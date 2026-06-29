@@ -1,4 +1,4 @@
-import { APP_DESCRIPTION, APP_NAME } from "./constants";
+import { APP_DESCRIPTION, APP_NAME } from "@/constants";
 
 export const appConfig = {
   name: APP_NAME,

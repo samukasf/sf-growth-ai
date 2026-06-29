@@ -1,2 +1,4 @@
-export * from "./config";
-export * from "./constants";
+/**
+ * Utilitários e helpers compartilhados da aplicação.
+ */
+export {};

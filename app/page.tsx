@@ -1,4 +1,4 @@
-import { APP_DESCRIPTION, APP_NAME, APP_TAGLINE } from "@/lib/constants";
+import { APP_DESCRIPTION, APP_NAME, APP_TAGLINE } from "@/constants";
 
 export default function Home() {
   return (
