@@ -1,0 +1,4 @@
+/**
+ * Feature: Diagnóstico empresarial.
+ */
+export {};

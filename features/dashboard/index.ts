@@ -1,0 +1,4 @@
+/**
+ * Feature: Dashboard principal.
+ */
+export {};
