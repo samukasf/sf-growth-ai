@@ -1,4 +1,4 @@
-/**
- * Componentes de UI reutilizáveis (Button, Input, Card, etc.).
- */
-export {};
+export { Button } from "./button";
+export { Card } from "./card";
+export { CheckIcon } from "./check-icon";
+export { Input } from "./input";

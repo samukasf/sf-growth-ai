@@ -1,4 +1,2 @@
-/**
- * Componentes comuns compartilhados entre módulos.
- */
-export {};
+export { FeatureList } from "./feature-list";
+export { Logo } from "./logo";

@@ -1,4 +1,1 @@
-/**
- * Componentes de formulário reutilizáveis.
- */
-export {};
+export { LoginForm } from "./login-form";
