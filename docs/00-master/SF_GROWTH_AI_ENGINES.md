@@ -189,3 +189,6 @@ The user sees:
 - Next best action
 - Execution support
 - Progress
+git add .
+git commit -m "docs: define intelligence engines"
+git push
