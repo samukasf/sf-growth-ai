@@ -64,6 +64,18 @@ export {
   type ForecastRecommendation,
 } from "./executive-forecast.service";
 
+export {
+  buildExecutiveStrategy,
+  type ExecutiveStrategy,
+  type StrategicObjective,
+  type StrategicInitiative,
+  type StrategicPillar,
+  type StrategicRisk,
+  type StrategicAdvantage,
+  type CompetitiveMove,
+  type StrategicRoadmap,
+} from "./executive-strategy.service";
+
 /** @deprecated Use buildQueryExecutiveContext */
 export { buildQueryExecutiveContext as buildExecutiveContext } from "./executive-orchestrator.service";
 

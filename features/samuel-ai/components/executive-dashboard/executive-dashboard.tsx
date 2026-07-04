@@ -8,6 +8,7 @@ import type {
 } from "../../executive-brain/types";
 import type { OrchestratorSnapshot } from "../../services/executive-orchestrator.types";
 import type { ExecutiveContext as CompanyExecutiveContext } from "@/services/executive-context.service";
+import type { ExecutiveStrategy } from "../../services/executive-strategy.service";
 import type { ExecutiveForecast } from "../../services/executive-forecast.service";
 import type { ExecutiveLearning } from "../../services/executive-learning.service";
 import type { ExecutiveMonitoring } from "../../services/executive-monitoring.service";
@@ -20,6 +21,7 @@ import { ExecutiveActionPlanSection } from "./executive-action-plan-section";
 import { ExecutiveContextSection } from "./executive-context-section";
 import { ExecutiveDecisionsSection } from "./executive-decisions-section";
 import { ExecutiveExecutionPlanSection } from "./executive-execution-plan-section";
+import { ExecutiveStrategySection } from "./executive-strategy-section";
 import { ExecutiveForecastSection } from "./executive-forecast-section";
 import { ExecutiveLearningSection } from "./executive-learning-section";
 import { ExecutiveIntelligenceSection } from "./executive-intelligence-section";
@@ -45,6 +47,7 @@ type ExecutiveDashboardProps = {
   executiveMonitoring?: ExecutiveMonitoring | null;
   executiveLearning?: ExecutiveLearning | null;
   executiveForecast?: ExecutiveForecast | null;
+  executiveStrategy?: ExecutiveStrategy | null;
 };
 
 const STATUS_LABELS: Record<ExecutiveBrainStatus, string> = {
@@ -68,6 +71,7 @@ export function ExecutiveDashboard({
   executiveMonitoring = null,
   executiveLearning = null,
   executiveForecast = null,
+  executiveStrategy = null,
 }: ExecutiveDashboardProps) {
   const statusWithTimestamp: ExecutiveStatus = {
     ...executiveStatus,
@@ -133,6 +137,10 @@ export function ExecutiveDashboard({
 
       <CommandPanel className="p-4 sm:p-5" accent>
         <ExecutiveForecastSection forecast={executiveForecast} />
+      </CommandPanel>
+
+      <CommandPanel className="p-4 sm:p-5" accent>
+        <ExecutiveStrategySection strategy={executiveStrategy} />
       </CommandPanel>
 
       <CommandPanel className="p-4 sm:p-5">
