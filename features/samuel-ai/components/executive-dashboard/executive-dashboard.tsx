@@ -8,6 +8,7 @@ import type {
 } from "../../executive-brain/types";
 import type { OrchestratorSnapshot } from "../../services/executive-orchestrator.types";
 import type { ExecutiveContext as CompanyExecutiveContext } from "@/services/executive-context.service";
+import type { ExecutionPlan } from "../../services/executive-execution-planner.service";
 import type { ExecutiveDecision } from "../../services/executive-decision.service";
 import type { ExecutiveIntelligence } from "../../services/executive-intelligence.service";
 import { CommandPanel } from "../shared/command-panel";
@@ -15,6 +16,7 @@ import { SectionHeader } from "../section-header";
 import { ExecutiveActionPlanSection } from "./executive-action-plan-section";
 import { ExecutiveContextSection } from "./executive-context-section";
 import { ExecutiveDecisionsSection } from "./executive-decisions-section";
+import { ExecutiveExecutionPlanSection } from "./executive-execution-plan-section";
 import { ExecutiveIntelligenceSection } from "./executive-intelligence-section";
 import { ExecutiveMemorySection } from "./executive-memory-section";
 import { ExecutiveOrchestratorSection } from "./executive-orchestrator-section";
@@ -33,6 +35,7 @@ type ExecutiveDashboardProps = {
   executiveContext?: CompanyExecutiveContext | null;
   executiveIntelligence?: ExecutiveIntelligence | null;
   executiveDecisions?: ExecutiveDecision[];
+  executionPlans?: ExecutionPlan[];
 };
 
 const STATUS_LABELS: Record<ExecutiveBrainStatus, string> = {
@@ -52,6 +55,7 @@ export function ExecutiveDashboard({
   executiveContext = null,
   executiveIntelligence = null,
   executiveDecisions = [],
+  executionPlans = [],
 }: ExecutiveDashboardProps) {
   const statusWithTimestamp: ExecutiveStatus = {
     ...executiveStatus,
@@ -101,6 +105,10 @@ export function ExecutiveDashboard({
 
       <CommandPanel className="p-4 sm:p-5" accent>
         <ExecutiveDecisionsSection decisions={executiveDecisions} />
+      </CommandPanel>
+
+      <CommandPanel className="p-4 sm:p-5" accent>
+        <ExecutiveExecutionPlanSection plans={executionPlans} />
       </CommandPanel>
 
       <CommandPanel className="p-4 sm:p-5">

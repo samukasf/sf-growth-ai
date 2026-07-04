@@ -26,6 +26,14 @@ export {
   type DecisionPriority,
 } from "./executive-decision.service";
 
+export {
+  buildExecutionPlan,
+  type ExecutionPlan,
+  type ExecutionPhase,
+  type ExecutionStep,
+  type ExecutionMilestone,
+} from "./executive-execution-planner.service";
+
 /** @deprecated Use buildQueryExecutiveContext */
 export { buildQueryExecutiveContext as buildExecutiveContext } from "./executive-orchestrator.service";
 

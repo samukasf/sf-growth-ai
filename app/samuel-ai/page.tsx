@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { samuelAi } from "@/features";
 import { buildExecutiveDecisions } from "@/features/samuel-ai/services/executive-decision.service";
+import { buildExecutionPlan } from "@/features/samuel-ai/services/executive-execution-planner.service";
 import { buildExecutiveIntelligence } from "@/features/samuel-ai/services/executive-intelligence.service";
 import {
   buildExecutiveContext,
@@ -35,11 +36,14 @@ export default async function SamuelAiRoute() {
     ? buildExecutiveDecisions(executiveIntelligence)
     : [];
 
+  const executionPlans = buildExecutionPlan(executiveDecisions);
+
   return (
     <samuelAi.SamuelAiPage
       executiveContext={executiveContext}
       executiveIntelligence={executiveIntelligence}
       executiveDecisions={executiveDecisions}
+      executionPlans={executionPlans}
     />
   );
 }
