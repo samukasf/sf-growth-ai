@@ -53,6 +53,17 @@ export {
   type ExecutiveEvolution,
 } from "./executive-learning.service";
 
+export {
+  buildExecutiveForecast,
+  type ExecutiveForecast,
+  type ForecastScenario,
+  type ForecastRisk,
+  type ForecastOpportunity,
+  type ForecastTimeline,
+  type ForecastConfidence,
+  type ForecastRecommendation,
+} from "./executive-forecast.service";
+
 /** @deprecated Use buildQueryExecutiveContext */
 export { buildQueryExecutiveContext as buildExecutiveContext } from "./executive-orchestrator.service";
 

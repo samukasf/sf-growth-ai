@@ -16,6 +16,7 @@ export type CompanyRecord = {
   description: string | null;
   website: string | null;
   business_stage: string | null;
+  annual_revenue: number | null;
 };
 
 export type BusinessProfileRecord = {
@@ -110,7 +111,7 @@ async function getCompany(companyId: string): Promise<CompanyRecord> {
   const { data, error } = await supabase
     .from("companies")
     .select(
-      "id, name, industry, city, country, description, website, business_stage",
+      "id, name, industry, city, country, description, website, business_stage, annual_revenue",
     )
     .eq("id", companyId)
     .single();

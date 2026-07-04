@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { samuelAi } from "@/features";
 import { buildExecutiveDecisions } from "@/features/samuel-ai/services/executive-decision.service";
 import { buildExecutionPlan } from "@/features/samuel-ai/services/executive-execution-planner.service";
+import { buildExecutiveForecast } from "@/features/samuel-ai/services/executive-forecast.service";
 import { buildExecutiveIntelligence } from "@/features/samuel-ai/services/executive-intelligence.service";
 import { buildExecutiveLearning } from "@/features/samuel-ai/services/executive-learning.service";
 import { buildExecutiveMonitoring } from "@/features/samuel-ai/services/executive-monitoring.service";
@@ -53,6 +54,14 @@ export default async function SamuelAiRoute() {
     monitoring: executiveMonitoring,
   });
 
+  const executiveForecast = buildExecutiveForecast({
+    context: executiveContext,
+    intelligence: executiveIntelligence,
+    decisions: executiveDecisions,
+    monitoring: executiveMonitoring,
+    learning: executiveLearning,
+  });
+
   return (
     <samuelAi.SamuelAiPage
       executiveContext={executiveContext}
@@ -61,6 +70,7 @@ export default async function SamuelAiRoute() {
       executionPlans={executionPlans}
       executiveMonitoring={executiveMonitoring}
       executiveLearning={executiveLearning}
+      executiveForecast={executiveForecast}
     />
   );
 }

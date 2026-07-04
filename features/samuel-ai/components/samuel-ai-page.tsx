@@ -1,6 +1,7 @@
 import type { ExecutiveContext } from "@/services/executive-context.service";
 import type { ExecutiveDecision } from "../services/executive-decision.service";
 import type { ExecutionPlan } from "../services/executive-execution-planner.service";
+import type { ExecutiveForecast } from "../services/executive-forecast.service";
 import type { ExecutiveIntelligence } from "../services/executive-intelligence.service";
 import type { ExecutiveLearning } from "../services/executive-learning.service";
 import type { ExecutiveMonitoring } from "../services/executive-monitoring.service";
@@ -14,6 +15,7 @@ type SamuelAiPageProps = {
   executionPlans?: ExecutionPlan[];
   executiveMonitoring?: ExecutiveMonitoring | null;
   executiveLearning?: ExecutiveLearning | null;
+  executiveForecast?: ExecutiveForecast | null;
 };
 
 export function SamuelAiPage({
@@ -23,6 +25,7 @@ export function SamuelAiPage({
   executionPlans = [],
   executiveMonitoring = null,
   executiveLearning = null,
+  executiveForecast = null,
 }: SamuelAiPageProps) {
   return (
     <SamuelAiShell
@@ -32,6 +35,7 @@ export function SamuelAiPage({
       executionPlans={executionPlans}
       executiveMonitoring={executiveMonitoring}
       executiveLearning={executiveLearning}
+      executiveForecast={executiveForecast}
     />
   );
 }
