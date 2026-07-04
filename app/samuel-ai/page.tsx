@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 
 import { samuelAi } from "@/features";
 import {
-  getCompanyMemory,
+  buildExecutiveContext,
   getFirstCompany,
-  type CompanyMemoryRecord,
-} from "@/services/executive-memory.service";
+  type ExecutiveContext,
+} from "@/services/executive-context.service";
 
 export const metadata: Metadata = {
   title: "Samuel AI™ | SF Growth AI",
@@ -13,17 +13,17 @@ export const metadata: Metadata = {
 };
 
 export default async function SamuelAiRoute() {
-  let companyMemories: CompanyMemoryRecord[] = [];
+  let executiveContext: ExecutiveContext | null = null;
 
   try {
     const company = await getFirstCompany();
 
     if (company) {
-      companyMemories = await getCompanyMemory(company.id);
+      executiveContext = await buildExecutiveContext(company.id);
     }
   } catch {
-    companyMemories = [];
+    executiveContext = null;
   }
 
-  return <samuelAi.SamuelAiPage companyMemories={companyMemories} />;
+  return <samuelAi.SamuelAiPage executiveContext={executiveContext} />;
 }

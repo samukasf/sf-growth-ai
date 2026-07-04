@@ -21,7 +21,7 @@ import type {
   OrchestratorPhase,
   OrchestratorSnapshot,
 } from "../services/executive-orchestrator.types";
-import type { CompanyMemoryRecord } from "@/services/executive-memory.service";
+import type { ExecutiveContext as CompanyExecutiveContext } from "@/services/executive-context.service";
 import { ChatPanel } from "./chat-panel";
 import {
   ExecutiveBriefingSection,
@@ -47,10 +47,10 @@ function delay(ms: number) {
 }
 
 type SamuelAiShellProps = {
-  companyMemories?: CompanyMemoryRecord[];
+  executiveContext?: CompanyExecutiveContext | null;
 };
 
-export function SamuelAiShell({ companyMemories = [] }: SamuelAiShellProps) {
+export function SamuelAiShell({ executiveContext = null }: SamuelAiShellProps) {
   const [executiveBrain, setExecutiveBrain] =
     useState<ExecutiveBrain>(DEFAULT_EXECUTIVE_BRAIN);
   const [brainStatus, setBrainStatus] = useState<ExecutiveBrainStatus>("idle");
@@ -68,31 +68,44 @@ export function SamuelAiShell({ companyMemories = [] }: SamuelAiShellProps) {
     setHasActiveAnalysis(true);
   }, []);
 
-  const handleSendMessage = useCallback(async (content: string) => {
-    setIsProcessing(true);
-    setBrainStatus("building");
-    setHasActiveAnalysis(true);
+  const handleSendMessage = useCallback(
+    async (content: string) => {
+      setIsProcessing(true);
+      setBrainStatus("building");
+      setHasActiveAnalysis(true);
 
-    for (const phase of ORCHESTRATION_PHASES) {
-      const snapshot = buildOrchestratorSnapshot(content, phase);
-      setOrchestratorSnapshot(snapshot);
-      setExecutiveBrain(buildExecutiveBrainFromSnapshot(content, phase));
+      for (const phase of ORCHESTRATION_PHASES) {
+        const snapshot = buildOrchestratorSnapshot(
+          content,
+          phase,
+          executiveContext,
+        );
+        setOrchestratorSnapshot(snapshot);
+        setExecutiveBrain(
+          buildExecutiveBrainFromSnapshot(content, phase, executiveContext),
+        );
 
-      if (phase !== "complete") {
-        await delay(PHASE_DELAY_MS);
+        if (phase !== "complete") {
+          await delay(PHASE_DELAY_MS);
+        }
       }
-    }
 
-    const finalSnapshot = buildOrchestratorSnapshot(content, "complete");
-    const brain = snapshotToBrain(finalSnapshot);
+      const finalSnapshot = buildOrchestratorSnapshot(
+        content,
+        "complete",
+        executiveContext,
+      );
+      const brain = snapshotToBrain(finalSnapshot);
 
-    setOrchestratorSnapshot(finalSnapshot);
-    setExecutiveBrain(brain);
-    setBrainStatus("ready");
-    setIsProcessing(false);
+      setOrchestratorSnapshot(finalSnapshot);
+      setExecutiveBrain(brain);
+      setBrainStatus("ready");
+      setIsProcessing(false);
 
-    return generateOrchestratorResponse(brain);
-  }, []);
+      return generateOrchestratorResponse(brain, executiveContext);
+    },
+    [executiveContext],
+  );
 
   return (
     <div className="relative flex min-h-dvh flex-col xl:h-dvh xl:overflow-hidden">
@@ -182,7 +195,7 @@ export function SamuelAiShell({ companyMemories = [] }: SamuelAiShellProps) {
             hasActiveAnalysis={hasActiveAnalysis}
             orchestratorSnapshot={orchestratorSnapshot}
             isProcessing={isProcessing}
-            companyMemories={companyMemories}
+            executiveContext={executiveContext}
           />
         </aside>
       </main>

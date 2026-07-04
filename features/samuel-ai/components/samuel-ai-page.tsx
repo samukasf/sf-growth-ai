@@ -1,11 +1,11 @@
-import type { CompanyMemoryRecord } from "@/services/executive-memory.service";
+import type { ExecutiveContext } from "@/services/executive-context.service";
 
 import { SamuelAiShell } from "./samuel-ai-shell";
 
 type SamuelAiPageProps = {
-  companyMemories?: CompanyMemoryRecord[];
+  executiveContext?: ExecutiveContext | null;
 };
 
-export function SamuelAiPage({ companyMemories = [] }: SamuelAiPageProps) {
-  return <SamuelAiShell companyMemories={companyMemories} />;
+export function SamuelAiPage({ executiveContext = null }: SamuelAiPageProps) {
+  return <SamuelAiShell executiveContext={executiveContext} />;
 }

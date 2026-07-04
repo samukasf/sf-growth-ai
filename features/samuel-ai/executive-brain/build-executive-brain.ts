@@ -4,13 +4,17 @@ import {
   runExecutiveOrchestrationToBrain,
   snapshotToBrain,
 } from "../services/executive-orchestrator.service";
+import type { ExecutiveContext as CompanyExecutiveContext } from "@/services/executive-context.service";
 import { DEFAULT_EXECUTIVE_BRAIN } from "./mock-data";
 import type { ExecutiveBrain } from "./types";
 
 export { generateOrchestratorResponse as generateSimulatedResponse } from "../services/executive-orchestrator.service";
 
-export function buildExecutiveBrain(userQuery: string): ExecutiveBrain {
-  return runExecutiveOrchestrationToBrain(userQuery);
+export function buildExecutiveBrain(
+  userQuery: string,
+  companyContext?: CompanyExecutiveContext | null,
+): ExecutiveBrain {
+  return runExecutiveOrchestrationToBrain(userQuery, companyContext);
 }
 
 export function buildExecutiveBrainInProgress(userQuery: string): ExecutiveBrain {
@@ -40,8 +44,9 @@ export function buildExecutiveBrainInProgress(userQuery: string): ExecutiveBrain
 export function buildExecutiveBrainFromSnapshot(
   userQuery: string,
   phase: Parameters<typeof buildOrchestratorSnapshot>[1],
+  companyContext?: CompanyExecutiveContext | null,
 ): ExecutiveBrain {
-  const snapshot = buildOrchestratorSnapshot(userQuery, phase);
+  const snapshot = buildOrchestratorSnapshot(userQuery, phase, companyContext);
 
   if (phase !== "complete") {
     if (!snapshot.context) {

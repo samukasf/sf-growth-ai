@@ -2,7 +2,7 @@ export {
   buildActionPlan,
   buildConsensus,
   buildExecutiveConfidence,
-  buildExecutiveContext,
+  buildQueryExecutiveContext,
   buildOrchestratorSnapshot,
   detectQueryIntent,
   generateOrchestratorResponse,
@@ -13,6 +13,9 @@ export {
   selectExecutives,
   snapshotToBrain,
 } from "./executive-orchestrator.service";
+
+/** @deprecated Use buildQueryExecutiveContext */
+export { buildQueryExecutiveContext as buildExecutiveContext } from "./executive-orchestrator.service";
 
 export { MOCK_EXECUTIVES, SPRINT_EXECUTIVE_ORDER } from "./mock-executives";
 

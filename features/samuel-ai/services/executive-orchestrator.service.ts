@@ -3,11 +3,13 @@ import type {
   ExecutiveAction,
   ExecutiveActionPlan,
   ExecutiveBrain,
-  ExecutiveContext,
+  ExecutiveContext as BrainExecutiveContext,
   ExecutiveMemory,
   ExecutiveReasoning,
   ConsultationSource,
 } from "../executive-brain/types";
+import type { ExecutiveContext as CompanyExecutiveContext } from "@/services/executive-context.service";
+import { enrichPromptWithExecutiveContext } from "@/services/executive-context.service";
 import type {
   AnalysisPipelineStep,
   ConsultedExecutive,
@@ -127,11 +129,85 @@ function buildObjective(intent: QueryIntent): string {
   return objectives[intent];
 }
 
-export function buildExecutiveContext(userQuery: string): ExecutiveContext {
+function mapCompanyContextToBrainContext(
+  companyContext: CompanyExecutiveContext,
+  intent: QueryIntent,
+): BrainExecutiveContext {
+  const profile = companyContext.businessProfile;
+  const location = [companyContext.company.city, companyContext.company.country]
+    .filter(Boolean)
+    .join(", ");
+
+  const fields: BrainExecutiveContext["fields"] = [];
+
+  if (profile?.positioning) {
+    fields.push({
+      id: "ctx-positioning",
+      label: "Posicionamento",
+      value: profile.positioning,
+    });
+  }
+
+  const differentiators = profile?.differentiators;
+  if (differentiators) {
+    fields.push({
+      id: "ctx-differentiators",
+      label: "Diferenciais",
+      value: Array.isArray(differentiators)
+        ? differentiators.join(" · ")
+        : differentiators,
+    });
+  }
+
+  const objectives = profile?.objectives;
+  if (objectives) {
+    fields.push({
+      id: "ctx-objectives",
+      label: "Objetivos",
+      value: Array.isArray(objectives) ? objectives.join(" · ") : objectives,
+    });
+  }
+
+  if (profile?.mission) {
+    fields.push({
+      id: "ctx-mission",
+      label: "Missão",
+      value: profile.mission,
+    });
+  }
+
+  if (companyContext.company.description) {
+    fields.push({
+      id: "ctx-description",
+      label: "Descrição",
+      value: companyContext.company.description,
+    });
+  }
+
+  return {
+    companyId: companyContext.company.id,
+    companyName: companyContext.company.name,
+    segment: profile?.segment ?? companyContext.company.industry ?? "—",
+    location: location || "—",
+    growthScore: DEFAULT_EXECUTIVE_BRAIN.context.growthScore,
+    detectedObjective: buildObjective(intent),
+    fields,
+  };
+}
+
+export function buildQueryExecutiveContext(
+  userQuery: string,
+  companyContext?: CompanyExecutiveContext | null,
+): BrainExecutiveContext {
   const intent = detectQueryIntent(userQuery);
+
+  if (companyContext) {
+    return mapCompanyContextToBrainContext(companyContext, intent);
+  }
+
   const baseFields = DEFAULT_EXECUTIVE_BRAIN.context.fields;
 
-  const intentFields: Record<QueryIntent, ExecutiveContext["fields"]> = {
+  const intentFields: Record<QueryIntent, BrainExecutiveContext["fields"]> = {
     sales: [
       { id: "f-sales-1", label: "Variação de vendas", value: "−12% no último mês" },
       { id: "f-sales-2", label: "Meta mensal", value: "R$ 55.000" },
@@ -200,7 +276,7 @@ function resolveConsultationStatus(
 
 export function selectExecutives(
   userQuery: string,
-  context: ExecutiveContext,
+  context: BrainExecutiveContext,
   phase: OrchestratorPhase = "complete",
 ): ConsultedExecutive[] {
   void context;
@@ -242,7 +318,7 @@ function buildConsultations(
 function buildAnalysisSteps(
   intent: QueryIntent,
   executives: ConsultedExecutive[],
-  context: ExecutiveContext,
+  context: BrainExecutiveContext,
   phase: "building" | "complete",
 ): AnalysisPipelineStep[] {
   const focusByIntent: Record<QueryIntent, string> = {
@@ -325,7 +401,7 @@ function buildAnalysisSteps(
 
 export function runExecutiveAnalysis(
   userQuery: string,
-  context: ExecutiveContext,
+  context: BrainExecutiveContext,
   executives: ConsultedExecutive[],
   phase: "building" | "complete" = "complete",
 ): ExecutiveAnalysisResult {
@@ -525,7 +601,7 @@ function buildMemory(intent: QueryIntent): ExecutiveMemory {
 
 export function buildActionPlan(
   userQuery: string,
-  context: ExecutiveContext,
+  context: BrainExecutiveContext,
   consensus: string,
 ): ExecutiveActionPlan {
   void context;
@@ -539,19 +615,44 @@ export function buildActionPlan(
   };
 }
 
-export function runExecutiveOrchestration(userQuery: string): OrchestratorResult {
-  const context = buildExecutiveContext(userQuery);
-  const consultedExecutives = selectExecutives(userQuery, context, "complete");
+function resolveOrchestrationQuery(
+  userQuery: string,
+  companyContext?: CompanyExecutiveContext | null,
+) {
+  return companyContext
+    ? enrichPromptWithExecutiveContext(userQuery, companyContext)
+    : userQuery;
+}
+
+export function runExecutiveOrchestration(
+  userQuery: string,
+  companyContext?: CompanyExecutiveContext | null,
+): OrchestratorResult {
+  const orchestrationQuery = resolveOrchestrationQuery(userQuery, companyContext);
+  const context = buildQueryExecutiveContext(orchestrationQuery, companyContext);
+  const consultedExecutives = selectExecutives(
+    orchestrationQuery,
+    context,
+    "complete",
+  );
   const analysis = runExecutiveAnalysis(
-    userQuery,
+    orchestrationQuery,
     context,
     consultedExecutives,
     "complete",
   );
-  const consensus = buildConsensus(userQuery, analysis, consultedExecutives);
-  const actionPlan = buildActionPlan(userQuery, context, consensus);
-  const confidence = buildExecutiveConfidence(userQuery, analysis, consensus);
-  const memory = buildMemory(detectQueryIntent(userQuery));
+  const consensus = buildConsensus(
+    orchestrationQuery,
+    analysis,
+    consultedExecutives,
+  );
+  const actionPlan = buildActionPlan(orchestrationQuery, context, consensus);
+  const confidence = buildExecutiveConfidence(
+    orchestrationQuery,
+    analysis,
+    consensus,
+  );
+  const memory = buildMemory(detectQueryIntent(orchestrationQuery));
 
   analysis.reasoning.executiveConsensus = consensus;
 
@@ -584,20 +685,30 @@ export function orchestratorResultToBrain(
   };
 }
 
-export function runExecutiveOrchestrationToBrain(userQuery: string): ExecutiveBrain {
-  return orchestratorResultToBrain(userQuery, runExecutiveOrchestration(userQuery));
+export function runExecutiveOrchestrationToBrain(
+  userQuery: string,
+  companyContext?: CompanyExecutiveContext | null,
+): ExecutiveBrain {
+  return orchestratorResultToBrain(
+    userQuery,
+    runExecutiveOrchestration(userQuery, companyContext),
+  );
 }
 
 export function buildOrchestratorSnapshot(
   userQuery: string,
   phase: OrchestratorPhase,
+  companyContext?: CompanyExecutiveContext | null,
 ): OrchestratorSnapshot {
+  const orchestrationQuery = resolveOrchestrationQuery(userQuery, companyContext);
   const context =
-    phase === "idle" ? null : buildExecutiveContext(userQuery);
+    phase === "idle"
+      ? null
+      : buildQueryExecutiveContext(orchestrationQuery, companyContext);
 
   const consultedExecutives =
     context && phase !== "building_context"
-      ? selectExecutives(userQuery, context, phase)
+      ? selectExecutives(orchestrationQuery, context, phase)
       : [];
 
   const analysis =
@@ -605,7 +716,7 @@ export function buildOrchestratorSnapshot(
     consultedExecutives.length > 0 &&
     !["idle", "building_context", "selecting_executives"].includes(phase)
       ? runExecutiveAnalysis(
-          userQuery,
+          orchestrationQuery,
           context,
           consultedExecutives,
           phase === "complete" || phase === "building_action_plan"
@@ -617,22 +728,22 @@ export function buildOrchestratorSnapshot(
   const consensus =
     analysis &&
     ["building_consensus", "building_action_plan", "complete"].includes(phase)
-      ? buildConsensus(userQuery, analysis, consultedExecutives)
+      ? buildConsensus(orchestrationQuery, analysis, consultedExecutives)
       : null;
 
   const actionPlan =
     context && consensus && ["building_action_plan", "complete"].includes(phase)
-      ? buildActionPlan(userQuery, context, consensus)
+      ? buildActionPlan(orchestrationQuery, context, consensus)
       : null;
 
   const confidence =
     analysis && consensus && phase === "complete"
-      ? buildExecutiveConfidence(userQuery, analysis, consensus)
+      ? buildExecutiveConfidence(orchestrationQuery, analysis, consensus)
       : null;
 
   const memory =
     phase === "complete"
-      ? buildMemory(detectQueryIntent(userQuery))
+      ? buildMemory(detectQueryIntent(orchestrationQuery))
       : null;
 
   if (analysis && consensus) {
@@ -674,12 +785,23 @@ export function snapshotToBrain(snapshot: OrchestratorSnapshot): ExecutiveBrain 
   });
 }
 
-export function generateOrchestratorResponse(brain: ExecutiveBrain): string {
+export function generateOrchestratorResponse(
+  brain: ExecutiveBrain,
+  companyContext?: CompanyExecutiveContext | null,
+): string {
   const topAction = brain.actionPlan.actions[0];
 
   if (!topAction) {
-    return "Análise concluída. O contexto do negócio foi processado pelo Executive Orchestrator.";
+    const contextPrefix = companyContext
+      ? `${companyContext.summary}\n\n`
+      : "";
+
+    return `${contextPrefix}Análise concluída. O contexto do negócio foi processado pelo Executive Orchestrator.`;
   }
+
+  const contextPrefix = companyContext
+    ? ["Contexto da empresa:", companyContext.summary, ""].join("\n")
+    : "";
 
   const priorityLabel =
     topAction.priority === "critical"
@@ -689,6 +811,7 @@ export function generateOrchestratorResponse(brain: ExecutiveBrain): string {
         : "estratégica";
 
   return [
+    contextPrefix,
     "Análise executiva concluída.",
     "",
     brain.actionPlan.summary,
@@ -699,5 +822,5 @@ export function generateOrchestratorResponse(brain: ExecutiveBrain): string {
     `Impacto projetado: ${topAction.impactDescription}.`,
     `Ação imediata: ${topAction.nextStep}.`,
     `Prazo de execução: ${topAction.timeframe}.`,
-  ].join("\n");
+  ].filter(Boolean).join("\n");
 }
