@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { samuelAi } from "@/features";
+import { buildExecutiveIntelligence } from "@/features/samuel-ai/services/executive-intelligence.service";
 import {
   buildExecutiveContext,
   getFirstCompany,
@@ -25,5 +26,14 @@ export default async function SamuelAiRoute() {
     executiveContext = null;
   }
 
-  return <samuelAi.SamuelAiPage executiveContext={executiveContext} />;
+  const executiveIntelligence = executiveContext
+    ? buildExecutiveIntelligence(executiveContext)
+    : null;
+
+  return (
+    <samuelAi.SamuelAiPage
+      executiveContext={executiveContext}
+      executiveIntelligence={executiveIntelligence}
+    />
+  );
 }

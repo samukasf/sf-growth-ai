@@ -8,10 +8,12 @@ import type {
 } from "../../executive-brain/types";
 import type { OrchestratorSnapshot } from "../../services/executive-orchestrator.types";
 import type { ExecutiveContext as CompanyExecutiveContext } from "@/services/executive-context.service";
+import type { ExecutiveIntelligence } from "../../services/executive-intelligence.service";
 import { CommandPanel } from "../shared/command-panel";
 import { SectionHeader } from "../section-header";
 import { ExecutiveActionPlanSection } from "./executive-action-plan-section";
 import { ExecutiveContextSection } from "./executive-context-section";
+import { ExecutiveIntelligenceSection } from "./executive-intelligence-section";
 import { ExecutiveMemorySection } from "./executive-memory-section";
 import { ExecutiveOrchestratorSection } from "./executive-orchestrator-section";
 import { ExecutiveReasoningSection } from "./executive-reasoning-section";
@@ -27,6 +29,7 @@ type ExecutiveDashboardProps = {
   orchestratorSnapshot?: OrchestratorSnapshot | null;
   isProcessing?: boolean;
   executiveContext?: CompanyExecutiveContext | null;
+  executiveIntelligence?: ExecutiveIntelligence | null;
 };
 
 const STATUS_LABELS: Record<ExecutiveBrainStatus, string> = {
@@ -44,6 +47,7 @@ export function ExecutiveDashboard({
   orchestratorSnapshot = null,
   isProcessing = false,
   executiveContext = null,
+  executiveIntelligence = null,
 }: ExecutiveDashboardProps) {
   const statusWithTimestamp: ExecutiveStatus = {
     ...executiveStatus,
@@ -90,6 +94,10 @@ export function ExecutiveDashboard({
           />
         </CommandPanel>
       )}
+
+      <CommandPanel className="p-4 sm:p-5">
+        <ExecutiveIntelligenceSection intelligence={executiveIntelligence} />
+      </CommandPanel>
 
       <CommandPanel className="p-4 sm:p-5">
         <ExecutiveMemorySection memories={executiveContext?.memories ?? []} />

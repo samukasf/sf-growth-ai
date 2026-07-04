@@ -14,6 +14,11 @@ export {
   snapshotToBrain,
 } from "./executive-orchestrator.service";
 
+export {
+  buildExecutiveIntelligence,
+  type ExecutiveIntelligence,
+} from "./executive-intelligence.service";
+
 /** @deprecated Use buildQueryExecutiveContext */
 export { buildQueryExecutiveContext as buildExecutiveContext } from "./executive-orchestrator.service";
 
