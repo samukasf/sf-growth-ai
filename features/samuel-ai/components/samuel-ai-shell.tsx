@@ -21,6 +21,7 @@ import type {
   OrchestratorPhase,
   OrchestratorSnapshot,
 } from "../services/executive-orchestrator.types";
+import type { CompanyMemoryRecord } from "@/services/executive-memory.service";
 import { ChatPanel } from "./chat-panel";
 import {
   ExecutiveBriefingSection,
@@ -45,7 +46,11 @@ function delay(ms: number) {
   });
 }
 
-export function SamuelAiShell() {
+type SamuelAiShellProps = {
+  companyMemories?: CompanyMemoryRecord[];
+};
+
+export function SamuelAiShell({ companyMemories = [] }: SamuelAiShellProps) {
   const [executiveBrain, setExecutiveBrain] =
     useState<ExecutiveBrain>(DEFAULT_EXECUTIVE_BRAIN);
   const [brainStatus, setBrainStatus] = useState<ExecutiveBrainStatus>("idle");
@@ -177,6 +182,7 @@ export function SamuelAiShell() {
             hasActiveAnalysis={hasActiveAnalysis}
             orchestratorSnapshot={orchestratorSnapshot}
             isProcessing={isProcessing}
+            companyMemories={companyMemories}
           />
         </aside>
       </main>

@@ -7,6 +7,7 @@ import type {
   ExecutiveStatus,
 } from "../../executive-brain/types";
 import type { OrchestratorSnapshot } from "../../services/executive-orchestrator.types";
+import type { CompanyMemoryRecord } from "@/services/executive-memory.service";
 import { CommandPanel } from "../shared/command-panel";
 import { SectionHeader } from "../section-header";
 import { ExecutiveActionPlanSection } from "./executive-action-plan-section";
@@ -25,6 +26,7 @@ type ExecutiveDashboardProps = {
   hasActiveAnalysis: boolean;
   orchestratorSnapshot?: OrchestratorSnapshot | null;
   isProcessing?: boolean;
+  companyMemories?: CompanyMemoryRecord[];
 };
 
 const STATUS_LABELS: Record<ExecutiveBrainStatus, string> = {
@@ -41,6 +43,7 @@ export function ExecutiveDashboard({
   hasActiveAnalysis,
   orchestratorSnapshot = null,
   isProcessing = false,
+  companyMemories = [],
 }: ExecutiveDashboardProps) {
   const statusWithTimestamp: ExecutiveStatus = {
     ...executiveStatus,
@@ -89,7 +92,7 @@ export function ExecutiveDashboard({
       )}
 
       <CommandPanel className="p-4 sm:p-5">
-        <ExecutiveMemorySection memory={brain.memory} />
+        <ExecutiveMemorySection memories={companyMemories} />
       </CommandPanel>
 
       <CommandPanel className="p-4 sm:p-5">

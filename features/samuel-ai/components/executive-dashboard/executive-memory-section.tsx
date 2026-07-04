@@ -1,23 +1,15 @@
 import { cn } from "@/utils/cn";
+import type { CompanyMemoryRecord } from "@/services/executive-memory.service";
 
-import type { ExecutiveMemory, StrategicMemoryEntry } from "../../executive-brain/types";
 import { SectionHeader } from "../section-header";
 
 type ExecutiveMemorySectionProps = {
-  memory: ExecutiveMemory;
+  memories: CompanyMemoryRecord[];
 };
-
-function formatDate(date: string) {
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(date));
-}
 
 type MemoryGroupProps = {
   title: string;
-  entries: StrategicMemoryEntry[];
+  entries: CompanyMemoryRecord[];
   accent?: "default" | "emerald" | "amber" | "accent";
 };
 
@@ -27,6 +19,22 @@ const ACCENT_BORDER: Record<NonNullable<MemoryGroupProps["accent"]>, string> = {
   amber: "border-amber-500/15",
   accent: "border-accent/15",
 };
+
+const CATEGORY_ACCENTS: Record<string, MemoryGroupProps["accent"]> = {
+  decisão: "amber",
+  decisoes: "amber",
+  recomendação: "accent",
+  recomendacoes: "accent",
+  resultado: "emerald",
+  resultados: "emerald",
+  aprendizado: "default",
+  aprendizados: "default",
+};
+
+function formatContent(content: CompanyMemoryRecord["content"]) {
+  if (typeof content === "string") return content;
+  return JSON.stringify(content);
+}
 
 function MemoryGroup({ title, entries, accent = "default" }: MemoryGroupProps) {
   if (entries.length === 0) return null;
@@ -47,14 +55,12 @@ function MemoryGroup({ title, entries, accent = "default" }: MemoryGroupProps) {
           >
             <p className="text-sm font-medium text-foreground">{entry.title}</p>
             <p className="mt-1 text-xs leading-relaxed text-muted">
-              {entry.summary}
+              {formatContent(entry.content)}
             </p>
-            {entry.outcome && (
-              <p className="mt-1.5 text-xs text-emerald-400/90">
-                Resultado: {entry.outcome}
-              </p>
-            )}
-            <p className="mt-2 text-[11px] text-muted">{formatDate(entry.date)}</p>
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted">
+              <span>Importância: {entry.importance}</span>
+              {entry.source ? <span>Fonte: {entry.source}</span> : null}
+            </div>
           </li>
         ))}
       </ul>
@@ -62,7 +68,29 @@ function MemoryGroup({ title, entries, accent = "default" }: MemoryGroupProps) {
   );
 }
 
-export function ExecutiveMemorySection({ memory }: ExecutiveMemorySectionProps) {
+function groupMemoriesByCategory(memories: CompanyMemoryRecord[]) {
+  return memories.reduce<Record<string, CompanyMemoryRecord[]>>((groups, memory) => {
+    const category = memory.category?.trim() || "Geral";
+    if (!groups[category]) {
+      groups[category] = [];
+    }
+    groups[category].push(memory);
+    return groups;
+  }, {});
+}
+
+function getCategoryAccent(category: string): MemoryGroupProps["accent"] {
+  const key = category
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+  return CATEGORY_ACCENTS[key] ?? "default";
+}
+
+export function ExecutiveMemorySection({ memories }: ExecutiveMemorySectionProps) {
+  const groupedMemories = groupMemoriesByCategory(memories);
+
   return (
     <section className="flex flex-col gap-4">
       <SectionHeader
@@ -70,39 +98,17 @@ export function ExecutiveMemorySection({ memory }: ExecutiveMemorySectionProps) 
         description="Memória estratégica de longo prazo"
       />
 
-      <MemoryGroup
-        title="Decisões recentes"
-        entries={memory.recentDecisions}
-        accent="amber"
-      />
-      <MemoryGroup
-        title="Recomendações anteriores"
-        entries={memory.previousRecommendations}
-        accent="accent"
-      />
-      <MemoryGroup
-        title="Resultados obtidos"
-        entries={memory.results}
-        accent="emerald"
-      />
-      <MemoryGroup title="Aprendizados" entries={memory.learnings} />
-
-      {memory.relevantPatterns.length > 0 && (
-        <div>
-          <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-muted">
-            Padrões estratégicos
-          </p>
-          <ul className="flex flex-col gap-1.5">
-            {memory.relevantPatterns.map((pattern) => (
-              <li
-                key={pattern}
-                className="rounded-lg border border-emerald-500/15 bg-emerald-500/[0.03] px-3 py-2 text-xs leading-relaxed text-emerald-300/90"
-              >
-                {pattern}
-              </li>
-            ))}
-          </ul>
-        </div>
+      {memories.length === 0 ? (
+        <p className="text-sm text-muted">Nenhuma memória registrada ainda.</p>
+      ) : (
+        Object.entries(groupedMemories).map(([category, entries]) => (
+          <MemoryGroup
+            key={category}
+            title={category}
+            entries={entries}
+            accent={getCategoryAccent(category)}
+          />
+        ))
       )}
     </section>
   );
