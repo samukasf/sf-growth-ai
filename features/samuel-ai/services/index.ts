@@ -19,6 +19,13 @@ export {
   type ExecutiveIntelligence,
 } from "./executive-intelligence.service";
 
+export {
+  buildExecutiveDecisions,
+  type ExecutiveDecision,
+  type DecisionImpact,
+  type DecisionPriority,
+} from "./executive-decision.service";
+
 /** @deprecated Use buildQueryExecutiveContext */
 export { buildQueryExecutiveContext as buildExecutiveContext } from "./executive-orchestrator.service";
 

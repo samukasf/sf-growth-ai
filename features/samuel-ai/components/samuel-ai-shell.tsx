@@ -22,6 +22,7 @@ import type {
   OrchestratorSnapshot,
 } from "../services/executive-orchestrator.types";
 import type { ExecutiveContext as CompanyExecutiveContext } from "@/services/executive-context.service";
+import type { ExecutiveDecision } from "../services/executive-decision.service";
 import type { ExecutiveIntelligence } from "../services/executive-intelligence.service";
 import { ChatPanel } from "./chat-panel";
 import {
@@ -50,11 +51,13 @@ function delay(ms: number) {
 type SamuelAiShellProps = {
   executiveContext?: CompanyExecutiveContext | null;
   executiveIntelligence?: ExecutiveIntelligence | null;
+  executiveDecisions?: ExecutiveDecision[];
 };
 
 export function SamuelAiShell({
   executiveContext = null,
   executiveIntelligence = null,
+  executiveDecisions = [],
 }: SamuelAiShellProps) {
   const [executiveBrain, setExecutiveBrain] =
     useState<ExecutiveBrain>(DEFAULT_EXECUTIVE_BRAIN);
@@ -202,6 +205,7 @@ export function SamuelAiShell({
             isProcessing={isProcessing}
             executiveContext={executiveContext}
             executiveIntelligence={executiveIntelligence}
+            executiveDecisions={executiveDecisions}
           />
         </aside>
       </main>
