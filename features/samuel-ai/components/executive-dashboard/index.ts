@@ -5,7 +5,7 @@ export { ExecutiveCouncilSection } from "./executive-council-section";
 export { ExecutiveDecisionsSection } from "./executive-decisions-section";
 export { ExecutiveExecutionPlanSection } from "./executive-execution-plan-section";
 export { ExecutiveDashboard } from "./executive-dashboard";
-export { ExecutiveIntelligenceSection } from "./executive-intelligence-section";
+export { ExecutiveLearningSection } from "./executive-learning-section";
 export { ExecutiveMonitoringSection } from "./executive-monitoring-section";
 export { ExecutiveMemorySection } from "./executive-memory-section";
 export { ExecutiveReasoningSection } from "./executive-reasoning-section";

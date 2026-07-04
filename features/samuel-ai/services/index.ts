@@ -43,6 +43,16 @@ export {
   type ExecutiveProgress,
 } from "./executive-monitoring.service";
 
+export {
+  buildExecutiveLearning,
+  type ExecutiveLearning,
+  type ExecutiveInsight,
+  type LearningPattern,
+  type LearningRule,
+  type ExecutiveExperience,
+  type ExecutiveEvolution,
+} from "./executive-learning.service";
+
 /** @deprecated Use buildQueryExecutiveContext */
 export { buildQueryExecutiveContext as buildExecutiveContext } from "./executive-orchestrator.service";
 

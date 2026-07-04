@@ -8,6 +8,7 @@ import type {
 } from "../../executive-brain/types";
 import type { OrchestratorSnapshot } from "../../services/executive-orchestrator.types";
 import type { ExecutiveContext as CompanyExecutiveContext } from "@/services/executive-context.service";
+import type { ExecutiveLearning } from "../../services/executive-learning.service";
 import type { ExecutiveMonitoring } from "../../services/executive-monitoring.service";
 import type { ExecutionPlan } from "../../services/executive-execution-planner.service";
 import type { ExecutiveDecision } from "../../services/executive-decision.service";
@@ -18,6 +19,7 @@ import { ExecutiveActionPlanSection } from "./executive-action-plan-section";
 import { ExecutiveContextSection } from "./executive-context-section";
 import { ExecutiveDecisionsSection } from "./executive-decisions-section";
 import { ExecutiveExecutionPlanSection } from "./executive-execution-plan-section";
+import { ExecutiveLearningSection } from "./executive-learning-section";
 import { ExecutiveIntelligenceSection } from "./executive-intelligence-section";
 import { ExecutiveMonitoringSection } from "./executive-monitoring-section";
 import { ExecutiveMemorySection } from "./executive-memory-section";
@@ -39,6 +41,7 @@ type ExecutiveDashboardProps = {
   executiveDecisions?: ExecutiveDecision[];
   executionPlans?: ExecutionPlan[];
   executiveMonitoring?: ExecutiveMonitoring | null;
+  executiveLearning?: ExecutiveLearning | null;
 };
 
 const STATUS_LABELS: Record<ExecutiveBrainStatus, string> = {
@@ -60,6 +63,7 @@ export function ExecutiveDashboard({
   executiveDecisions = [],
   executionPlans = [],
   executiveMonitoring = null,
+  executiveLearning = null,
 }: ExecutiveDashboardProps) {
   const statusWithTimestamp: ExecutiveStatus = {
     ...executiveStatus,
@@ -117,6 +121,10 @@ export function ExecutiveDashboard({
 
       <CommandPanel className="p-4 sm:p-5" accent>
         <ExecutiveMonitoringSection monitoring={executiveMonitoring} />
+      </CommandPanel>
+
+      <CommandPanel className="p-4 sm:p-5" accent>
+        <ExecutiveLearningSection learning={executiveLearning} />
       </CommandPanel>
 
       <CommandPanel className="p-4 sm:p-5">
