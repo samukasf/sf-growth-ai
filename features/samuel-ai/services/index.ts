@@ -76,6 +76,18 @@ export {
   type StrategicRoadmap,
 } from "./executive-strategy.service";
 
+export {
+  buildExecutiveCompetitor,
+  type ExecutiveCompetitor,
+  type CompetitorProfile,
+  type CompetitorStrength,
+  type CompetitorWeakness,
+  type CompetitorOpportunity,
+  type CompetitorThreat,
+  type CompetitiveGap,
+  type CompetitiveAdvantage,
+} from "./executive-competitor.service";
+
 /** @deprecated Use buildQueryExecutiveContext */
 export { buildQueryExecutiveContext as buildExecutiveContext } from "./executive-orchestrator.service";
 
