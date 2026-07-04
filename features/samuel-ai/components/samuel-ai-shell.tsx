@@ -25,6 +25,7 @@ import type { ExecutiveContext as CompanyExecutiveContext } from "@/services/exe
 import type { ExecutiveDecision } from "../services/executive-decision.service";
 import type { ExecutionPlan } from "../services/executive-execution-planner.service";
 import type { ExecutiveIntelligence } from "../services/executive-intelligence.service";
+import type { ExecutiveMonitoring } from "../services/executive-monitoring.service";
 import { ChatPanel } from "./chat-panel";
 import {
   ExecutiveBriefingSection,
@@ -54,6 +55,7 @@ type SamuelAiShellProps = {
   executiveIntelligence?: ExecutiveIntelligence | null;
   executiveDecisions?: ExecutiveDecision[];
   executionPlans?: ExecutionPlan[];
+  executiveMonitoring?: ExecutiveMonitoring | null;
 };
 
 export function SamuelAiShell({
@@ -61,6 +63,7 @@ export function SamuelAiShell({
   executiveIntelligence = null,
   executiveDecisions = [],
   executionPlans = [],
+  executiveMonitoring = null,
 }: SamuelAiShellProps) {
   const [executiveBrain, setExecutiveBrain] =
     useState<ExecutiveBrain>(DEFAULT_EXECUTIVE_BRAIN);
@@ -210,6 +213,7 @@ export function SamuelAiShell({
             executiveIntelligence={executiveIntelligence}
             executiveDecisions={executiveDecisions}
             executionPlans={executionPlans}
+            executiveMonitoring={executiveMonitoring}
           />
         </aside>
       </main>

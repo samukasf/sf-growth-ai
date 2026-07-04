@@ -34,6 +34,15 @@ export {
   type ExecutionMilestone,
 } from "./executive-execution-planner.service";
 
+export {
+  buildExecutiveMonitoring,
+  type ExecutiveMonitoring,
+  type ExecutionMetric,
+  type ExecutiveAlert,
+  type ExecutiveKPI,
+  type ExecutiveProgress,
+} from "./executive-monitoring.service";
+
 /** @deprecated Use buildQueryExecutiveContext */
 export { buildQueryExecutiveContext as buildExecutiveContext } from "./executive-orchestrator.service";
 

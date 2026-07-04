@@ -4,6 +4,7 @@ import { samuelAi } from "@/features";
 import { buildExecutiveDecisions } from "@/features/samuel-ai/services/executive-decision.service";
 import { buildExecutionPlan } from "@/features/samuel-ai/services/executive-execution-planner.service";
 import { buildExecutiveIntelligence } from "@/features/samuel-ai/services/executive-intelligence.service";
+import { buildExecutiveMonitoring } from "@/features/samuel-ai/services/executive-monitoring.service";
 import {
   buildExecutiveContext,
   getFirstCompany,
@@ -38,12 +39,18 @@ export default async function SamuelAiRoute() {
 
   const executionPlans = buildExecutionPlan(executiveDecisions);
 
+  const executiveMonitoring =
+    executionPlans.length > 0
+      ? buildExecutiveMonitoring(executionPlans)
+      : null;
+
   return (
     <samuelAi.SamuelAiPage
       executiveContext={executiveContext}
       executiveIntelligence={executiveIntelligence}
       executiveDecisions={executiveDecisions}
       executionPlans={executionPlans}
+      executiveMonitoring={executiveMonitoring}
     />
   );
 }
