@@ -48,6 +48,7 @@ import type { ExecutiveForecast } from "../services/executive-forecast.service";
 import type { ExecutiveLearning } from "../services/executive-learning.service";
 import type { ExecutiveMonitoring } from "../services/executive-monitoring.service";
 import { ChatPanel } from "./chat-panel";
+import { ExecutiveExperience } from "./executive-experience";
 import {
   ExecutiveBriefingSection,
   ExecutiveDashboard,
@@ -290,6 +291,34 @@ export function SamuelAiShell({
           <CommandPanel accent className="p-5 sm:p-6">
             <ExecutiveBriefingSection briefing={briefing} />
           </CommandPanel>
+
+          {(hasActiveAnalysis || isProcessing || executiveConversation || pendingQuestion) && (
+            <CommandPanel accent className="p-5 sm:p-6">
+              <ExecutiveExperience
+                brain={executiveBrain}
+                brainStatus={brainStatus}
+                isProcessing={isProcessing}
+                orchestratorSnapshot={orchestratorSnapshot}
+                executiveConversation={executiveConversation}
+                pendingQuestion={pendingQuestion}
+                executiveCeo={executiveCeo}
+                companyName={executiveContext?.company.name}
+                analysisStartedAt={analysisStartedAt}
+                analysisCompletedAt={analysisCompletedAt}
+                moduleAvailability={{
+                  marketing: Boolean(marketingExecutive),
+                  finance: Boolean(financeExecutive),
+                  sales: Boolean(salesExecutive),
+                  operations: Boolean(operationsExecutive),
+                  hr: Boolean(hrExecutive),
+                  legal: Boolean(legalExecutive),
+                  "google-business": Boolean(googleBusinessExecutive),
+                  meta: Boolean(metaExecutive),
+                  linkedin: Boolean(linkedInExecutive),
+                }}
+              />
+            </CommandPanel>
+          )}
 
           <CommandPanel className="flex min-h-[min(420px,55dvh)] flex-1 flex-col overflow-hidden p-0 xl:min-h-[400px]">
             <div className="shrink-0 border-b border-border px-5 py-4 sm:px-6">

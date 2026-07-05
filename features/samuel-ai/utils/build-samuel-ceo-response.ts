@@ -19,15 +19,6 @@ const INTENT_LABELS: Record<ConversationIntent, string> = {
   general: "Estratégia Geral",
 };
 
-const ALIGNMENT_LABELS: Record<
-  ExecutiveConversation["executiveConsensus"]["alignment"],
-  string
-> = {
-  strong: "forte",
-  moderate: "moderado",
-  divergent: "divergente",
-};
-
 export function formatConversationIntent(intent: ConversationIntent): string {
   return INTENT_LABELS[intent];
 }
@@ -41,31 +32,25 @@ export function buildSamuelCeoResponse(
     (participant) => participant.consulted,
   );
   const intentLabel = formatConversationIntent(conversation.primaryIntent);
-  const alignment = ALIGNMENT_LABELS[conversation.executiveConsensus.alignment];
   const leadConclusion = conversation.executiveReasoning?.conclusions[0];
   const immediateAction =
-    leadConclusion?.positiveImpacts[0] ??
     conversation.executiveConsensus.primaryRecommendation;
-  const supportingPoint =
-    leadConclusion?.justification ??
+  const operationalDirective =
+    leadConclusion?.positiveImpacts[0] ??
     conversation.executiveConsensus.supportingPoints[0] ??
-    conversation.executiveConsensus.narrative;
-  const reasoningLine = conversation.executiveReasoning
-    ? `Raciocínio: ${conversation.executiveReasoning.hypotheses.filter((item) => item.status === "validated").length} hipótese(s) validada(s) com ${conversation.executiveReasoning.evidence.length} evidência(s).`
-    : null;
+    "Executar com cadência semanal e métricas de conversão visíveis.";
 
   return [
-    `Analisei sua diretriz com o Conselho Executivo da ${company}.`,
+    `Diretriz executiva — ${company}`,
     "",
-    `Diagnóstico: foco em ${intentLabel} com confiança ${conversation.confidenceScore}/100, baseada em ${consulted.length} área(s) consultada(s).`,
-    ...(reasoningLine ? ["", reasoningLine] : []),
+    `Diagnóstico: queda ou desvio identificado em ${intentLabel}. Confiança da análise: ${conversation.confidenceScore}/100, com ${consulted.length} área(s) validada(s).`,
     "",
-    `Consenso ${alignment}: ${conversation.executiveConsensus.primaryRecommendation}`,
+    `Posicionamento: ${conversation.executiveConsensus.primaryRecommendation}`,
     "",
     `Ação imediata: ${immediateAction}`,
     "",
-    `Diretriz operacional: ${supportingPoint}`,
+    `Diretriz operacional: ${operationalDirective}`,
     "",
-    `Impacto esperado: execução priorizada nos próximos 30 dias com alinhamento entre ${consulted.map((p) => p.domain).join(", ")}.`,
+    `Impacto esperado: recuperação de tração em até 30 dias, com governança entre ${consulted.map((p) => p.domain).join(", ")}.`,
   ].join("\n");
 }
