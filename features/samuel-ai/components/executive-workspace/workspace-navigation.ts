@@ -1,4 +1,5 @@
 export type WorkspaceSection =
+  | "executive-inbox"
   | "dashboard"
   | "samuel-ai"
   | "executive-alerts"
@@ -28,6 +29,7 @@ export type WorkspaceNavItem = {
 };
 
 export const WORKSPACE_NAV_ITEMS: WorkspaceNavItem[] = [
+  { id: "executive-inbox", label: "Executive Inbox", group: "core" },
   { id: "dashboard", label: "Dashboard", group: "core" },
   { id: "samuel-ai", label: "Samuel AI", group: "core" },
   { id: "executive-alerts", label: "Executive Alerts", group: "executive" },

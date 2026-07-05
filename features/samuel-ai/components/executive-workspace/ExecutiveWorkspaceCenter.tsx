@@ -17,6 +17,7 @@ import { ExecutiveWatchersSection } from "@/features/watchers/components/executi
 import { MarketWatcherSection } from "@/features/watchers/market/components/market-watcher-section";
 import { SeoWatcherSection } from "@/features/watchers/seo/components/seo-watcher-section";
 import { ExecutiveAlertCenter } from "@/features/watchers/components/executive-alert-center";
+import { ExecutiveInbox } from "@/features/executive-inbox";
 
 import { ExecutiveExperience } from "../executive-experience";
 import { MOCK_CHAT_MESSAGES } from "../../mock-data";
@@ -240,6 +241,43 @@ export function ExecutiveWorkspaceCenter({
 
   const content = (() => {
     switch (activeSection) {
+      case "executive-inbox":
+        return (
+          <CommandPanel className="p-4 sm:p-5" accent>
+            <ExecutiveInbox
+              brainStatus={data.brainStatus}
+              isProcessing={isProcessing}
+              orchestratorSnapshot={data.orchestratorSnapshot}
+              pendingQuestion={data.pendingQuestion}
+              executiveConversation={data.executiveConversation}
+              executiveContext={data.executiveContext}
+              executiveDecisions={data.executiveDecisions}
+              executiveAction={data.executiveAction}
+              executivePriority={data.executivePriority}
+              executiveRecommendation={data.executiveRecommendation}
+              executiveCeo={data.executiveCeo}
+              executiveMonitoring={data.executiveMonitoring}
+              watcherExecutive={data.watcherExecutive}
+              marketWatcher={data.marketWatcher}
+              seoWatcher={data.seoWatcher}
+              crmExecutive={data.crmExecutive}
+              marketingExecutive={data.marketingExecutive}
+              salesExecutive={data.salesExecutive}
+              financeExecutive={data.financeExecutive}
+              operationsExecutive={data.operationsExecutive}
+              hrExecutive={data.hrExecutive}
+              legalExecutive={data.legalExecutive}
+              googleBusinessExecutive={data.googleBusinessExecutive}
+              googleAnalyticsExecutive={data.googleAnalyticsExecutive}
+              searchConsoleExecutive={data.searchConsoleExecutive}
+              metaExecutive={data.metaExecutive}
+              linkedInExecutive={data.linkedInExecutive}
+              analysisStartedAt={data.analysisStartedAt}
+              analysisCompletedAt={data.analysisCompletedAt}
+            />
+          </CommandPanel>
+        );
+
       case "samuel-ai":
         return <SamuelAiWorkspace data={data} handlers={handlers} />;
 

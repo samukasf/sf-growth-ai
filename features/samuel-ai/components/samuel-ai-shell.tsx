@@ -45,7 +45,9 @@ import type { FinanceExecutive } from "@/features/finance/services/finance-execu
 import type { SalesExecutive } from "@/features/sales/services/sales-executive.service";
 import type { MarketingExecutive } from "@/features/marketing/services/marketing-executive.service";
 import type { CrmExecutive } from "@/features/crm/services/crm-executive.service";
+import type { ExecutiveAction } from "../services/executive-action.service";
 import type { ExecutiveCEO } from "../services/executive-ceo.service";
+import type { ExecutivePriority } from "../services/executive-priority.service";
 import type { ExecutiveCompetitor } from "../services/executive-competitor.service";
 import type { ExecutiveStrategy } from "../services/executive-strategy.service";
 import type { ExecutiveRecommendation } from "../services/executive-recommendation.service";
@@ -81,6 +83,8 @@ type SamuelAiShellProps = {
   executiveForecast?: ExecutiveForecast | null;
   executiveStrategy?: ExecutiveStrategy | null;
   executiveCompetitor?: ExecutiveCompetitor | null;
+  executiveAction?: ExecutiveAction | null;
+  executivePriority?: ExecutivePriority | null;
   executiveRecommendation?: ExecutiveRecommendation | null;
   executiveCeo?: ExecutiveCEO | null;
   crmExecutive?: CrmExecutive | null;
@@ -110,6 +114,8 @@ export function SamuelAiShell({
   executiveForecast = null,
   executiveStrategy = null,
   executiveCompetitor = null,
+  executiveAction = null,
+  executivePriority = null,
   executiveRecommendation = null,
   executiveCeo = null,
   crmExecutive = null,
@@ -264,6 +270,8 @@ export function SamuelAiShell({
       executiveContext={executiveContext}
       executiveIntelligence={executiveIntelligence}
       executiveDecisions={executiveDecisions}
+      executiveAction={executiveAction}
+      executivePriority={executivePriority}
       executionPlans={executionPlans}
       executiveMonitoring={executiveMonitoring}
       executiveLearning={executiveLearning}

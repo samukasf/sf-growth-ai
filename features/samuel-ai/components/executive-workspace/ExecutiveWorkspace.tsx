@@ -21,7 +21,7 @@ export function ExecutiveWorkspace({
   isProcessing,
   ...data
 }: ExecutiveWorkspaceProps) {
-  const [activeSection, setActiveSection] = useState<WorkspaceSection>("samuel-ai");
+  const [activeSection, setActiveSection] = useState<WorkspaceSection>("executive-inbox");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (

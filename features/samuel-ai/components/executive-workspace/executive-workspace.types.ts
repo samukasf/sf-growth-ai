@@ -22,7 +22,9 @@ import type {
   ExecutiveCouncil,
   ExecutiveStatus,
 } from "../../executive-brain/types";
+import type { ExecutiveAction } from "../../services/executive-action.service";
 import type { ExecutiveCEO } from "../../services/executive-ceo.service";
+import type { ExecutivePriority } from "../../services/executive-priority.service";
 import type { ExecutiveConversation } from "../../services/executive-conversation-orchestrator.service";
 import type { ExecutiveDecision } from "../../services/executive-decision.service";
 import type { ExecutionPlan } from "../../services/executive-execution-planner.service";
@@ -46,6 +48,8 @@ export type ExecutiveWorkspaceData = {
   executiveContext?: CompanyExecutiveContext | null;
   executiveIntelligence?: ExecutiveIntelligence | null;
   executiveDecisions?: ExecutiveDecision[];
+  executiveAction?: ExecutiveAction | null;
+  executivePriority?: ExecutivePriority | null;
   executionPlans?: ExecutionPlan[];
   executiveMonitoring?: ExecutiveMonitoring | null;
   executiveLearning?: ExecutiveLearning | null;

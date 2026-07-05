@@ -72,6 +72,8 @@ export function SamuelAiPage({
   executiveForecast = null,
   executiveStrategy = null,
   executiveCompetitor = null,
+  executiveAction = null,
+  executivePriority = null,
   executiveRecommendation = null,
   executiveCeo = null,
   crmExecutive = null,
@@ -103,6 +105,8 @@ export function SamuelAiPage({
       executiveForecast={executiveForecast}
       executiveStrategy={executiveStrategy}
       executiveCompetitor={competitorIntelligence}
+      executiveAction={executiveAction}
+      executivePriority={executivePriority}
       executiveRecommendation={executiveRecommendation}
       executiveCeo={executiveCeo}
       crmExecutive={crmExecutive}
