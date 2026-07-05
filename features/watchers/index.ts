@@ -44,3 +44,30 @@ export {
 } from "./services/watcher-bridge.service";
 
 export { ExecutiveWatchersSection } from "./components/executive-watchers-section";
+
+export type {
+  MarketSeverity,
+  MarketSignalType,
+  MarketSignal,
+  MarketRecommendation,
+  MarketAlert,
+  MarketOpportunity,
+  MarketThreat,
+  MarketTrend,
+  CompetitiveMovement,
+  MarketWatcherInput,
+  MarketWatcherResult,
+  MarketWatcherRunResult,
+  MarketWatcherProviderData,
+} from "./market";
+
+export {
+  MARKET_WATCHER_ID,
+  fetchMarketWatcherMockData,
+  runMarketWatcher,
+  mergeMarketWatcherWithExecutive,
+  buildCombinedWatcherExecutive,
+  enrichMemoriesWithMarketWatcher,
+  enrichIntelligenceWithMarketWatcher,
+  MarketWatcherSection,
+} from "./market";

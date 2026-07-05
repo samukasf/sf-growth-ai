@@ -29,6 +29,7 @@ import type {
 } from "../services/executive-orchestrator.types";
 import type { ExecutiveContext as CompanyExecutiveContext } from "@/services/executive-context.service";
 import type { WatcherExecutive } from "@/features/watchers/types/watcher.types";
+import type { MarketWatcherResult } from "@/features/watchers/market/market-watcher.types";
 import type { ExecutiveDecision } from "../services/executive-decision.service";
 import type { ExecutionPlan } from "../services/executive-execution-planner.service";
 import type { ExecutiveIntelligence } from "../services/executive-intelligence.service";
@@ -99,6 +100,7 @@ type SamuelAiShellProps = {
   metaExecutive?: MetaExecutive | null;
   linkedInExecutive?: LinkedInExecutive | null;
   watcherExecutive?: WatcherExecutive | null;
+  marketWatcher?: MarketWatcherResult | null;
 };
 
 export function SamuelAiShell({
@@ -125,6 +127,7 @@ export function SamuelAiShell({
   metaExecutive = null,
   linkedInExecutive = null,
   watcherExecutive = null,
+  marketWatcher = null,
 }: SamuelAiShellProps) {
   const [executiveBrain, setExecutiveBrain] =
     useState<ExecutiveBrain>(DEFAULT_EXECUTIVE_BRAIN);
@@ -389,6 +392,7 @@ export function SamuelAiShell({
             metaExecutive={metaExecutive}
             linkedInExecutive={linkedInExecutive}
             watcherExecutive={watcherExecutive}
+            marketWatcher={marketWatcher}
             executiveConversation={executiveConversation}
             pendingQuestion={pendingQuestion}
             analysisStartedAt={analysisStartedAt}

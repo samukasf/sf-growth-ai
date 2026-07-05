@@ -42,6 +42,8 @@ import type { ExecutionPlan } from "../../services/executive-execution-planner.s
 import type { ExecutiveDecision } from "../../services/executive-decision.service";
 import type { ExecutiveIntelligence } from "../../services/executive-intelligence.service";
 import { ExecutiveWatchersSection } from "@/features/watchers/components/executive-watchers-section";
+import { MarketWatcherSection } from "@/features/watchers/market/components/market-watcher-section";
+import type { MarketWatcherResult } from "@/features/watchers/market/market-watcher.types";
 import type { WatcherExecutive } from "@/features/watchers/types/watcher.types";
 import { ExecutiveLiveBoard } from "../executive-live-board";
 import { CommandPanel } from "../shared/command-panel";
@@ -93,6 +95,7 @@ type ExecutiveDashboardProps = {
   metaExecutive?: MetaExecutive | null;
   linkedInExecutive?: LinkedInExecutive | null;
   watcherExecutive?: WatcherExecutive | null;
+  marketWatcher?: MarketWatcherResult | null;
   executiveConversation?: ExecutiveConversation | null;
   pendingQuestion?: string | null;
   analysisStartedAt?: number | null;
@@ -135,6 +138,7 @@ export function ExecutiveDashboard({
   metaExecutive = null,
   linkedInExecutive = null,
   watcherExecutive = null,
+  marketWatcher = null,
   executiveConversation = null,
   pendingQuestion = null,
   analysisStartedAt = null,
@@ -288,6 +292,10 @@ export function ExecutiveDashboard({
 
       <CommandPanel className="p-4 sm:p-5" accent>
         <ExecutiveWatchersSection watchers={watcherExecutive ?? null} />
+      </CommandPanel>
+
+      <CommandPanel className="p-4 sm:p-5" accent>
+        <MarketWatcherSection marketWatcher={marketWatcher ?? null} />
       </CommandPanel>
 
       <CommandPanel className="p-4 sm:p-5" accent>
