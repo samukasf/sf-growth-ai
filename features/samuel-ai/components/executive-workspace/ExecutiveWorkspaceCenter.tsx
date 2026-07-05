@@ -150,6 +150,11 @@ function SamuelAiWorkspace({
             executiveConversation={data.executiveConversation}
             pendingQuestion={data.pendingQuestion}
             executiveCeo={data.executiveCeo}
+            executiveMonitoring={data.executiveMonitoring}
+            executiveForecast={data.executiveForecast}
+            executiveStrategy={data.executiveStrategy}
+            executiveRecommendation={data.executiveRecommendation}
+            inboxActions={handlers.inboxActions}
             companyName={data.executiveContext?.company.name}
             analysisStartedAt={data.analysisStartedAt}
             analysisCompletedAt={data.analysisCompletedAt}
@@ -300,9 +305,14 @@ export function ExecutiveWorkspaceCenter({
                 isProcessing={isProcessing}
                 orchestratorPhase={data.orchestratorSnapshot?.phase ?? null}
                 executiveCeo={data.executiveCeo}
+                executiveMonitoring={data.executiveMonitoring}
+                executiveForecast={data.executiveForecast}
+                executiveStrategy={data.executiveStrategy}
+                executiveRecommendation={data.executiveRecommendation}
                 executiveConversation={data.executiveConversation}
                 analysisStartedAt={data.analysisStartedAt}
                 analysisCompletedAt={data.analysisCompletedAt}
+                inboxActions={inboxActions}
                 moduleAvailability={{
                   marketing: Boolean(data.marketingExecutive),
                   finance: Boolean(data.financeExecutive),
@@ -552,6 +562,7 @@ export function ExecutiveWorkspaceCenter({
               pendingQuestion={data.pendingQuestion}
               analysisStartedAt={data.analysisStartedAt}
               analysisCompletedAt={data.analysisCompletedAt}
+              inboxActions={inboxActions}
             />
           </div>
         </details>

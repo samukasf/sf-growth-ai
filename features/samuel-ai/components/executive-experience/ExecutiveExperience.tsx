@@ -9,7 +9,12 @@ import { cn } from "@/utils/cn";
 import type { ExecutiveBrain, ExecutiveBrainStatus } from "../../executive-brain/types";
 import type { ExecutiveConversation } from "../../services/executive-conversation-orchestrator.service";
 import type { ExecutiveCEO } from "../../services/executive-ceo.service";
+import type { ExecutiveForecast } from "../../services/executive-forecast.service";
+import type { ExecutiveMonitoring } from "../../services/executive-monitoring.service";
+import type { ExecutiveRecommendation } from "../../services/executive-recommendation.service";
+import type { ExecutiveStrategy } from "../../services/executive-strategy.service";
 import type { OrchestratorSnapshot } from "../../services/executive-orchestrator.types";
+import type { ExecutiveInboxActionRecord } from "@/features/executive-inbox/executive-inbox.types";
 import { ExecutiveLiveBoard } from "../executive-live-board";
 import { SectionHeader } from "../section-header";
 import { StatusBadge } from "../shared/status-badge";
@@ -32,6 +37,11 @@ export type ExecutiveExperienceProps = {
   executiveConversation?: ExecutiveConversation | null;
   pendingQuestion?: string | null;
   executiveCeo?: ExecutiveCEO | null;
+  executiveMonitoring?: ExecutiveMonitoring | null;
+  executiveForecast?: ExecutiveForecast | null;
+  executiveStrategy?: ExecutiveStrategy | null;
+  executiveRecommendation?: ExecutiveRecommendation | null;
+  inboxActions?: ExecutiveInboxActionRecord[];
   companyName?: string;
   analysisStartedAt?: number | null;
   analysisCompletedAt?: number | null;
@@ -126,6 +136,11 @@ export function ExecutiveExperience({
   executiveConversation = null,
   pendingQuestion = null,
   executiveCeo = null,
+  executiveMonitoring = null,
+  executiveForecast = null,
+  executiveStrategy = null,
+  executiveRecommendation = null,
+  inboxActions = [],
   companyName,
   analysisStartedAt = null,
   analysisCompletedAt = null,
@@ -337,9 +352,14 @@ export function ExecutiveExperience({
         isProcessing={isProcessing}
         orchestratorPhase={orchestratorSnapshot?.phase ?? null}
         executiveCeo={executiveCeo}
+        executiveMonitoring={executiveMonitoring}
+        executiveForecast={executiveForecast}
+        executiveStrategy={executiveStrategy}
+        executiveRecommendation={executiveRecommendation}
         executiveConversation={executiveConversation}
         analysisStartedAt={analysisStartedAt}
         analysisCompletedAt={analysisCompletedAt}
+        inboxActions={inboxActions}
         moduleAvailability={moduleAvailability}
       />
 

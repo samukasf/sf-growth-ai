@@ -49,6 +49,7 @@ import { SeoWatcherSection } from "@/features/watchers/seo/components/seo-watche
 import type { SeoWatcherResult } from "@/features/watchers/seo/seo-watcher.types";
 import { ExecutiveAlertCenter } from "@/features/watchers/components/executive-alert-center";
 import type { WatcherExecutive } from "@/features/watchers/types/watcher.types";
+import type { ExecutiveInboxActionRecord } from "@/features/executive-inbox/executive-inbox.types";
 import { ExecutiveLiveBoard } from "../executive-live-board";
 import { ExecutiveTimeline } from "../executive-timeline";
 import { CommandPanel } from "../shared/command-panel";
@@ -107,6 +108,7 @@ type ExecutiveDashboardProps = {
   pendingQuestion?: string | null;
   analysisStartedAt?: number | null;
   analysisCompletedAt?: number | null;
+  inboxActions?: ExecutiveInboxActionRecord[];
 };
 
 const STATUS_LABELS: Record<ExecutiveBrainStatus, string> = {
@@ -152,6 +154,7 @@ export function ExecutiveDashboard({
   pendingQuestion = null,
   analysisStartedAt = null,
   analysisCompletedAt = null,
+  inboxActions = [],
 }: ExecutiveDashboardProps) {
   const statusWithTimestamp: ExecutiveStatus = {
     ...executiveStatus,
@@ -176,9 +179,14 @@ export function ExecutiveDashboard({
           isProcessing={isProcessing}
           orchestratorPhase={orchestratorSnapshot?.phase ?? null}
           executiveCeo={executiveCeo}
+          executiveMonitoring={executiveMonitoring}
+          executiveForecast={executiveForecast}
+          executiveStrategy={executiveStrategy}
+          executiveRecommendation={executiveRecommendation}
           executiveConversation={executiveConversation}
           analysisStartedAt={analysisStartedAt}
           analysisCompletedAt={analysisCompletedAt}
+          inboxActions={inboxActions}
           moduleAvailability={{
             marketing: Boolean(marketingExecutive),
             finance: Boolean(financeExecutive),
