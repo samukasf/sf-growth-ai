@@ -1,3 +1,4 @@
+import type { FinanceExecutive } from "@/features/finance/services/finance-executive.service";
 import type { SalesExecutive } from "@/features/sales/services/sales-executive.service";
 import type { MarketingExecutive } from "@/features/marketing/services/marketing-executive.service";
 import type { CrmExecutive } from "@/features/crm/services/crm-executive.service";
@@ -36,6 +37,7 @@ type SamuelAiPageProps = {
   crmExecutive?: CrmExecutive | null;
   marketingExecutive?: MarketingExecutive | null;
   salesExecutive?: SalesExecutive | null;
+  financeExecutive?: FinanceExecutive | null;
 };
 
 export function SamuelAiPage({
@@ -55,6 +57,7 @@ export function SamuelAiPage({
   crmExecutive = null,
   marketingExecutive = null,
   salesExecutive = null,
+  financeExecutive = null,
 }: SamuelAiPageProps) {
   const competitorIntelligence = executiveCompetitor ?? buildExecutiveCompetitor();
 
@@ -73,6 +76,7 @@ export function SamuelAiPage({
       crmExecutive={crmExecutive}
       marketingExecutive={marketingExecutive}
       salesExecutive={salesExecutive}
+      financeExecutive={financeExecutive}
     />
   );
 }

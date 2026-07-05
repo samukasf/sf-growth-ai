@@ -1,6 +1,7 @@
 export * as crm from "./crm";
 export * as marketing from "./marketing";
 export * as sales from "./sales";
+export * as finance from "./finance";
 export * as auth from "./auth";
 export * as business from "./business";
 export * as dashboard from "./dashboard";
