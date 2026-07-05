@@ -70,6 +70,7 @@ export function SamuelAiPage({
   executiveForecast = null,
   executiveStrategy = null,
   executiveCompetitor = null,
+  executiveRecommendation = null,
   executiveCeo = null,
   crmExecutive = null,
   marketingExecutive = null,
@@ -99,6 +100,7 @@ export function SamuelAiPage({
       executiveForecast={executiveForecast}
       executiveStrategy={executiveStrategy}
       executiveCompetitor={competitorIntelligence}
+      executiveRecommendation={executiveRecommendation}
       executiveCeo={executiveCeo}
       crmExecutive={crmExecutive}
       marketingExecutive={marketingExecutive}

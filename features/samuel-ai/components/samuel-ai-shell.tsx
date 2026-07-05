@@ -48,6 +48,7 @@ import type { CrmExecutive } from "@/features/crm/services/crm-executive.service
 import type { ExecutiveCEO } from "../services/executive-ceo.service";
 import type { ExecutiveCompetitor } from "../services/executive-competitor.service";
 import type { ExecutiveStrategy } from "../services/executive-strategy.service";
+import type { ExecutiveRecommendation } from "../services/executive-recommendation.service";
 import type { ExecutiveForecast } from "../services/executive-forecast.service";
 import type { ExecutiveLearning } from "../services/executive-learning.service";
 import type { ExecutiveMonitoring } from "../services/executive-monitoring.service";
@@ -86,6 +87,7 @@ type SamuelAiShellProps = {
   executiveForecast?: ExecutiveForecast | null;
   executiveStrategy?: ExecutiveStrategy | null;
   executiveCompetitor?: ExecutiveCompetitor | null;
+  executiveRecommendation?: ExecutiveRecommendation | null;
   executiveCeo?: ExecutiveCEO | null;
   crmExecutive?: CrmExecutive | null;
   marketingExecutive?: MarketingExecutive | null;
@@ -113,6 +115,7 @@ export function SamuelAiShell({
   executiveForecast = null,
   executiveStrategy = null,
   executiveCompetitor = null,
+  executiveRecommendation = null,
   executiveCeo = null,
   crmExecutive = null,
   marketingExecutive = null,
@@ -378,6 +381,7 @@ export function SamuelAiShell({
             executiveLearning={executiveLearning}
             executiveForecast={executiveForecast}
             executiveStrategy={executiveStrategy}
+            executiveRecommendation={executiveRecommendation}
             executiveCeo={executiveCeo}
             crmExecutive={crmExecutive}
             marketingExecutive={marketingExecutive}

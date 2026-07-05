@@ -35,6 +35,7 @@ import { CrmExecutiveSummarySection } from "@/features/crm/components/crm-execut
 import type { CrmExecutive } from "@/features/crm/services/crm-executive.service";
 import type { ExecutiveCEO } from "../../services/executive-ceo.service";
 import type { ExecutiveStrategy } from "../../services/executive-strategy.service";
+import type { ExecutiveRecommendation } from "../../services/executive-recommendation.service";
 import type { ExecutiveForecast } from "../../services/executive-forecast.service";
 import type { ExecutiveLearning } from "../../services/executive-learning.service";
 import type { ExecutiveMonitoring } from "../../services/executive-monitoring.service";
@@ -46,6 +47,7 @@ import { MarketWatcherSection } from "@/features/watchers/market/components/mark
 import type { MarketWatcherResult } from "@/features/watchers/market/market-watcher.types";
 import type { WatcherExecutive } from "@/features/watchers/types/watcher.types";
 import { ExecutiveLiveBoard } from "../executive-live-board";
+import { ExecutiveTimeline } from "../executive-timeline";
 import { CommandPanel } from "../shared/command-panel";
 import { SectionHeader } from "../section-header";
 import { ExecutiveActionPlanSection } from "./executive-action-plan-section";
@@ -81,6 +83,7 @@ type ExecutiveDashboardProps = {
   executiveLearning?: ExecutiveLearning | null;
   executiveForecast?: ExecutiveForecast | null;
   executiveStrategy?: ExecutiveStrategy | null;
+  executiveRecommendation?: ExecutiveRecommendation | null;
   executiveCeo?: ExecutiveCEO | null;
   crmExecutive?: CrmExecutive | null;
   marketingExecutive?: MarketingExecutive | null;
@@ -124,6 +127,7 @@ export function ExecutiveDashboard({
   executiveLearning = null,
   executiveForecast = null,
   executiveStrategy = null,
+  executiveRecommendation = null,
   executiveCeo = null,
   crmExecutive = null,
   marketingExecutive = null,
@@ -183,6 +187,29 @@ export function ExecutiveDashboard({
             meta: Boolean(metaExecutive),
             linkedin: Boolean(linkedInExecutive),
           }}
+        />
+      </CommandPanel>
+
+      <CommandPanel className="p-4 sm:p-5" accent={isProcessing}>
+        <ExecutiveTimeline
+          brainStatus={status}
+          isProcessing={isProcessing}
+          orchestratorSnapshot={orchestratorSnapshot}
+          pendingQuestion={pendingQuestion}
+          executiveConversation={executiveConversation}
+          executiveContext={executiveContext}
+          executiveIntelligence={executiveIntelligence}
+          executiveStrategy={executiveStrategy}
+          executiveRecommendation={executiveRecommendation}
+          executiveCeo={executiveCeo}
+          marketingExecutive={marketingExecutive}
+          financeExecutive={financeExecutive}
+          salesExecutive={salesExecutive}
+          operationsExecutive={operationsExecutive}
+          watcherExecutive={watcherExecutive}
+          marketWatcher={marketWatcher}
+          analysisStartedAt={analysisStartedAt}
+          analysisCompletedAt={analysisCompletedAt}
         />
       </CommandPanel>
 
