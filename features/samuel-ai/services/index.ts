@@ -84,13 +84,11 @@ export {
   type CompetitorWeakness,
   type CompetitorOpportunity,
   type CompetitorThreat,
-  type CompetitiveGap,
-  type CompetitiveAdvantage,
-  type CompetitorStrategy,
-  type MarketShareEstimate,
-  type PriceRange,
-  type CompetitiveSwot,
-  type StrategicRecommendation,
+  type MarketShare,
+  type PricePosition,
+  type CompetitorDifferentiator,
+  type MarketGap,
+  type CompetitorRecommendation,
 } from "./executive-competitor.service";
 
 /** @deprecated Use buildQueryExecutiveContext */
