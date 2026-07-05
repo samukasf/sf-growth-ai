@@ -113,6 +113,15 @@ export {
   type BlockedAction,
 } from "./executive-priority.service";
 
+export {
+  buildExecutiveRecommendation,
+  type ExecutiveRecommendation,
+  type ExecutiveRecommendationInput,
+  type ExecutiveRecommendationItem,
+  type RecommendationPriority,
+  type RecommendationRisk,
+} from "./executive-recommendation.service";
+
 /** @deprecated Use buildQueryExecutiveContext */
 export { buildQueryExecutiveContext as buildExecutiveContext } from "./executive-orchestrator.service";
 
