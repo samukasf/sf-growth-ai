@@ -10,6 +10,10 @@ import {
   buildMarketingExecutiveForCompany,
 } from "@/features/marketing/services/marketing-executive.service";
 import {
+  buildHrExecutive,
+  buildHrExecutiveForCompany,
+} from "@/features/hr/services/hr-executive.service";
+import {
   buildOperationsExecutive,
   buildOperationsExecutiveForCompany,
 } from "@/features/operations/services/operations-executive.service";
@@ -268,6 +272,41 @@ export default async function SamuelAiRoute() {
     });
   }
 
+  const hrEngines = {
+    strategy: executiveStrategy,
+    intelligence: executiveIntelligence,
+    learning: executiveLearning,
+    forecast: executiveForecast,
+    competitor: executiveCompetitor,
+    monitoring: executiveMonitoring,
+    action: executiveAction,
+    priority: executivePriority,
+    recommendation: executiveRecommendation,
+    operationsExecutive,
+    salesExecutive,
+    financeExecutive,
+  };
+
+  let hrExecutive = buildHrExecutive({
+    companyName: executiveContext?.company.name,
+    ...hrEngines,
+  });
+
+  try {
+    if (executiveContext?.company.id) {
+      hrExecutive = await buildHrExecutiveForCompany(
+        executiveContext.company.id,
+        executiveContext.company.name,
+        hrEngines,
+      );
+    }
+  } catch {
+    hrExecutive = buildHrExecutive({
+      companyName: executiveContext?.company.name,
+      ...hrEngines,
+    });
+  }
+
   const executiveCeo = buildExecutiveCEO({
     context: executiveContext,
     intelligence: executiveIntelligence,
@@ -286,6 +325,7 @@ export default async function SamuelAiRoute() {
     salesExecutive,
     financeExecutive,
     operationsExecutive,
+    hrExecutive,
   });
 
   return (
@@ -308,6 +348,7 @@ export default async function SamuelAiRoute() {
       salesExecutive={salesExecutive}
       financeExecutive={financeExecutive}
       operationsExecutive={operationsExecutive}
+      hrExecutive={hrExecutive}
     />
   );
 }

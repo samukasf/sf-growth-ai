@@ -25,6 +25,7 @@ import type { ExecutiveContext as CompanyExecutiveContext } from "@/services/exe
 import type { ExecutiveDecision } from "../services/executive-decision.service";
 import type { ExecutionPlan } from "../services/executive-execution-planner.service";
 import type { ExecutiveIntelligence } from "../services/executive-intelligence.service";
+import type { HrExecutive } from "@/features/hr/services/hr-executive.service";
 import type { OperationsExecutive } from "@/features/operations/services/operations-executive.service";
 import type { FinanceExecutive } from "@/features/finance/services/finance-executive.service";
 import type { SalesExecutive } from "@/features/sales/services/sales-executive.service";
@@ -76,6 +77,7 @@ type SamuelAiShellProps = {
   salesExecutive?: SalesExecutive | null;
   financeExecutive?: FinanceExecutive | null;
   operationsExecutive?: OperationsExecutive | null;
+  hrExecutive?: HrExecutive | null;
 };
 
 export function SamuelAiShell({
@@ -94,6 +96,7 @@ export function SamuelAiShell({
   salesExecutive = null,
   financeExecutive = null,
   operationsExecutive = null,
+  hrExecutive = null,
 }: SamuelAiShellProps) {
   const [executiveBrain, setExecutiveBrain] =
     useState<ExecutiveBrain>(DEFAULT_EXECUTIVE_BRAIN);
@@ -253,6 +256,7 @@ export function SamuelAiShell({
             salesExecutive={salesExecutive}
             financeExecutive={financeExecutive}
             operationsExecutive={operationsExecutive}
+            hrExecutive={hrExecutive}
           />
         </aside>
       </main>

@@ -374,8 +374,8 @@ function buildOperationalRisks(
   for (const weakness of input.intelligence?.weaknesses.slice(0, 1) ?? []) {
     risks.push({
       id: `risk-${index++}`,
-      title: weakness.title,
-      description: weakness.description,
+      title: weakness.split(/[.—]/)[0]?.trim() ?? weakness.slice(0, 60),
+      description: weakness,
       severity: "medium",
     });
   }
@@ -408,8 +408,8 @@ function buildOperationalOpportunities(input: OperationsExecutiveInput): Operati
   for (const opp of input.intelligence?.opportunities.slice(0, 1) ?? []) {
     opportunities.push({
       id: `opp-${index++}`,
-      title: opp.title,
-      description: opp.description,
+      title: opp.split(/[.—]/)[0]?.trim() ?? opp.slice(0, 60),
+      description: opp,
       severity: "medium",
     });
   }
@@ -469,9 +469,9 @@ function buildProcessGaps(input: OperationsExecutiveInput): OperationsGapItem[] 
   for (const weakness of input.intelligence?.weaknesses.slice(0, 2) ?? []) {
     gaps.push({
       id: `gap-${index++}`,
-      title: weakness.title,
+      title: weakness.split(/[.—]/)[0]?.trim() ?? weakness.slice(0, 60),
       area: "Inteligência",
-      impact: weakness.description,
+      impact: weakness,
     });
   }
 
