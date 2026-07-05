@@ -67,13 +67,10 @@ export {
 export {
   buildExecutiveStrategy,
   type ExecutiveStrategy,
+  type ExecutiveStrategyInput,
   type StrategicObjective,
-  type StrategicInitiative,
-  type StrategicPillar,
-  type StrategicRisk,
-  type StrategicAdvantage,
-  type CompetitiveMove,
-  type StrategicRoadmap,
+  type StrategicObjectivesByHorizon,
+  type StrategicPlan,
 } from "./executive-strategy.service";
 
 export {

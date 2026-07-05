@@ -64,6 +64,8 @@ export default async function SamuelAiRoute() {
     learning: executiveLearning,
   });
 
+  const executiveCompetitor = buildExecutiveCompetitor();
+
   const executiveStrategy = buildExecutiveStrategy({
     context: executiveContext,
     intelligence: executiveIntelligence,
@@ -72,9 +74,8 @@ export default async function SamuelAiRoute() {
     monitoring: executiveMonitoring,
     learning: executiveLearning,
     forecast: executiveForecast,
+    competitor: executiveCompetitor,
   });
-
-  const executiveCompetitor = buildExecutiveCompetitor();
 
   return (
     <samuelAi.SamuelAiPage
