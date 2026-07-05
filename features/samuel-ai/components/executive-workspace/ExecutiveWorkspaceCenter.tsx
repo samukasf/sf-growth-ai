@@ -207,6 +207,7 @@ function SamuelAiWorkspace({
           marketWatcher={data.marketWatcher}
           analysisStartedAt={data.analysisStartedAt}
           analysisCompletedAt={data.analysisCompletedAt}
+          inboxActions={handlers.inboxActions}
         />
       </CommandPanel>
 
@@ -229,12 +230,16 @@ export function ExecutiveWorkspaceCenter({
   onSendMessage,
   onFirstMessage,
   isProcessing,
+  inboxActions = [],
+  onInboxAction,
   ...data
 }: ExecutiveWorkspaceCenterProps) {
   const handlers: ExecutiveWorkspaceHandlers = {
     onSendMessage,
     onFirstMessage,
     isProcessing,
+    inboxActions,
+    onInboxAction,
   };
 
   const sectionLabel = getWorkspaceSectionLabel(activeSection);
@@ -274,6 +279,8 @@ export function ExecutiveWorkspaceCenter({
               linkedInExecutive={data.linkedInExecutive}
               analysisStartedAt={data.analysisStartedAt}
               analysisCompletedAt={data.analysisCompletedAt}
+              inboxActions={inboxActions}
+              onInboxAction={onInboxAction}
             />
           </CommandPanel>
         );
@@ -363,6 +370,7 @@ export function ExecutiveWorkspaceCenter({
               marketWatcher={data.marketWatcher}
               analysisStartedAt={data.analysisStartedAt}
               analysisCompletedAt={data.analysisCompletedAt}
+              inboxActions={inboxActions}
             />
           </CommandPanel>
         );

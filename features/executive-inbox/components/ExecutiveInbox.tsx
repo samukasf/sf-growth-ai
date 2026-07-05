@@ -9,30 +9,23 @@ import {
   filterExecutiveInboxItems,
   type BuildExecutiveInboxInput,
 } from "../services/executive-inbox.service";
+import type { InboxActionType } from "../executive-inbox.types";
 import { ExecutiveInboxCard } from "./ExecutiveInboxCard";
 import { ExecutiveInboxFilters } from "./ExecutiveInboxFilters";
 import { ExecutiveInboxSummary } from "./ExecutiveInboxSummary";
-import type { ExecutiveInboxFilter, InboxStatus } from "../executive-inbox.types";
+import type { ExecutiveInboxFilter, ExecutiveInboxItem } from "../executive-inbox.types";
 
-export type ExecutiveInboxProps = BuildExecutiveInboxInput;
+export type ExecutiveInboxProps = BuildExecutiveInboxInput & {
+  onInboxAction?: (item: ExecutiveInboxItem, action: InboxActionType) => void;
+};
 
-export function ExecutiveInbox(props: ExecutiveInboxProps) {
+export function ExecutiveInbox({ onInboxAction, ...props }: ExecutiveInboxProps) {
   const [activeFilter, setActiveFilter] = useState<ExecutiveInboxFilter>("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [statusOverrides, setStatusOverrides] = useState<Record<string, InboxStatus>>({});
 
-  const { items: baseItems, summary } = useMemo(
+  const { items, summary } = useMemo(
     () => buildExecutiveInbox(props),
     [props],
-  );
-
-  const items = useMemo(
-    () =>
-      baseItems.map((item) => ({
-        ...item,
-        status: statusOverrides[item.id] ?? item.status,
-      })),
-    [baseItems, statusOverrides],
   );
 
   const filteredItems = useMemo(
@@ -71,8 +64,8 @@ export function ExecutiveInbox(props: ExecutiveInboxProps) {
     (item) => item.status === "resolved" || item.status === "archived",
   ).length;
 
-  const updateStatus = (id: string, status: InboxStatus) => {
-    setStatusOverrides((current) => ({ ...current, [id]: status }));
+  const handleAction = (item: ExecutiveInboxItem, action: InboxActionType) => {
+    onInboxAction?.(item, action);
   };
 
   return (
@@ -104,10 +97,10 @@ export function ExecutiveInbox(props: ExecutiveInboxProps) {
                 onOpen={() =>
                   setExpandedId((current) => (current === item.id ? null : item.id))
                 }
-                onDelegate={() => updateStatus(item.id, "delegated")}
-                onResolve={() => updateStatus(item.id, "resolved")}
-                onArchive={() => updateStatus(item.id, "archived")}
-                onExecute={() => updateStatus(item.id, "executing")}
+                onApprove={() => handleAction(item, "approve")}
+                onComplete={() => handleAction(item, "complete")}
+                onDismiss={() => handleAction(item, "dismiss")}
+                onDefer={() => handleAction(item, "defer")}
               />
             ))
           ) : (

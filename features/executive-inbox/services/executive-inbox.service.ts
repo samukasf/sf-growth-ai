@@ -30,6 +30,7 @@ import type { WatcherExecutive } from "@/features/watchers/types/watcher.types";
 import type {
   ExecutiveInboxFilter,
   ExecutiveInboxItem,
+  ExecutiveInboxActionRecord,
   ExecutiveInboxState,
   ExecutiveInboxSummaryData,
   InboxCategory,
@@ -37,6 +38,11 @@ import type {
   InboxPriority,
   InboxStatus,
 } from "../executive-inbox.types";
+import {
+  getLatestInboxStatusByItem,
+  INBOX_ACTION_LABELS,
+} from "./executive-inbox-persistence.service";
+import type { ExecutiveTimelineState } from "@/features/samuel-ai/components/executive-timeline/executive-timeline.types";
 
 export type BuildExecutiveInboxInput = {
   brainStatus?: ExecutiveBrainStatus;
@@ -68,6 +74,7 @@ export type BuildExecutiveInboxInput = {
   linkedInExecutive?: LinkedInExecutive | null;
   analysisStartedAt?: number | null;
   analysisCompletedAt?: number | null;
+  inboxActions?: ExecutiveInboxActionRecord[];
 };
 
 const PRIORITY_ORDER: Record<InboxPriority, number> = {
@@ -416,10 +423,179 @@ export function buildExecutiveInbox(input: BuildExecutiveInboxInput): ExecutiveI
   );
 
   const sorted = sortItems(deduped);
+  const itemsWithActions = applyInboxActionsToItems(sorted, input.inboxActions ?? []);
 
   return {
-    items: sorted,
-    summary: buildSummary(sorted, input.executiveCeo),
+    items: itemsWithActions,
+    summary: buildSummary(itemsWithActions, input.executiveCeo),
+  };
+}
+
+export function applyInboxActionsToItems(
+  items: ExecutiveInboxItem[],
+  actions: ExecutiveInboxActionRecord[],
+): ExecutiveInboxItem[] {
+  if (actions.length === 0) return items;
+
+  return items.map((item) => {
+    const status = getLatestInboxStatusByItem(actions, item.id);
+    return status ? { ...item, status } : item;
+  });
+}
+
+export function applyInboxActionsToMonitoring(
+  monitoring: ExecutiveMonitoring,
+  actions: ExecutiveInboxActionRecord[],
+): ExecutiveMonitoring {
+  if (actions.length === 0) return monitoring;
+
+  const completedCount = actions.filter((action) => action.action === "complete").length;
+  const dismissedCount = actions.filter((action) => action.action === "dismiss").length;
+  const approvedCount = actions.filter((action) => action.action === "approve").length;
+  const deferredCount = actions.filter((action) => action.action === "defer").length;
+
+  const progress = {
+    ...monitoring.progress,
+    completedTasks: monitoring.progress.completedTasks + completedCount,
+    pendingTasks: Math.max(
+      0,
+      monitoring.progress.pendingTasks - completedCount - dismissedCount,
+    ),
+    inProgressTasks: monitoring.progress.inProgressTasks + approvedCount,
+    overall: Math.min(100, monitoring.progress.overall + completedCount * 2),
+    delayRisk: Math.max(0, monitoring.progress.delayRisk - completedCount * 3),
+  };
+
+  const indicators = [
+    ...actions
+      .slice(-5)
+      .reverse()
+      .map(
+        (action) =>
+          `Inbox · ${INBOX_ACTION_LABELS[action.action]}: ${action.itemTitle}`,
+      ),
+    ...monitoring.indicators,
+  ].slice(0, 8);
+
+  const timeline = [
+    ...actions
+      .slice(-5)
+      .reverse()
+      .map((action) => ({
+        id: action.id,
+        planId: "executive-inbox",
+        planTitle: "Executive Inbox",
+        label: `${INBOX_ACTION_LABELS[action.action]}: ${action.itemTitle}`,
+        deadline: action.timestamp,
+        status:
+          action.action === "complete"
+            ? ("completed" as const)
+            : action.action === "approve"
+              ? ("in_progress" as const)
+              : action.action === "defer"
+                ? ("at_risk" as const)
+                : ("pending" as const),
+      })),
+    ...monitoring.timeline,
+  ].slice(0, 12);
+
+  const alerts =
+    deferredCount > 0
+      ? [
+          {
+            id: "inbox-deferred-alert",
+            type: "blocked_dependency" as const,
+            title: "Itens adiados na Executive Inbox",
+            message: `${deferredCount} item(ns) aguardando nova janela de execução.`,
+            severity: "medium" as const,
+          },
+          ...monitoring.alerts,
+        ]
+      : monitoring.alerts;
+
+  return {
+    ...monitoring,
+    progress,
+    indicators,
+    timeline,
+    alerts,
+  };
+}
+
+export function applyInboxActionsToCeo(
+  ceo: ExecutiveCEO,
+  actions: ExecutiveInboxActionRecord[],
+): ExecutiveCEO {
+  if (actions.length === 0) return ceo;
+
+  const completedCount = actions.filter((action) => action.action === "complete").length;
+  const approvedCount = actions.filter((action) => action.action === "approve").length;
+  const latestAction = actions[actions.length - 1];
+
+  const executiveScore = Math.min(100, ceo.executiveScore + completedCount * 2);
+  const riskScore = Math.max(0, ceo.riskScore - completedCount * 2 - approvedCount);
+  const growthScore = Math.min(100, ceo.growthScore + completedCount);
+
+  const inboxSummary = `${actions.length} ação(ões) registrada(s) na Executive Inbox (${completedCount} concluída(s), ${approvedCount} em execução).`;
+
+  return {
+    ...ceo,
+    executiveScore,
+    riskScore,
+    growthScore,
+    executiveSummary: `${ceo.executiveSummary} ${inboxSummary}`,
+    nextActions: [
+      ...actions
+        .filter((action) => action.action === "approve")
+        .slice(-2)
+        .map((action) => `${action.itemTitle} (em execução)`),
+      ...ceo.nextActions,
+    ]
+      .filter(Boolean)
+      .slice(0, 6),
+    ceoMessage: `${ceo.ceoMessage} Última ação da inbox: ${INBOX_ACTION_LABELS[latestAction.action]} — ${latestAction.itemTitle}.`,
+    companyHealth: {
+      ...ceo.companyHealth,
+      score: Math.min(100, ceo.companyHealth.score + completedCount),
+      summary: `${ceo.companyHealth.summary} ${inboxSummary}`,
+    },
+  };
+}
+
+export function applyInboxActionsToTimeline(
+  timeline: ExecutiveTimelineState,
+  actions: ExecutiveInboxActionRecord[],
+): ExecutiveTimelineState {
+  if (actions.length === 0) return timeline;
+
+  const maxOrder = Math.max(...timeline.steps.map((step) => step.order), 0);
+  const completedCount = actions.filter((action) => action.action === "complete").length;
+
+  const inboxSteps = actions.slice(-5).map((action, index) => ({
+    id: "ceo-response" as const,
+    order: maxOrder + index + 1,
+    title: `Inbox · ${INBOX_ACTION_LABELS[action.action]}`,
+    description: action.itemTitle,
+    status:
+      action.action === "complete"
+        ? ("Completed" as const)
+        : action.action === "approve"
+          ? ("Running" as const)
+          : action.action === "defer"
+            ? ("Warning" as const)
+            : ("Completed" as const),
+    timestamp: action.timestamp,
+    durationMs: null,
+    confidence: 85,
+    responsible: "Executive Inbox",
+    detail: `${action.origin} · ${action.area}`,
+  }));
+
+  return {
+    ...timeline,
+    steps: [...timeline.steps, ...inboxSteps],
+    progressPercent: Math.min(100, timeline.progressPercent + completedCount * 2),
+    isLive: actions.some((action) => action.action === "approve"),
   };
 }
 

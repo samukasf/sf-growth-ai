@@ -1,3 +1,23 @@
+export type InboxActionType = "approve" | "complete" | "dismiss" | "defer";
+
+export type ExecutiveInboxActionRecord = {
+  id: string;
+  itemId: string;
+  itemTitle: string;
+  itemType: InboxItemType;
+  action: InboxActionType;
+  status: InboxStatus;
+  timestamp: string;
+  origin: string;
+  area: string;
+};
+
+export type ExecutiveInboxActionsState = {
+  companyId: string;
+  actions: ExecutiveInboxActionRecord[];
+  updatedAt: string;
+};
+
 export type InboxPriority = "Critical" | "High" | "Medium" | "Low";
 
 export type InboxStatus =

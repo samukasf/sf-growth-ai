@@ -6,10 +6,14 @@ import { cn } from "@/utils/cn";
 
 import { SectionHeader } from "../section-header";
 import { buildExecutiveTimeline, type BuildExecutiveTimelineInput } from "./build-executive-timeline";
+import { applyInboxActionsToTimeline } from "@/features/executive-inbox";
+import type { ExecutiveInboxActionRecord } from "@/features/executive-inbox/executive-inbox.types";
 import { TimelineStep } from "./TimelineStep";
 import { TimelineEvent } from "./TimelineEvent";
 
-export type ExecutiveTimelineProps = BuildExecutiveTimelineInput;
+export type ExecutiveTimelineProps = BuildExecutiveTimelineInput & {
+  inboxActions?: ExecutiveInboxActionRecord[];
+};
 
 function formatDuration(ms: number): string {
   if (ms < 1000) return `${ms}ms`;
@@ -33,10 +37,10 @@ export function ExecutiveTimeline(props: ExecutiveTimelineProps) {
     return () => window.clearInterval(interval);
   }, [props.isProcessing]);
 
-  const timeline = useMemo(
-    () => buildExecutiveTimeline({ ...props, now }),
-    [props, now],
-  );
+  const timeline = useMemo(() => {
+    const baseTimeline = buildExecutiveTimeline({ ...props, now });
+    return applyInboxActionsToTimeline(baseTimeline, props.inboxActions ?? []);
+  }, [props, now]);
 
   return (
     <section className="flex flex-col gap-4">
@@ -82,7 +86,7 @@ export function ExecutiveTimeline(props: ExecutiveTimelineProps) {
         <ol className="relative flex flex-col gap-0">
           {timeline.steps.map((step, index) => (
             <TimelineStep
-              key={step.id}
+              key={`${step.id}-${step.order}`}
               step={step}
               isLast={index === timeline.steps.length - 1}
             />

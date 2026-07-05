@@ -14,6 +14,11 @@ import type { MarketWatcherResult } from "@/features/watchers/market/market-watc
 import type { SeoWatcherResult } from "@/features/watchers/seo/seo-watcher.types";
 import type { WatcherExecutive } from "@/features/watchers/types/watcher.types";
 import type { ExecutiveContext as CompanyExecutiveContext } from "@/services/executive-context.service";
+import type {
+  ExecutiveInboxActionRecord,
+  ExecutiveInboxItem,
+  InboxActionType,
+} from "@/features/executive-inbox/executive-inbox.types";
 
 import type {
   ExecutiveBrain,
@@ -82,4 +87,6 @@ export type ExecutiveWorkspaceHandlers = {
   onSendMessage: (content: string) => Promise<string>;
   onFirstMessage: () => void;
   isProcessing: boolean;
+  inboxActions?: ExecutiveInboxActionRecord[];
+  onInboxAction?: (item: ExecutiveInboxItem, action: InboxActionType) => void;
 };

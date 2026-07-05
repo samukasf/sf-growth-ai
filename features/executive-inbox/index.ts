@@ -1,4 +1,7 @@
 export type {
+  InboxActionType,
+  ExecutiveInboxActionRecord,
+  ExecutiveInboxActionsState,
   InboxPriority,
   InboxStatus,
   InboxCategory,
@@ -13,8 +16,21 @@ export {
   buildExecutiveInbox,
   filterExecutiveInboxItems,
   getInboxTypeLabel,
+  applyInboxActionsToItems,
+  applyInboxActionsToMonitoring,
+  applyInboxActionsToCeo,
+  applyInboxActionsToTimeline,
 } from "./services/executive-inbox.service";
 export type { BuildExecutiveInboxInput } from "./services/executive-inbox.service";
+
+export {
+  loadExecutiveInboxActions,
+  persistExecutiveInboxAction,
+  mapInboxActionToStatus,
+  createExecutiveInboxActionRecord,
+  getLatestInboxStatusByItem,
+  INBOX_ACTION_LABELS,
+} from "./services/executive-inbox-persistence.service";
 
 export { ExecutiveInbox } from "./components/ExecutiveInbox";
 export type { ExecutiveInboxProps } from "./components/ExecutiveInbox";

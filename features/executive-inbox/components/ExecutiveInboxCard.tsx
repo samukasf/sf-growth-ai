@@ -9,10 +9,10 @@ type ExecutiveInboxCardProps = {
   item: ExecutiveInboxItem;
   expanded?: boolean;
   onOpen?: () => void;
-  onDelegate?: () => void;
-  onResolve?: () => void;
-  onArchive?: () => void;
-  onExecute?: () => void;
+  onApprove?: () => void;
+  onComplete?: () => void;
+  onDismiss?: () => void;
+  onDefer?: () => void;
 };
 
 function priorityVariant(priority: InboxPriority) {
@@ -29,13 +29,13 @@ function priorityVariant(priority: InboxPriority) {
 function statusLabel(status: InboxStatus): string {
   switch (status) {
     case "resolved":
-      return "Resolvido";
+      return "Concluído";
     case "archived":
-      return "Arquivado";
+      return "Dispensado";
     case "delegated":
-      return "Delegado";
+      return "Adiado";
     case "executing":
-      return "Executando";
+      return "Aprovado";
     case "urgent":
       return "Urgente";
     default:
@@ -56,10 +56,10 @@ export function ExecutiveInboxCard({
   item,
   expanded = false,
   onOpen,
-  onDelegate,
-  onResolve,
-  onArchive,
-  onExecute,
+  onApprove,
+  onComplete,
+  onDismiss,
+  onDefer,
 }: ExecutiveInboxCardProps) {
   const isClosed = item.status === "resolved" || item.status === "archived";
 
@@ -118,10 +118,10 @@ export function ExecutiveInboxCard({
       {!isClosed && (
         <div className="mt-2.5 flex flex-wrap gap-1.5">
           <ActionButton label="Abrir" onClick={onOpen} active={expanded} />
-          <ActionButton label="Delegar" onClick={onDelegate} />
-          <ActionButton label="Resolver" onClick={onResolve} />
-          <ActionButton label="Arquivar" onClick={onArchive} />
-          <ActionButton label="Executar" onClick={onExecute} />
+          <ActionButton label="Aprovar" onClick={onApprove} />
+          <ActionButton label="Concluir" onClick={onComplete} />
+          <ActionButton label="Dispensar" onClick={onDismiss} />
+          <ActionButton label="Adiar" onClick={onDefer} />
         </div>
       )}
     </li>

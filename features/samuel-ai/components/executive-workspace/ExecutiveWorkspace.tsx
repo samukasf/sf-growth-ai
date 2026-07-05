@@ -1,8 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { cn } from "@/utils/cn";
+
+import {
+  applyInboxActionsToCeo,
+  applyInboxActionsToMonitoring,
+} from "@/features/executive-inbox";
+import {
+  loadExecutiveInboxActions,
+  persistExecutiveInboxAction,
+} from "@/features/executive-inbox/services/executive-inbox-persistence.service";
+import type { ExecutiveInboxActionRecord } from "@/features/executive-inbox/executive-inbox.types";
+import type { ExecutiveInboxItem, InboxActionType } from "@/features/executive-inbox/executive-inbox.types";
 
 import { ExecutiveSidebar } from "./ExecutiveSidebar";
 import { ExecutiveWorkspaceCenter } from "./ExecutiveWorkspaceCenter";
@@ -11,6 +22,7 @@ import type {
   ExecutiveWorkspaceData,
   ExecutiveWorkspaceHandlers,
 } from "./executive-workspace.types";
+
 import { getWorkspaceSectionLabel, type WorkspaceSection } from "./workspace-navigation";
 
 export type ExecutiveWorkspaceProps = ExecutiveWorkspaceData & ExecutiveWorkspaceHandlers;
@@ -23,6 +35,49 @@ export function ExecutiveWorkspace({
 }: ExecutiveWorkspaceProps) {
   const [activeSection, setActiveSection] = useState<WorkspaceSection>("executive-inbox");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const companyId = data.executiveContext?.company.id ?? "default-company";
+  const [inboxActions, setInboxActions] = useState<ExecutiveInboxActionRecord[]>([]);
+
+  useEffect(() => {
+    setInboxActions(loadExecutiveInboxActions(companyId));
+  }, [companyId]);
+
+  const handleInboxAction = useCallback(
+    async (item: ExecutiveInboxItem, action: InboxActionType) => {
+      const nextActions = await persistExecutiveInboxAction(
+        companyId,
+        item,
+        action,
+        inboxActions,
+      );
+      setInboxActions(nextActions);
+    },
+    [companyId, inboxActions],
+  );
+
+  const workspaceData = useMemo(() => {
+    const executiveMonitoring = data.executiveMonitoring
+      ? applyInboxActionsToMonitoring(data.executiveMonitoring, inboxActions)
+      : data.executiveMonitoring;
+
+    const executiveCeo = data.executiveCeo
+      ? applyInboxActionsToCeo(data.executiveCeo, inboxActions)
+      : data.executiveCeo;
+
+    return {
+      ...data,
+      executiveMonitoring,
+      executiveCeo,
+    };
+  }, [data, inboxActions]);
+
+  const handlers: ExecutiveWorkspaceHandlers = {
+    onSendMessage,
+    onFirstMessage,
+    isProcessing,
+    inboxActions,
+    onInboxAction: handleInboxAction,
+  };
 
   return (
     <div className="relative flex min-h-dvh flex-col xl:h-dvh xl:overflow-hidden">
@@ -90,20 +145,18 @@ export function ExecutiveWorkspace({
         >
           <ExecutiveWorkspaceCenter
             activeSection={activeSection}
-            onSendMessage={onSendMessage}
-            onFirstMessage={onFirstMessage}
-            isProcessing={isProcessing}
-            {...data}
+            {...workspaceData}
+            {...handlers}
           />
 
           <div className="hidden shrink-0 xl:block xl:overflow-y-auto">
-            <ExecutiveWorkspaceRightPanel {...data} />
+            <ExecutiveWorkspaceRightPanel {...workspaceData} />
           </div>
         </main>
       </div>
 
       <div className="border-t border-white/[0.06] bg-black/40 p-4 xl:hidden">
-        <ExecutiveWorkspaceRightPanel {...data} />
+        <ExecutiveWorkspaceRightPanel {...workspaceData} />
       </div>
     </div>
   );
