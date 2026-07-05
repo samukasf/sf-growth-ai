@@ -98,3 +98,24 @@ export {
   enrichMarketingWithSeoWatcher,
   SeoWatcherSection,
 } from "./seo";
+
+export {
+  ExecutiveAlertCenter,
+  ExecutiveAlertCard,
+  ExecutiveAlertFilters,
+  ExecutiveAlertSummary,
+  buildExecutiveAlertCenter,
+  filterExecutiveAlerts,
+} from "./components/executive-alert-center";
+
+export type {
+  ExecutiveAlertSeverity,
+  ExecutiveAlertStatus,
+  ExecutiveAlertOrigin,
+  ExecutiveAlertFilter,
+  ConsolidatedExecutiveAlert,
+  ExecutiveAlertCenterSummary,
+  ExecutiveAlertCenterState,
+  ExecutiveAlertCenterProps,
+  BuildExecutiveAlertCenterInput,
+} from "./components/executive-alert-center";

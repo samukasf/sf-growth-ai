@@ -47,6 +47,7 @@ import { MarketWatcherSection } from "@/features/watchers/market/components/mark
 import type { MarketWatcherResult } from "@/features/watchers/market/market-watcher.types";
 import { SeoWatcherSection } from "@/features/watchers/seo/components/seo-watcher-section";
 import type { SeoWatcherResult } from "@/features/watchers/seo/seo-watcher.types";
+import { ExecutiveAlertCenter } from "@/features/watchers/components/executive-alert-center";
 import type { WatcherExecutive } from "@/features/watchers/types/watcher.types";
 import { ExecutiveLiveBoard } from "../executive-live-board";
 import { ExecutiveTimeline } from "../executive-timeline";
@@ -191,6 +192,24 @@ export function ExecutiveDashboard({
             meta: Boolean(metaExecutive),
             linkedin: Boolean(linkedInExecutive),
           }}
+        />
+      </CommandPanel>
+
+      <CommandPanel className="p-4 sm:p-5" accent>
+        <ExecutiveAlertCenter
+          watcherExecutive={watcherExecutive}
+          marketWatcher={marketWatcher}
+          seoWatcher={seoWatcher}
+          googleBusinessExecutive={googleBusinessExecutive}
+          metaExecutive={metaExecutive}
+          crmExecutive={crmExecutive}
+          marketingExecutive={marketingExecutive}
+          financeExecutive={financeExecutive}
+          salesExecutive={salesExecutive}
+          operationsExecutive={operationsExecutive}
+          hrExecutive={hrExecutive}
+          legalExecutive={legalExecutive}
+          executiveMonitoring={executiveMonitoring}
         />
       </CommandPanel>
 
