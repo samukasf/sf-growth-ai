@@ -17,6 +17,12 @@ import {
   generateOrchestratorResponse,
   snapshotToBrain,
 } from "../services/executive-orchestrator.service";
+import {
+  buildExecutiveConversation,
+  type ExecutiveConversation,
+  type ExecutiveConversationContext,
+} from "../services/executive-conversation-orchestrator.service";
+import { buildSamuelCeoResponse } from "../utils/build-samuel-ceo-response";
 import type {
   OrchestratorPhase,
   OrchestratorSnapshot,
@@ -117,6 +123,9 @@ export function SamuelAiShell({
   const [hasActiveAnalysis, setHasActiveAnalysis] = useState(false);
   const [orchestratorSnapshot, setOrchestratorSnapshot] =
     useState<OrchestratorSnapshot | null>(null);
+  const [executiveConversation, setExecutiveConversation] =
+    useState<ExecutiveConversation | null>(null);
+  const [pendingQuestion, setPendingQuestion] = useState<string | null>(null);
 
   const briefing = {
     ...MOCK_EXECUTIVE_BRIEFING,
@@ -132,6 +141,25 @@ export function SamuelAiShell({
       setIsProcessing(true);
       setBrainStatus("building");
       setHasActiveAnalysis(true);
+      setPendingQuestion(content);
+      setExecutiveConversation(null);
+
+      const conversationContext: ExecutiveConversationContext = {
+        companyName: executiveContext?.company.name,
+        executiveCeo,
+        crmExecutive,
+        marketingExecutive,
+        salesExecutive,
+        financeExecutive,
+        operationsExecutive,
+        hrExecutive,
+        legalExecutive,
+        strategy: executiveStrategy,
+        competitor: executiveCompetitor,
+        googleBusinessExecutive,
+        metaExecutive,
+        linkedInExecutive,
+      };
 
       for (const phase of ORCHESTRATION_PHASES) {
         const snapshot = buildOrchestratorSnapshot(
@@ -156,14 +184,43 @@ export function SamuelAiShell({
       );
       const brain = snapshotToBrain(finalSnapshot);
 
+      const conversation = buildExecutiveConversation({
+        question: content,
+        context: conversationContext,
+      });
+
       setOrchestratorSnapshot(finalSnapshot);
       setExecutiveBrain(brain);
+      setExecutiveConversation(conversation);
+      setPendingQuestion(null);
       setBrainStatus("ready");
       setIsProcessing(false);
 
+      if (conversation) {
+        return buildSamuelCeoResponse(
+          conversation,
+          executiveContext?.company.name,
+        );
+      }
+
       return generateOrchestratorResponse(brain, executiveContext);
     },
-    [executiveContext],
+    [
+      executiveContext,
+      executiveCeo,
+      crmExecutive,
+      marketingExecutive,
+      salesExecutive,
+      financeExecutive,
+      operationsExecutive,
+      hrExecutive,
+      legalExecutive,
+      executiveStrategy,
+      executiveCompetitor,
+      googleBusinessExecutive,
+      metaExecutive,
+      linkedInExecutive,
+    ],
   );
 
   return (
@@ -273,6 +330,8 @@ export function SamuelAiShell({
             googleBusinessExecutive={googleBusinessExecutive}
             metaExecutive={metaExecutive}
             linkedInExecutive={linkedInExecutive}
+            executiveConversation={executiveConversation}
+            pendingQuestion={pendingQuestion}
           />
         </aside>
       </main>

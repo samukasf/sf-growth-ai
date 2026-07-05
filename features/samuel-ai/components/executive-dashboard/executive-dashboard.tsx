@@ -7,6 +7,7 @@ import type {
   ExecutiveStatus,
 } from "../../executive-brain/types";
 import type { OrchestratorSnapshot } from "../../services/executive-orchestrator.types";
+import type { ExecutiveConversation } from "../../services/executive-conversation-orchestrator.service";
 import type { ExecutiveContext as CompanyExecutiveContext } from "@/services/executive-context.service";
 import { MetaExecutiveSummarySection } from "@/features/meta/components/meta-executive-summary-section";
 import type { MetaExecutive } from "@/features/meta/services/meta-executive.service";
@@ -49,6 +50,7 @@ import { ExecutiveLearningSection } from "./executive-learning-section";
 import { ExecutiveIntelligenceSection } from "./executive-intelligence-section";
 import { ExecutiveMonitoringSection } from "./executive-monitoring-section";
 import { ExecutiveMemorySection } from "./executive-memory-section";
+import { ExecutiveConversationSection } from "./executive-conversation-section";
 import { ExecutiveOrchestratorSection } from "./executive-orchestrator-section";
 import { ExecutiveReasoningSection } from "./executive-reasoning-section";
 import { ExecutiveCouncilSection } from "./executive-council-section";
@@ -81,6 +83,8 @@ type ExecutiveDashboardProps = {
   googleBusinessExecutive?: GoogleBusinessExecutive | null;
   metaExecutive?: MetaExecutive | null;
   linkedInExecutive?: LinkedInExecutive | null;
+  executiveConversation?: ExecutiveConversation | null;
+  pendingQuestion?: string | null;
 };
 
 const STATUS_LABELS: Record<ExecutiveBrainStatus, string> = {
@@ -116,6 +120,8 @@ export function ExecutiveDashboard({
   googleBusinessExecutive = null,
   metaExecutive = null,
   linkedInExecutive = null,
+  executiveConversation = null,
+  pendingQuestion = null,
 }: ExecutiveDashboardProps) {
   const statusWithTimestamp: ExecutiveStatus = {
     ...executiveStatus,
@@ -150,6 +156,17 @@ export function ExecutiveDashboard({
           <ExecutiveOrchestratorSection
             snapshot={orchestratorSnapshot}
             isProcessing={isProcessing}
+          />
+        </CommandPanel>
+      )}
+
+      {(executiveConversation || pendingQuestion || isProcessing) && (
+        <CommandPanel className="p-4 sm:p-5" accent>
+          <ExecutiveConversationSection
+            conversation={executiveConversation}
+            isProcessing={isProcessing}
+            pendingQuestion={pendingQuestion}
+            companyName={executiveContext?.company.name}
           />
         </CommandPanel>
       )}

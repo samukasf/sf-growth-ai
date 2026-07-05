@@ -13,4 +13,5 @@ export { ExecutiveLearningSection } from "./executive-learning-section";
 export { ExecutiveMonitoringSection } from "./executive-monitoring-section";
 export { ExecutiveMemorySection } from "./executive-memory-section";
 export { ExecutiveReasoningSection } from "./executive-reasoning-section";
+export { ExecutiveConversationSection } from "./executive-conversation-section";
 export { ExecutiveOrchestratorSection } from "./executive-orchestrator-section";
