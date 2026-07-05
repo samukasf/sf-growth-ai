@@ -13,6 +13,7 @@ import {
   persistExecutiveInboxAction,
 } from "@/features/executive-inbox/services/executive-inbox-persistence.service";
 import { captureKnowledgeFromInboxAction } from "@/features/executive-knowledge";
+import { syncInboxActionToExecutiveMemory } from "@/features/executive-memory-engine";
 import type { ExecutiveInboxActionRecord } from "@/features/executive-inbox/executive-inbox.types";
 import type { ExecutiveInboxItem, InboxActionType } from "@/features/executive-inbox/executive-inbox.types";
 
@@ -57,6 +58,7 @@ export function ExecutiveWorkspace({
       );
       setInboxActions(nextActions);
       void captureKnowledgeFromInboxAction(companyId, item, action);
+      void syncInboxActionToExecutiveMemory(companyId, item, action);
     },
     [companyId, inboxActions],
   );

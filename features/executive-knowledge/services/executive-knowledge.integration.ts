@@ -6,6 +6,10 @@ import type {
 } from "@/features/executive-inbox/executive-inbox.types";
 
 import type { KnowledgeCategory, LearningEventType } from "../executive-knowledge.types";
+import {
+  syncExecutiveKnowledgeToMemory,
+  syncLearningEventToMemory,
+} from "@/features/executive-memory-engine";
 import { registerExecutiveKnowledge } from "./executive-knowledge.service";
 import {
   mapInboxActionToLearningEventType,
@@ -65,8 +69,9 @@ export async function captureKnowledgeFromInboxAction(
     confidenceScore: item.confidence,
     tags,
   });
+  void syncExecutiveKnowledgeToMemory(record);
 
-  await registerLearningEvent({
+  const actionEvent = await registerLearningEvent({
     companyId,
     type: actionLearningType,
     title: item.title,
@@ -79,15 +84,17 @@ export async function captureKnowledgeFromInboxAction(
       area: item.area,
     },
   });
+  void syncLearningEventToMemory(actionEvent);
 
   if (learningType !== "inbox_action") {
-    await registerLearningEvent({
+    const typeEvent = await registerLearningEvent({
       companyId,
       type: learningType,
       title: item.title,
       description: item.description,
       knowledgeRecordId: record.id,
     });
+    void syncLearningEventToMemory(typeEvent);
   }
 
   if (action === "complete") {
@@ -135,14 +142,16 @@ export async function captureKnowledgeFromConversation(
     confidenceScore: conversation?.confidenceScore ?? 55,
     tags: ["conversation", "question"],
   });
+  void syncExecutiveKnowledgeToMemory(questionRecord);
 
-  await registerLearningEvent({
+  const questionEvent = await registerLearningEvent({
     companyId,
     type: "conversation",
     title: "Nova pergunta executiva",
     description: question,
     knowledgeRecordId: questionRecord.id,
   });
+  void syncLearningEventToMemory(questionEvent);
 
   if (!conversation && !answer) {
     return { questionRecord, answerRecord: null };
@@ -173,8 +182,9 @@ export async function captureKnowledgeFromConversation(
     confidenceScore: conversation?.confidenceScore ?? 65,
     tags: ["conversation", "answer"],
   });
+  void syncExecutiveKnowledgeToMemory(answerRecord);
 
-  await registerExecutiveKnowledge({
+  const analysisRecord = await registerExecutiveKnowledge({
     companyId,
     category: "analysis",
     origin: "samuel-ai",
@@ -189,6 +199,7 @@ export async function captureKnowledgeFromConversation(
     confidenceScore: conversation?.confidenceScore ?? 60,
     tags: ["conversation", "analysis"],
   });
+  void syncExecutiveKnowledgeToMemory(analysisRecord);
 
   if (conversation?.executiveConsensus.primaryRecommendation) {
     const recommendationRecord = await registerExecutiveKnowledge({
@@ -203,14 +214,16 @@ export async function captureKnowledgeFromConversation(
       confidenceScore: conversation.confidenceScore ?? 70,
       tags: ["conversation", "recommendation"],
     });
+    void syncExecutiveKnowledgeToMemory(recommendationRecord);
 
-    await registerLearningEvent({
+    const recommendationEvent = await registerLearningEvent({
       companyId,
       type: "new_recommendation",
       title: "Nova recomendação via conversa",
       description: conversation.executiveConsensus.primaryRecommendation,
       knowledgeRecordId: recommendationRecord.id,
     });
+    void syncLearningEventToMemory(recommendationEvent);
   }
 
   return { questionRecord, answerRecord };

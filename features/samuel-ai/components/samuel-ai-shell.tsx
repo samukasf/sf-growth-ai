@@ -54,6 +54,7 @@ import type { ExecutiveForecast } from "../services/executive-forecast.service";
 import type { ExecutiveLearning } from "../services/executive-learning.service";
 import type { ExecutiveMonitoring } from "../services/executive-monitoring.service";
 import { captureKnowledgeFromConversation } from "@/features/executive-knowledge";
+import { syncConversationToExecutiveMemory } from "@/features/executive-memory-engine";
 import { ExecutiveWorkspace } from "./executive-workspace";
 
 const ORCHESTRATION_PHASES: OrchestratorPhase[] = [
@@ -239,6 +240,7 @@ export function SamuelAiShell({
 
       const companyId = executiveContext?.company.id ?? "default-company";
       void captureKnowledgeFromConversation(companyId, content, conversation);
+      void syncConversationToExecutiveMemory(companyId, content, conversation);
 
       if (conversation) {
         return buildSamuelCeoResponse(
