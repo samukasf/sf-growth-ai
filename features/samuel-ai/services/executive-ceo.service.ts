@@ -14,6 +14,7 @@ import type { MetaExecutive } from "@/features/meta/services/meta-executive.serv
 import type { LinkedInExecutive } from "@/features/linkedin/services/linkedin-executive.service";
 import type { WatcherExecutive } from "@/features/watchers/types/watcher.types";
 import type { MarketWatcherResult } from "@/features/watchers/market/market-watcher.types";
+import type { SeoWatcherResult } from "@/features/watchers/seo/seo-watcher.types";
 
 import type { ExecutiveAction } from "./executive-action.service";
 import type { ExecutiveCompetitor } from "./executive-competitor.service";
@@ -76,6 +77,7 @@ export type ExecutiveCEOInput = {
   linkedInExecutive?: LinkedInExecutive | null;
   watcherExecutive?: WatcherExecutive | null;
   marketWatcher?: MarketWatcherResult | null;
+  seoWatcher?: SeoWatcherResult | null;
 };
 
 function clampScore(value: number): number {
@@ -232,6 +234,14 @@ function calculateCompanyHealthScore(input: ExecutiveCEOInput): number {
     score += Math.min(6, input.marketWatcher.opportunities.length * 2);
   }
 
+  if (input.seoWatcher) {
+    score -= Math.min(
+      8,
+      input.seoWatcher.risks.filter((risk) => risk.severity === "Critical" || risk.severity === "High").length * 3,
+    );
+    score += Math.min(6, input.seoWatcher.opportunities.length * 2);
+  }
+
   return clampScore(score);
 }
 
@@ -356,6 +366,15 @@ function calculateRiskScore(input: ExecutiveCEOInput): number {
     );
   }
 
+  if (input.seoWatcher) {
+    score += Math.min(
+      10,
+      input.seoWatcher.risks.filter(
+        (risk) => risk.severity === "Critical" || risk.severity === "High",
+      ).length * 3,
+    );
+  }
+
   return clampScore(score);
 }
 
@@ -370,6 +389,10 @@ function calculateOpportunityScore(input: ExecutiveCEOInput): number {
 
   if (input.marketWatcher) {
     score += Math.min(12, input.marketWatcher.opportunities.length * 4);
+  }
+
+  if (input.seoWatcher) {
+    score += Math.min(10, input.seoWatcher.opportunities.length * 3);
   }
 
   return clampScore(score);
@@ -399,7 +422,7 @@ function buildExecutiveSummary(
     input.strategy?.executiveStrategy ??
     "Análise executiva em consolidação.";
 
-  return `${company} — CEO Digital Samuel AI™. ${intelligenceSummary} Score executivo ${executiveScore}/100 · Saúde ${companyHealth.score}/100 · ${input.decisions?.length ?? 0} decisão(ões) · ${input.action?.executionOrder.length ?? 0} ação(ões) mapeada(s).${input.crmExecutive ? ` ${input.crmExecutive.crmExecutiveSummary}` : ""}${input.marketingExecutive ? ` ${input.marketingExecutive.marketingExecutiveSummary}` : ""}${input.salesExecutive ? ` ${input.salesExecutive.salesExecutiveSummary}` : ""}${input.financeExecutive ? ` ${input.financeExecutive.financeExecutiveSummary}` : ""}${input.operationsExecutive ? ` ${input.operationsExecutive.operationsExecutiveSummary}` : ""}${input.hrExecutive ? ` ${input.hrExecutive.hrExecutiveSummary}` : ""}${input.legalExecutive ? ` ${input.legalExecutive.legalExecutiveSummary}` : ""}${input.googleBusinessExecutive ? ` ${input.googleBusinessExecutive.googleBusinessExecutiveSummary}` : ""}${input.googleAnalyticsExecutive ? ` ${input.googleAnalyticsExecutive.googleAnalyticsExecutiveSummary}` : ""}${input.searchConsoleExecutive ? ` ${input.searchConsoleExecutive.searchConsoleExecutiveSummary}` : ""}${input.metaExecutive ? ` ${input.metaExecutive.metaExecutiveSummary}` : ""}${input.linkedInExecutive ? ` ${input.linkedInExecutive.linkedInExecutiveSummary}` : ""}${input.watcherExecutive ? ` ${input.watcherExecutive.watcherExecutiveSummary}` : ""}${input.marketWatcher ? ` ${input.marketWatcher.executiveSummary}` : ""}`;
+  return `${company} — CEO Digital Samuel AI™. ${intelligenceSummary} Score executivo ${executiveScore}/100 · Saúde ${companyHealth.score}/100 · ${input.decisions?.length ?? 0} decisão(ões) · ${input.action?.executionOrder.length ?? 0} ação(ões) mapeada(s).${input.crmExecutive ? ` ${input.crmExecutive.crmExecutiveSummary}` : ""}${input.marketingExecutive ? ` ${input.marketingExecutive.marketingExecutiveSummary}` : ""}${input.salesExecutive ? ` ${input.salesExecutive.salesExecutiveSummary}` : ""}${input.financeExecutive ? ` ${input.financeExecutive.financeExecutiveSummary}` : ""}${input.operationsExecutive ? ` ${input.operationsExecutive.operationsExecutiveSummary}` : ""}${input.hrExecutive ? ` ${input.hrExecutive.hrExecutiveSummary}` : ""}${input.legalExecutive ? ` ${input.legalExecutive.legalExecutiveSummary}` : ""}${input.googleBusinessExecutive ? ` ${input.googleBusinessExecutive.googleBusinessExecutiveSummary}` : ""}${input.googleAnalyticsExecutive ? ` ${input.googleAnalyticsExecutive.googleAnalyticsExecutiveSummary}` : ""}${input.searchConsoleExecutive ? ` ${input.searchConsoleExecutive.searchConsoleExecutiveSummary}` : ""}${input.metaExecutive ? ` ${input.metaExecutive.metaExecutiveSummary}` : ""}${input.linkedInExecutive ? ` ${input.linkedInExecutive.linkedInExecutiveSummary}` : ""}${input.watcherExecutive ? ` ${input.watcherExecutive.watcherExecutiveSummary}` : ""}${input.marketWatcher ? ` ${input.marketWatcher.executiveSummary}` : ""}${input.seoWatcher ? ` ${input.seoWatcher.executiveSummary}` : ""}`;
 }
 
 function buildTopDecision(input: ExecutiveCEOInput): string {
@@ -487,6 +510,10 @@ function buildTopPriorities(input: ExecutiveCEOInput): string[] {
       .slice(0, 2)
       .map((alert) => alert.recommendation.title) ?? []),
     ...(input.marketWatcher?.recommendations
+      .filter((rec) => rec.priority === "Critical" || rec.priority === "High")
+      .slice(0, 2)
+      .map((rec) => rec.title) ?? []),
+    ...(input.seoWatcher?.recommendations
       .filter((rec) => rec.priority === "Critical" || rec.priority === "High")
       .slice(0, 2)
       .map((rec) => rec.title) ?? []),
@@ -579,7 +606,11 @@ function buildCeoMessage(
     ? ` Market Watcher: ${input.marketWatcher.threats.length} ameaça(s), ${input.marketWatcher.opportunities.length} oportunidade(s), confiança ${input.marketWatcher.averageConfidence}%.`
     : "";
 
-  return `Olá, sou o CEO Digital da ${company}. ${tone} Saúde operacional em ${companyHealth.score}/100, potencial de crescimento ${growthScore}/100 e risco consolidado ${riskScore}/100.${crmNote}${marketingNote}${salesNote}${financeNote}${operationsNote}${hrNote}${legalNote}${googleBusinessNote}${googleAnalyticsNote}${searchConsoleNote}${metaNote}${linkedInNote}${watcherNote}${marketNote} Meta de crescimento: ${growth}. Minha diretriz imediata: ${topAction}. Confio no motor executivo Samuel AI™ para converter estratégia em resultados mensuráveis.`;
+  const seoNote = input.seoWatcher
+    ? ` SEO Watcher: ${input.seoWatcher.alerts.length} alerta(s), CTR ${input.seoWatcher.metrics.ctr}%, confiança ${input.seoWatcher.averageConfidence}%.`
+    : "";
+
+  return `Olá, sou o CEO Digital da ${company}. ${tone} Saúde operacional em ${companyHealth.score}/100, potencial de crescimento ${growthScore}/100 e risco consolidado ${riskScore}/100.${crmNote}${marketingNote}${salesNote}${financeNote}${operationsNote}${hrNote}${legalNote}${googleBusinessNote}${googleAnalyticsNote}${searchConsoleNote}${metaNote}${linkedInNote}${watcherNote}${marketNote}${seoNote} Meta de crescimento: ${growth}. Minha diretriz imediata: ${topAction}. Confio no motor executivo Samuel AI™ para converter estratégia em resultados mensuráveis.`;
 }
 
 export function buildExecutiveCEO(
@@ -610,6 +641,7 @@ export function buildExecutiveCEO(
     input.linkedInExecutive ||
     input.watcherExecutive ||
     input.marketWatcher ||
+    input.seoWatcher ||
     (input.decisions?.length ?? 0) > 0;
 
   if (!hasData) return null;

@@ -70,9 +70,14 @@ import {
 import {
   buildCombinedWatcherExecutive,
   enrichIntelligenceWithMarketWatcher,
+  enrichIntelligenceWithSeoWatcher,
   enrichIntelligenceWithWatchers,
+  enrichMarketingWithSeoWatcher,
   enrichMemoriesWithMarketWatcher,
+  enrichMemoriesWithSeoWatcher,
   enrichMemoriesWithWatchers,
+  mergeSeoWatcherWithExecutive,
+  runSeoWatcher,
 } from "@/features/watchers";
 
 export const metadata: Metadata = {
@@ -513,12 +518,37 @@ export default async function SamuelAiRoute() {
     salesExecutive,
   });
 
-  const { watcherExecutive, marketWatcher } = buildCombinedWatcherExecutive({
+  const { watcherExecutive: watcherWithMarket, marketWatcher } = buildCombinedWatcherExecutive({
     companyId: executiveContext?.company.id,
     companyName: executiveContext?.company.name,
   });
 
+  const seoWatcher = runSeoWatcher({
+    companyId: executiveContext?.company.id,
+    companyName: executiveContext?.company.name,
+    searchConsoleExecutive,
+    marketingExecutive: marketingExecutiveWithIntegrations,
+  });
+
+  const watcherExecutive = mergeSeoWatcherWithExecutive(watcherWithMarket, seoWatcher);
+
+  const marketingExecutiveFinal =
+    enrichMarketingWithSeoWatcher(
+      marketingExecutiveWithIntegrations,
+      seoWatcher,
+    ) ?? marketingExecutiveWithIntegrations;
+
   const executiveIntelligenceFinal =
+    enrichIntelligenceWithSeoWatcher(
+      enrichIntelligenceWithMarketWatcher(
+        enrichIntelligenceWithWatchers(
+          executiveIntelligenceWithIntegrations,
+          watcherExecutive,
+        ),
+        marketWatcher,
+      ),
+      seoWatcher,
+    ) ??
     enrichIntelligenceWithMarketWatcher(
       enrichIntelligenceWithWatchers(
         executiveIntelligenceWithIntegrations,
@@ -526,21 +556,20 @@ export default async function SamuelAiRoute() {
       ),
       marketWatcher,
     ) ??
-    enrichIntelligenceWithWatchers(
-      executiveIntelligenceWithIntegrations,
-      watcherExecutive,
-    ) ??
     executiveIntelligenceWithIntegrations;
 
   const executiveContextWithWatchers = executiveContext
     ? {
         ...executiveContext,
-        memories: enrichMemoriesWithMarketWatcher(
-          enrichMemoriesWithWatchers(
-            executiveContext.memories,
-            watcherExecutive,
+        memories: enrichMemoriesWithSeoWatcher(
+          enrichMemoriesWithMarketWatcher(
+            enrichMemoriesWithWatchers(
+              executiveContext.memories,
+              watcherExecutive,
+            ),
+            marketWatcher,
           ),
-          marketWatcher,
+          seoWatcher,
         ),
       }
     : null;
@@ -559,7 +588,7 @@ export default async function SamuelAiRoute() {
     priority: executivePriority,
     recommendation: executiveRecommendation,
     crmExecutive,
-    marketingExecutive: marketingExecutiveWithIntegrations,
+    marketingExecutive: marketingExecutiveFinal,
     salesExecutive,
     financeExecutive,
     operationsExecutive,
@@ -572,6 +601,7 @@ export default async function SamuelAiRoute() {
     linkedInExecutive,
     watcherExecutive,
     marketWatcher,
+    seoWatcher,
   });
 
   return (
@@ -590,7 +620,7 @@ export default async function SamuelAiRoute() {
       executiveRecommendation={executiveRecommendation}
       executiveCeo={executiveCeo}
       crmExecutive={crmExecutive}
-      marketingExecutive={marketingExecutiveWithIntegrations}
+      marketingExecutive={marketingExecutiveFinal}
       salesExecutive={salesExecutive}
       financeExecutive={financeExecutive}
       operationsExecutive={operationsExecutive}
@@ -603,6 +633,7 @@ export default async function SamuelAiRoute() {
       linkedInExecutive={linkedInExecutive}
       watcherExecutive={watcherExecutive}
       marketWatcher={marketWatcher}
+      seoWatcher={seoWatcher}
     />
   );
 }

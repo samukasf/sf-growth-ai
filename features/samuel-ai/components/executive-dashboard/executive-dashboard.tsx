@@ -45,6 +45,8 @@ import type { ExecutiveIntelligence } from "../../services/executive-intelligenc
 import { ExecutiveWatchersSection } from "@/features/watchers/components/executive-watchers-section";
 import { MarketWatcherSection } from "@/features/watchers/market/components/market-watcher-section";
 import type { MarketWatcherResult } from "@/features/watchers/market/market-watcher.types";
+import { SeoWatcherSection } from "@/features/watchers/seo/components/seo-watcher-section";
+import type { SeoWatcherResult } from "@/features/watchers/seo/seo-watcher.types";
 import type { WatcherExecutive } from "@/features/watchers/types/watcher.types";
 import { ExecutiveLiveBoard } from "../executive-live-board";
 import { ExecutiveTimeline } from "../executive-timeline";
@@ -99,6 +101,7 @@ type ExecutiveDashboardProps = {
   linkedInExecutive?: LinkedInExecutive | null;
   watcherExecutive?: WatcherExecutive | null;
   marketWatcher?: MarketWatcherResult | null;
+  seoWatcher?: SeoWatcherResult | null;
   executiveConversation?: ExecutiveConversation | null;
   pendingQuestion?: string | null;
   analysisStartedAt?: number | null;
@@ -143,6 +146,7 @@ export function ExecutiveDashboard({
   linkedInExecutive = null,
   watcherExecutive = null,
   marketWatcher = null,
+  seoWatcher = null,
   executiveConversation = null,
   pendingQuestion = null,
   analysisStartedAt = null,
@@ -323,6 +327,10 @@ export function ExecutiveDashboard({
 
       <CommandPanel className="p-4 sm:p-5" accent>
         <MarketWatcherSection marketWatcher={marketWatcher ?? null} />
+      </CommandPanel>
+
+      <CommandPanel className="p-4 sm:p-5" accent>
+        <SeoWatcherSection seoWatcher={seoWatcher ?? null} />
       </CommandPanel>
 
       <CommandPanel className="p-4 sm:p-5" accent>

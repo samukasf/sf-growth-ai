@@ -71,3 +71,30 @@ export {
   enrichIntelligenceWithMarketWatcher,
   MarketWatcherSection,
 } from "./market";
+
+export type {
+  SeoSeverity,
+  SeoSignalType,
+  SeoSignal,
+  SeoRecommendation,
+  SeoAlert,
+  SeoOpportunity,
+  SeoRisk,
+  SeoMetricsSnapshot,
+  GrowingKeyword,
+  SeoWatcherInput,
+  SeoWatcherResult,
+  SeoWatcherRunResult,
+  SeoWatcherProviderData,
+} from "./seo";
+
+export {
+  SEO_WATCHER_ID,
+  fetchSeoWatcherData,
+  runSeoWatcher,
+  mergeSeoWatcherWithExecutive,
+  enrichMemoriesWithSeoWatcher,
+  enrichIntelligenceWithSeoWatcher,
+  enrichMarketingWithSeoWatcher,
+  SeoWatcherSection,
+} from "./seo";
