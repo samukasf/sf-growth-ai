@@ -9,6 +9,7 @@ import {
   buildMarketingExecutive,
   buildMarketingExecutiveForCompany,
 } from "@/features/marketing/services/marketing-executive.service";
+import { buildGoogleBusinessExecutive } from "@/features/google-business/services/google-business-executive.service";
 import {
   buildLegalExecutive,
   buildLegalExecutiveForCompany,
@@ -346,6 +347,14 @@ export default async function SamuelAiRoute() {
     });
   }
 
+  const googleBusinessExecutive = buildGoogleBusinessExecutive({
+    companyName: executiveContext?.company.name,
+    strategy: executiveStrategy,
+    intelligence: executiveIntelligence,
+    competitor: executiveCompetitor,
+    marketingExecutive,
+  });
+
   const executiveCeo = buildExecutiveCEO({
     context: executiveContext,
     intelligence: executiveIntelligence,
@@ -366,6 +375,7 @@ export default async function SamuelAiRoute() {
     operationsExecutive,
     hrExecutive,
     legalExecutive,
+    googleBusinessExecutive,
   });
 
   return (
@@ -390,6 +400,7 @@ export default async function SamuelAiRoute() {
       operationsExecutive={operationsExecutive}
       hrExecutive={hrExecutive}
       legalExecutive={legalExecutive}
+      googleBusinessExecutive={googleBusinessExecutive}
     />
   );
 }

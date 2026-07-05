@@ -7,6 +7,7 @@ import type { FinanceExecutive } from "@/features/finance/services/finance-execu
 import type { OperationsExecutive } from "@/features/operations/services/operations-executive.service";
 import type { HrExecutive } from "@/features/hr/services/hr-executive.service";
 import type { LegalExecutive } from "@/features/legal/services/legal-executive.service";
+import type { GoogleBusinessExecutive } from "@/features/google-business/services/google-business-executive.service";
 
 import type { ExecutiveAction } from "./executive-action.service";
 import type { ExecutiveCompetitor } from "./executive-competitor.service";
@@ -62,6 +63,7 @@ export type ExecutiveCEOInput = {
   operationsExecutive?: OperationsExecutive | null;
   hrExecutive?: HrExecutive | null;
   legalExecutive?: LegalExecutive | null;
+  googleBusinessExecutive?: GoogleBusinessExecutive | null;
 };
 
 function clampScore(value: number): number {
@@ -162,6 +164,15 @@ function calculateCompanyHealthScore(input: ExecutiveCEOInput): number {
     );
   }
 
+  if (input.googleBusinessExecutive) {
+    score += Math.min(10, input.googleBusinessExecutive.googleBusinessHealthScore * 0.1);
+    score -= Math.min(
+      6,
+      input.googleBusinessExecutive.googleBusinessRisks.filter((r) => r.severity === "critical")
+        .length * 3,
+    );
+  }
+
   return clampScore(score);
 }
 
@@ -229,6 +240,12 @@ function calculateGrowthScore(input: ExecutiveCEOInput): number {
     if (input.legalExecutive.contractRiskScore <= 30) score += 5;
   }
 
+  if (input.googleBusinessExecutive) {
+    score += Math.min(10, input.googleBusinessExecutive.visibilityScore * 0.1);
+    score += Math.min(8, input.googleBusinessExecutive.reputationScore * 0.08);
+    if (input.googleBusinessExecutive.averageRating >= 4.5) score += 5;
+  }
+
   return clampScore(score);
 }
 
@@ -286,7 +303,7 @@ function buildExecutiveSummary(
     input.strategy?.executiveStrategy ??
     "Análise executiva em consolidação.";
 
-  return `${company} — CEO Digital Samuel AI™. ${intelligenceSummary} Score executivo ${executiveScore}/100 · Saúde ${companyHealth.score}/100 · ${input.decisions?.length ?? 0} decisão(ões) · ${input.action?.executionOrder.length ?? 0} ação(ões) mapeada(s).${input.crmExecutive ? ` ${input.crmExecutive.crmExecutiveSummary}` : ""}${input.marketingExecutive ? ` ${input.marketingExecutive.marketingExecutiveSummary}` : ""}${input.salesExecutive ? ` ${input.salesExecutive.salesExecutiveSummary}` : ""}${input.financeExecutive ? ` ${input.financeExecutive.financeExecutiveSummary}` : ""}${input.operationsExecutive ? ` ${input.operationsExecutive.operationsExecutiveSummary}` : ""}${input.hrExecutive ? ` ${input.hrExecutive.hrExecutiveSummary}` : ""}${input.legalExecutive ? ` ${input.legalExecutive.legalExecutiveSummary}` : ""}`;
+  return `${company} — CEO Digital Samuel AI™. ${intelligenceSummary} Score executivo ${executiveScore}/100 · Saúde ${companyHealth.score}/100 · ${input.decisions?.length ?? 0} decisão(ões) · ${input.action?.executionOrder.length ?? 0} ação(ões) mapeada(s).${input.crmExecutive ? ` ${input.crmExecutive.crmExecutiveSummary}` : ""}${input.marketingExecutive ? ` ${input.marketingExecutive.marketingExecutiveSummary}` : ""}${input.salesExecutive ? ` ${input.salesExecutive.salesExecutiveSummary}` : ""}${input.financeExecutive ? ` ${input.financeExecutive.financeExecutiveSummary}` : ""}${input.operationsExecutive ? ` ${input.operationsExecutive.operationsExecutiveSummary}` : ""}${input.hrExecutive ? ` ${input.hrExecutive.hrExecutiveSummary}` : ""}${input.legalExecutive ? ` ${input.legalExecutive.legalExecutiveSummary}` : ""}${input.googleBusinessExecutive ? ` ${input.googleBusinessExecutive.googleBusinessExecutiveSummary}` : ""}`;
 }
 
 function buildTopDecision(input: ExecutiveCEOInput): string {
@@ -346,6 +363,10 @@ function buildTopPriorities(input: ExecutiveCEOInput): string[] {
       .slice(0, 2)
       .map((r) => r.title) ?? []),
     ...(input.legalExecutive?.legalRecommendations
+      .filter((r) => r.priority === "critical" || r.priority === "high")
+      .slice(0, 2)
+      .map((r) => r.title) ?? []),
+    ...(input.googleBusinessExecutive?.googleBusinessRecommendations
       .filter((r) => r.priority === "critical" || r.priority === "high")
       .slice(0, 2)
       .map((r) => r.title) ?? []),
@@ -410,7 +431,11 @@ function buildCeoMessage(
     ? ` Jurídico em ${input.legalExecutive.legalHealthScore}/100 com compliance ${input.legalExecutive.complianceScore}/100.`
     : "";
 
-  return `Olá, sou o CEO Digital da ${company}. ${tone} Saúde operacional em ${companyHealth.score}/100, potencial de crescimento ${growthScore}/100 e risco consolidado ${riskScore}/100.${crmNote}${marketingNote}${salesNote}${financeNote}${operationsNote}${hrNote}${legalNote} Meta de crescimento: ${growth}. Minha diretriz imediata: ${topAction}. Confio no motor executivo Samuel AI™ para converter estratégia em resultados mensuráveis.`;
+  const googleBusinessNote = input.googleBusinessExecutive
+    ? ` Google Business em ${input.googleBusinessExecutive.googleBusinessHealthScore}/100 com reputação ${input.googleBusinessExecutive.reputationScore}/100.`
+    : "";
+
+  return `Olá, sou o CEO Digital da ${company}. ${tone} Saúde operacional em ${companyHealth.score}/100, potencial de crescimento ${growthScore}/100 e risco consolidado ${riskScore}/100.${crmNote}${marketingNote}${salesNote}${financeNote}${operationsNote}${hrNote}${legalNote}${googleBusinessNote} Meta de crescimento: ${growth}. Minha diretriz imediata: ${topAction}. Confio no motor executivo Samuel AI™ para converter estratégia em resultados mensuráveis.`;
 }
 
 export function buildExecutiveCEO(
@@ -434,6 +459,7 @@ export function buildExecutiveCEO(
     input.operationsExecutive ||
     input.hrExecutive ||
     input.legalExecutive ||
+    input.googleBusinessExecutive ||
     (input.decisions?.length ?? 0) > 0;
 
   if (!hasData) return null;

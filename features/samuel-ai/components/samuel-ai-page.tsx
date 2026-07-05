@@ -1,3 +1,4 @@
+import type { GoogleBusinessExecutive } from "@/features/google-business/services/google-business-executive.service";
 import type { LegalExecutive } from "@/features/legal/services/legal-executive.service";
 import type { HrExecutive } from "@/features/hr/services/hr-executive.service";
 import type { OperationsExecutive } from "@/features/operations/services/operations-executive.service";
@@ -44,6 +45,7 @@ type SamuelAiPageProps = {
   operationsExecutive?: OperationsExecutive | null;
   hrExecutive?: HrExecutive | null;
   legalExecutive?: LegalExecutive | null;
+  googleBusinessExecutive?: GoogleBusinessExecutive | null;
 };
 
 export function SamuelAiPage({
@@ -67,6 +69,7 @@ export function SamuelAiPage({
   operationsExecutive = null,
   hrExecutive = null,
   legalExecutive = null,
+  googleBusinessExecutive = null,
 }: SamuelAiPageProps) {
   const competitorIntelligence = executiveCompetitor ?? buildExecutiveCompetitor();
 
@@ -89,6 +92,7 @@ export function SamuelAiPage({
       operationsExecutive={operationsExecutive}
       hrExecutive={hrExecutive}
       legalExecutive={legalExecutive}
+      googleBusinessExecutive={googleBusinessExecutive}
     />
   );
 }
