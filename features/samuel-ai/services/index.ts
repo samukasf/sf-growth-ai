@@ -101,6 +101,18 @@ export {
   type EstimatedROI,
 } from "./executive-action.service";
 
+export {
+  buildExecutivePriority,
+  type ExecutivePriority,
+  type ExecutivePriorityInput,
+  type PriorityTask,
+  type RiskLevel,
+  type CalendarEntry,
+  type AgendaItem,
+  type DependencyNode,
+  type BlockedAction,
+} from "./executive-priority.service";
+
 /** @deprecated Use buildQueryExecutiveContext */
 export { buildQueryExecutiveContext as buildExecutiveContext } from "./executive-orchestrator.service";
 
