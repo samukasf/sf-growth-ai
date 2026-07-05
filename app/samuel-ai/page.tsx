@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { samuelAi } from "@/features";
 import { buildExecutiveAction } from "@/features/samuel-ai/services/executive-action.service";
+import { buildExecutiveCEO } from "@/features/samuel-ai/services/executive-ceo.service";
 import { buildExecutiveCompetitor } from "@/features/samuel-ai/services/executive-competitor.service";
 import { buildExecutiveDecisions } from "@/features/samuel-ai/services/executive-decision.service";
 import { buildExecutionPlan } from "@/features/samuel-ai/services/executive-execution-planner.service";
@@ -107,6 +108,21 @@ export default async function SamuelAiRoute() {
     learning: executiveLearning,
   });
 
+  const executiveCeo = buildExecutiveCEO({
+    context: executiveContext,
+    intelligence: executiveIntelligence,
+    decisions: executiveDecisions,
+    executionPlans,
+    monitoring: executiveMonitoring,
+    learning: executiveLearning,
+    forecast: executiveForecast,
+    competitor: executiveCompetitor,
+    strategy: executiveStrategy,
+    action: executiveAction,
+    priority: executivePriority,
+    recommendation: executiveRecommendation,
+  });
+
   return (
     <samuelAi.SamuelAiPage
       executiveContext={executiveContext}
@@ -121,6 +137,7 @@ export default async function SamuelAiRoute() {
       executiveAction={executiveAction}
       executivePriority={executivePriority}
       executiveRecommendation={executiveRecommendation}
+      executiveCeo={executiveCeo}
     />
   );
 }

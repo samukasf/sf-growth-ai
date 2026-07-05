@@ -8,6 +8,7 @@ import type {
 } from "../../executive-brain/types";
 import type { OrchestratorSnapshot } from "../../services/executive-orchestrator.types";
 import type { ExecutiveContext as CompanyExecutiveContext } from "@/services/executive-context.service";
+import type { ExecutiveCEO } from "../../services/executive-ceo.service";
 import type { ExecutiveStrategy } from "../../services/executive-strategy.service";
 import type { ExecutiveForecast } from "../../services/executive-forecast.service";
 import type { ExecutiveLearning } from "../../services/executive-learning.service";
@@ -19,6 +20,7 @@ import { CommandPanel } from "../shared/command-panel";
 import { SectionHeader } from "../section-header";
 import { ExecutiveActionPlanSection } from "./executive-action-plan-section";
 import { ExecutiveContextSection } from "./executive-context-section";
+import { ExecutiveCeoSection } from "./executive-ceo-section";
 import { ExecutiveDecisionsSection } from "./executive-decisions-section";
 import { ExecutiveExecutionPlanSection } from "./executive-execution-plan-section";
 import { ExecutiveStrategySection } from "./executive-strategy-section";
@@ -48,6 +50,7 @@ type ExecutiveDashboardProps = {
   executiveLearning?: ExecutiveLearning | null;
   executiveForecast?: ExecutiveForecast | null;
   executiveStrategy?: ExecutiveStrategy | null;
+  executiveCeo?: ExecutiveCEO | null;
 };
 
 const STATUS_LABELS: Record<ExecutiveBrainStatus, string> = {
@@ -72,6 +75,7 @@ export function ExecutiveDashboard({
   executiveLearning = null,
   executiveForecast = null,
   executiveStrategy = null,
+  executiveCeo = null,
 }: ExecutiveDashboardProps) {
   const statusWithTimestamp: ExecutiveStatus = {
     ...executiveStatus,
@@ -118,6 +122,10 @@ export function ExecutiveDashboard({
           />
         </CommandPanel>
       )}
+
+      <CommandPanel className="p-4 sm:p-5" accent>
+        <ExecutiveCeoSection ceo={executiveCeo} />
+      </CommandPanel>
 
       <CommandPanel className="p-4 sm:p-5" accent>
         <ExecutiveDecisionsSection decisions={executiveDecisions} />

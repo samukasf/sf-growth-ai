@@ -122,6 +122,14 @@ export {
   type RecommendationRisk,
 } from "./executive-recommendation.service";
 
+export {
+  buildExecutiveCEO,
+  type ExecutiveCEO,
+  type ExecutiveCEOInput,
+  type CompanyHealth,
+  type CompanyHealthStatus,
+} from "./executive-ceo.service";
+
 /** @deprecated Use buildQueryExecutiveContext */
 export { buildQueryExecutiveContext as buildExecutiveContext } from "./executive-orchestrator.service";
 

@@ -4,6 +4,7 @@ export { ExecutiveContextSection } from "./executive-context-section";
 export { ExecutiveCouncilSection } from "./executive-council-section";
 export { ExecutiveDecisionsSection } from "./executive-decisions-section";
 export { ExecutiveExecutionPlanSection } from "./executive-execution-plan-section";
+export { ExecutiveCeoSection } from "./executive-ceo-section";
 export { ExecutiveDashboard } from "./executive-dashboard";
 export { ExecutiveStrategySection } from "./executive-strategy-section";
 export { ExecutiveForecastSection } from "./executive-forecast-section";
