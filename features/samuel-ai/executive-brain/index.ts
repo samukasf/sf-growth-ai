@@ -4,10 +4,12 @@ export {
   generateSimulatedResponse,
 } from "./build-executive-brain";
 export {
+  buildExecutiveBriefing,
   formatExecutiveDateTime,
   formatRelativeTime,
   getTimeGreeting,
 } from "./briefing-utils";
+export type { BuildExecutiveBriefingInput } from "./briefing-utils";
 export {
   DEFAULT_EXECUTIVE_BRAIN,
   MOCK_EXECUTIVE_BRIEFING,

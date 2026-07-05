@@ -62,6 +62,7 @@ import { buildExecutiveMonitoring } from "@/features/samuel-ai/services/executiv
 import { buildExecutivePriority } from "@/features/samuel-ai/services/executive-priority.service";
 import { buildExecutiveRecommendation } from "@/features/samuel-ai/services/executive-recommendation.service";
 import { buildExecutiveStrategy } from "@/features/samuel-ai/services/executive-strategy.service";
+import { buildExecutiveBriefing } from "@/features/samuel-ai/executive-brain";
 import {
   buildExecutiveContext,
   getFirstCompany,
@@ -604,8 +605,17 @@ export default async function SamuelAiRoute() {
     seoWatcher,
   });
 
+  const executiveBriefing = buildExecutiveBriefing({
+    context: executiveContextWithWatchers,
+    intelligence: executiveIntelligenceFinal,
+    monitoring: executiveMonitoring,
+    forecast: executiveForecast,
+    priority: executivePriority,
+  });
+
   return (
     <samuelAi.SamuelAiPage
+      executiveBriefing={executiveBriefing}
       executiveContext={executiveContextWithWatchers}
       executiveIntelligence={executiveIntelligenceFinal}
       executiveDecisions={executiveDecisions}

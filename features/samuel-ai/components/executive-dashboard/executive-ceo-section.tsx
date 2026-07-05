@@ -119,17 +119,33 @@ export function ExecutiveCeoSection({ ceo }: ExecutiveCeoSectionProps) {
       </div>
 
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <div className="rounded-lg border border-amber-500/15 bg-amber-500/[0.03] px-3 py-2.5">
-          <p className="text-[10px] font-medium uppercase tracking-wider text-amber-400">
-            Próxima Decisão
+        <div className="rounded-lg border border-rose-500/15 bg-rose-500/[0.03] px-3 py-2.5">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-rose-400">
+            Maior Risco Atual
           </p>
           <p className="mt-2 text-xs leading-relaxed text-foreground/90">
             {ceo.executiveDecision}
           </p>
         </div>
+        <div className="rounded-lg border border-amber-500/15 bg-amber-500/[0.03] px-3 py-2.5">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-amber-400">
+            Maior Oportunidade
+          </p>
+          <p className="mt-2 text-xs leading-relaxed text-foreground/90">
+            {ceo.topPriorities[1] ?? "Oportunidade em consolidação."}
+          </p>
+        </div>
+        <div className="rounded-lg border border-accent/15 bg-accent/[0.03] px-3 py-2.5">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-accent">
+            Foco Estratégico
+          </p>
+          <p className="mt-2 text-xs leading-relaxed text-foreground/90">
+            {ceo.topPriorities[0] ?? "Foco estratégico em definição."}
+          </p>
+        </div>
         <div className="rounded-lg border border-emerald-500/15 bg-emerald-500/[0.03] px-3 py-2.5">
           <p className="text-[10px] font-medium uppercase tracking-wider text-emerald-400">
-            Recomendação Principal
+            Próxima Ação Recomendada
           </p>
           <p className="mt-2 text-xs leading-relaxed text-foreground/90">
             {ceo.executiveRecommendation}
@@ -137,21 +153,23 @@ export function ExecutiveCeoSection({ ceo }: ExecutiveCeoSectionProps) {
         </div>
       </div>
 
-      <div>
-        <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-muted">
-          Próximas Ações
-        </p>
-        <ul className="flex flex-col gap-1.5">
-          {ceo.nextActions.map((action) => (
-            <li
-              key={action}
-              className="rounded-lg border border-border/60 bg-black/10 px-3 py-2 text-[11px] text-foreground/90"
-            >
-              • {action}
-            </li>
-          ))}
-        </ul>
-      </div>
+      {ceo.nextActions.length > 0 && (
+        <div>
+          <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-muted">
+            Ações Derivadas
+          </p>
+          <ul className="flex flex-col gap-1.5">
+            {ceo.nextActions.map((action) => (
+              <li
+                key={action}
+                className="rounded-lg border border-border/60 bg-black/10 px-3 py-2 text-[11px] text-foreground/90"
+              >
+                • {action}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="rounded-xl border border-accent/20 bg-gradient-to-br from-accent/10 to-transparent px-4 py-3">
         <p className="text-[10px] font-medium uppercase tracking-wider text-accent">

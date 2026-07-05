@@ -411,122 +411,231 @@ function buildCompanyHealth(input: ExecutiveCEOInput, score: number): CompanyHea
   };
 }
 
+function buildBiggestRisk(input: ExecutiveCEOInput): string {
+  const criticalAlert = input.monitoring?.alerts.find(
+    (alert) => alert.severity === "critical",
+  );
+  if (criticalAlert) {
+    return `${criticalAlert.title}: ${criticalAlert.message}`;
+  }
+
+  const highAlert = input.monitoring?.alerts.find((alert) => alert.severity === "high");
+  if (highAlert) {
+    return `${highAlert.title}: ${highAlert.message}`;
+  }
+
+  if (input.intelligence?.risks[0]) {
+    return input.intelligence.risks[0];
+  }
+
+  const forecastAlert = input.forecast?.futureAlerts[0];
+  if (forecastAlert) {
+    return forecastAlert;
+  }
+
+  const expectedScenario = input.forecast?.scenarios.find(
+    (scenario) => scenario.type === "expected",
+  );
+  const scenarioRisk = expectedScenario?.risks[0];
+  if (scenarioRisk) {
+    return `${scenarioRisk.title}: ${scenarioRisk.description}`;
+  }
+
+  const delayRisk = input.monitoring?.progress.delayRisk ?? 0;
+  if (delayRisk >= 50) {
+    return `Risco de atraso operacional em ${delayRisk}% — execução abaixo do ritmo necessário.`;
+  }
+
+  if (input.intelligence?.weaknesses[0]) {
+    return input.intelligence.weaknesses[0];
+  }
+
+  for (const bottleneck of input.monitoring?.bottlenecks.slice(0, 1) ?? []) {
+    return bottleneck;
+  }
+
+  return "Nenhum risco crítico consolidado no ciclo atual.";
+}
+
+function buildBiggestOpportunity(input: ExecutiveCEOInput): string {
+  if (input.intelligence?.opportunities[0]) {
+    return input.intelligence.opportunities[0];
+  }
+
+  const expectedScenario = input.forecast?.scenarios.find(
+    (scenario) => scenario.type === "expected",
+  );
+  const scenarioOpportunity = expectedScenario?.opportunities[0];
+  if (scenarioOpportunity) {
+    return `${scenarioOpportunity.title}: ${scenarioOpportunity.description}`;
+  }
+
+  const recommendedInvestment = input.recommendation?.recommendedInvestments[0];
+  if (recommendedInvestment) {
+    return `${recommendedInvestment.title}: ${recommendedInvestment.description}`;
+  }
+
+  const recommendedAction = input.recommendation?.recommendedActions[0];
+  if (recommendedAction) {
+    return `${recommendedAction.title}: ${recommendedAction.description}`;
+  }
+
+  if (input.intelligence?.strengths[0]) {
+    return `Alavancar força identificada: ${input.intelligence.strengths[0]}`;
+  }
+
+  if (input.forecast?.recommendations[0]) {
+    const recommendation = input.forecast.recommendations[0];
+    return `${recommendation.title}: ${recommendation.description}`;
+  }
+
+  return "Consolidar contexto estratégico para mapear oportunidades de alto impacto.";
+}
+
+function parseContextObjectives(context: ExecutiveCEOInput["context"]): string | null {
+  const objectives = context?.businessProfile?.objectives;
+  if (!objectives) return null;
+
+  if (Array.isArray(objectives)) {
+    return objectives.find(Boolean) ?? null;
+  }
+
+  const first = objectives
+    .split(/[\n,;]+/)
+    .map((item) => item.trim())
+    .find(Boolean);
+
+  return first ?? null;
+}
+
+function buildStrategicFocus(input: ExecutiveCEOInput): string {
+  if (input.strategy?.topPriorities[0]) {
+    return input.strategy.topPriorities[0];
+  }
+
+  if (input.strategy?.strategicVision) {
+    return input.strategy.strategicVision;
+  }
+
+  if (input.intelligence?.priorities[0]) {
+    return input.intelligence.priorities[0];
+  }
+
+  if (input.strategy?.growthPlan30d.goals[0]) {
+    return input.strategy.growthPlan30d.goals[0];
+  }
+
+  const objective = parseContextObjectives(input.context);
+  if (objective) {
+    return objective;
+  }
+
+  const positioning = input.context?.businessProfile?.positioning?.trim();
+  if (positioning) {
+    return positioning;
+  }
+
+  return "Estruturar base executiva e alinhar indicadores ao objetivo da empresa.";
+}
+
+function buildNextRecommendedAction(input: ExecutiveCEOInput): string {
+  const topRecommendation = input.recommendation?.executiveRecommendations[0];
+  if (topRecommendation) {
+    return `${topRecommendation.title}: ${topRecommendation.description} (ROI: ${topRecommendation.estimatedROI})`;
+  }
+
+  const forecastRecommendation = input.forecast?.recommendations.find(
+    (recommendation) =>
+      recommendation.priority === "critical" || recommendation.priority === "high",
+  );
+  if (forecastRecommendation) {
+    return `${forecastRecommendation.title}: ${forecastRecommendation.description}`;
+  }
+
+  const strategyAction = input.strategy?.growthPlan30d.actions[0];
+  if (strategyAction) {
+    return strategyAction;
+  }
+
+  if (input.recommendation?.executiveRecommendationSummary) {
+    return input.recommendation.executiveRecommendationSummary;
+  }
+
+  return "Ativar ciclo de recomendações a partir da inteligência executiva consolidada.";
+}
+
 function buildExecutiveSummary(
   input: ExecutiveCEOInput,
   executiveScore: number,
   companyHealth: CompanyHealth,
 ): string {
   const company = input.context?.company.name ?? "A empresa";
-  const intelligenceSummary =
-    input.intelligence?.executiveSummary ??
-    input.strategy?.executiveStrategy ??
-    "Análise executiva em consolidação.";
+  const parts: string[] = [];
 
-  return `${company} — CEO Digital Samuel AI™. ${intelligenceSummary} Score executivo ${executiveScore}/100 · Saúde ${companyHealth.score}/100 · ${input.decisions?.length ?? 0} decisão(ões) · ${input.action?.executionOrder.length ?? 0} ação(ões) mapeada(s).${input.crmExecutive ? ` ${input.crmExecutive.crmExecutiveSummary}` : ""}${input.marketingExecutive ? ` ${input.marketingExecutive.marketingExecutiveSummary}` : ""}${input.salesExecutive ? ` ${input.salesExecutive.salesExecutiveSummary}` : ""}${input.financeExecutive ? ` ${input.financeExecutive.financeExecutiveSummary}` : ""}${input.operationsExecutive ? ` ${input.operationsExecutive.operationsExecutiveSummary}` : ""}${input.hrExecutive ? ` ${input.hrExecutive.hrExecutiveSummary}` : ""}${input.legalExecutive ? ` ${input.legalExecutive.legalExecutiveSummary}` : ""}${input.googleBusinessExecutive ? ` ${input.googleBusinessExecutive.googleBusinessExecutiveSummary}` : ""}${input.googleAnalyticsExecutive ? ` ${input.googleAnalyticsExecutive.googleAnalyticsExecutiveSummary}` : ""}${input.searchConsoleExecutive ? ` ${input.searchConsoleExecutive.searchConsoleExecutiveSummary}` : ""}${input.metaExecutive ? ` ${input.metaExecutive.metaExecutiveSummary}` : ""}${input.linkedInExecutive ? ` ${input.linkedInExecutive.linkedInExecutiveSummary}` : ""}${input.watcherExecutive ? ` ${input.watcherExecutive.watcherExecutiveSummary}` : ""}${input.marketWatcher ? ` ${input.marketWatcher.executiveSummary}` : ""}${input.seoWatcher ? ` ${input.seoWatcher.executiveSummary}` : ""}`;
-}
-
-function buildTopDecision(input: ExecutiveCEOInput): string {
-  const critical = input.decisions?.find((d) => d.priority === "Critical");
-  if (critical) {
-    return `${critical.title} — ${critical.description} (Prazo: ${critical.deadline})`;
+  if (input.intelligence?.executiveSummary) {
+    parts.push(input.intelligence.executiveSummary);
+  } else if (input.context?.summary) {
+    const summaryLine = input.context.summary
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .slice(0, 2)
+      .join(". ");
+    if (summaryLine) parts.push(summaryLine);
   }
 
-  const priorityTask = input.priority?.criticalTasks[0];
-  if (priorityTask) {
-    return `${priorityTask.title} — ${priorityTask.description}`;
+  if (input.strategy?.executiveStrategy) {
+    parts.push(input.strategy.executiveStrategy);
   }
 
-  return "Consolidar contexto executivo e ativar ciclo de decisões críticas.";
-}
-
-function buildTopRecommendation(input: ExecutiveCEOInput): string {
-  const top = input.recommendation?.executiveRecommendations[0];
-  if (top) {
-    return `${top.title} — ${top.description} (ROI: ${top.estimatedROI})`;
+  if (input.monitoring) {
+    parts.push(
+      `Execução em ${input.monitoring.progress.overall}% · ${input.monitoring.progress.overdueTasks} tarefa(s) atrasada(s) · risco de atraso ${input.monitoring.progress.delayRisk}%.`,
+    );
   }
 
-  return input.recommendation?.executiveRecommendationSummary ??
-    "Ativar recomendações prioritárias derivadas da inteligência executiva.";
+  if (input.forecast) {
+    parts.push(
+      `Crescimento projetado ${input.forecast.expectedGrowth} · probabilidade de sucesso ${input.forecast.successProbability}%.`,
+    );
+  }
+
+  if (parts.length === 0) {
+    return `${company} — análise executiva em consolidação. Conecte contexto e dados operacionais para ativar o CEO Digital.`;
+  }
+
+  return `${company} — CEO Digital Samuel AI™. ${parts.join(" ")} Score executivo ${executiveScore}/100 · Saúde ${companyHealth.score}/100.`;
 }
 
 function buildTopPriorities(input: ExecutiveCEOInput): string[] {
-  return [
-    ...(input.strategy?.topPriorities ?? []),
-    ...(input.priority?.top10Priorities.slice(0, 3).map((t) => t.title) ?? []),
+  const strategicFocus = buildStrategicFocus(input);
+  const biggestOpportunity = buildBiggestOpportunity(input);
+
+  const additionalPriorities = [
+    ...(input.strategy?.topPriorities.slice(1) ?? []),
+    ...(input.intelligence?.priorities ?? []),
     ...(input.recommendation?.executiveRecommendations
-      .filter((r) => r.priority === "critical")
-      .slice(0, 2)
-      .map((r) => r.title) ?? []),
-    ...(input.crmExecutive?.crmRecommendations
-      .filter((r) => r.priority === "critical" || r.priority === "high")
-      .slice(0, 2)
-      .map((r) => r.title) ?? []),
-    ...(input.marketingExecutive?.marketingRecommendations
-      .filter((r) => r.priority === "critical" || r.priority === "high")
-      .slice(0, 2)
-      .map((r) => r.title) ?? []),
-    ...(input.salesExecutive?.salesRecommendations
-      .filter((r) => r.priority === "critical" || r.priority === "high")
-      .slice(0, 2)
-      .map((r) => r.title) ?? []),
-    ...(input.financeExecutive?.financialRecommendations
-      .filter((r) => r.priority === "critical" || r.priority === "high")
-      .slice(0, 2)
-      .map((r) => r.title) ?? []),
-    ...(input.operationsExecutive?.operationalRecommendations
-      .filter((r) => r.priority === "critical" || r.priority === "high")
-      .slice(0, 2)
-      .map((r) => r.title) ?? []),
-    ...(input.hrExecutive?.hrRecommendations
-      .filter((r) => r.priority === "critical" || r.priority === "high")
-      .slice(0, 2)
-      .map((r) => r.title) ?? []),
-    ...(input.legalExecutive?.legalRecommendations
-      .filter((r) => r.priority === "critical" || r.priority === "high")
-      .slice(0, 2)
-      .map((r) => r.title) ?? []),
-    ...(input.googleBusinessExecutive?.googleBusinessRecommendations
-      .filter((r) => r.priority === "critical" || r.priority === "high")
-      .slice(0, 2)
-      .map((r) => r.title) ?? []),
-    ...(input.googleAnalyticsExecutive?.googleAnalyticsRecommendations
-      .filter((r) => r.priority === "critical" || r.priority === "high")
-      .slice(0, 2)
-      .map((r) => r.title) ?? []),
-    ...(input.searchConsoleExecutive?.searchConsoleRecommendations
-      .filter((r) => r.priority === "critical" || r.priority === "high")
-      .slice(0, 2)
-      .map((r) => r.title) ?? []),
-    ...(input.metaExecutive?.metaRecommendations
-      .filter((r) => r.priority === "critical" || r.priority === "high")
-      .slice(0, 2)
-      .map((r) => r.title) ?? []),
-    ...(input.linkedInExecutive?.linkedInRecommendations
-      .filter((r) => r.priority === "critical" || r.priority === "high")
-      .slice(0, 2)
-      .map((r) => r.title) ?? []),
-    ...(input.watcherExecutive?.recentAlerts
-      .filter((alert) => alert.severity === "critical" || alert.severity === "high")
-      .slice(0, 2)
-      .map((alert) => alert.recommendation.title) ?? []),
-    ...(input.marketWatcher?.recommendations
-      .filter((rec) => rec.priority === "Critical" || rec.priority === "High")
-      .slice(0, 2)
-      .map((rec) => rec.title) ?? []),
-    ...(input.seoWatcher?.recommendations
-      .filter((rec) => rec.priority === "Critical" || rec.priority === "High")
-      .slice(0, 2)
-      .map((rec) => rec.title) ?? []),
-  ]
+      .filter((recommendation) => recommendation.priority === "critical")
+      .map((recommendation) => recommendation.title) ?? []),
+    ...(input.forecast?.recommendations
+      .filter((recommendation) => recommendation.priority === "critical")
+      .map((recommendation) => recommendation.title) ?? []),
+  ].filter(
+    (priority) => priority !== strategicFocus && priority !== biggestOpportunity,
+  );
+
+  return [strategicFocus, biggestOpportunity, ...additionalPriorities]
     .filter(Boolean)
     .slice(0, 8);
 }
 
 function buildNextActions(input: ExecutiveCEOInput): string[] {
   return [
-    ...(input.action?.immediateActions.slice(0, 2).map((a) => a.title) ?? []),
-    ...(input.priority?.top10Priorities.slice(0, 3).map((t) => t.title) ?? []),
-    ...(input.action?.quickWins.slice(0, 2).map((a) => a.title) ?? []),
+    ...(input.recommendation?.executiveRecommendations.slice(0, 3).map((item) => item.title) ??
+      []),
+    ...(input.forecast?.recommendations.slice(0, 2).map((item) => item.title) ?? []),
+    ...(input.strategy?.growthPlan30d.actions.slice(0, 2) ?? []),
+    ...(input.strategy?.growthPlan90d.actions.slice(0, 1) ?? []),
   ]
     .filter(Boolean)
     .slice(0, 6);
@@ -540,8 +649,11 @@ function buildCeoMessage(
   riskScore: number,
 ): string {
   const company = input.context?.company.name ?? "sua empresa";
-  const growth = input.forecast?.expectedGrowth ?? "+10%";
-  const topAction = buildNextActions(input)[0] ?? "estruturar o ciclo executivo";
+  const summary = buildExecutiveSummary(input, executiveScore, companyHealth);
+  const biggestRisk = buildBiggestRisk(input);
+  const biggestOpportunity = buildBiggestOpportunity(input);
+  const strategicFocus = buildStrategicFocus(input);
+  const nextAction = buildNextRecommendedAction(input);
 
   const tone =
     executiveScore >= 70
@@ -550,67 +662,9 @@ function buildCeoMessage(
         ? "Temos base sólida, mas precisamos de foco imediato."
         : "Precisamos estabilizar fundamentos antes de escalar.";
 
-  const crmNote = input.crmExecutive
-    ? ` CRM em ${input.crmExecutive.crmHealthScore}/100 com pipeline ativo e ${input.crmExecutive.activeLeads} leads.`
-    : "";
+  const growth = input.forecast?.expectedGrowth ?? "em consolidação";
 
-  const marketingNote = input.marketingExecutive
-    ? ` Marketing em ${input.marketingExecutive.marketingHealthScore}/100 com conversão ${input.marketingExecutive.conversionScore}/100.`
-    : "";
-
-  const salesNote = input.salesExecutive
-    ? ` Vendas em ${input.salesExecutive.salesHealthScore}/100 com win rate ${input.salesExecutive.winRate}%.`
-    : "";
-
-  const financeNote = input.financeExecutive
-    ? ` Financeiro em ${input.financeExecutive.financeHealthScore}/100 com margem ${input.financeExecutive.profitMargin}%.`
-    : "";
-
-  const operationsNote = input.operationsExecutive
-    ? ` Operações em ${input.operationsExecutive.operationsHealthScore}/100 com produtividade ${input.operationsExecutive.productivityScore}/100.`
-    : "";
-
-  const hrNote = input.hrExecutive
-    ? ` RH em ${input.hrExecutive.hrHealthScore}/100 com engagement ${input.hrExecutive.engagementScore}/100.`
-    : "";
-
-  const legalNote = input.legalExecutive
-    ? ` Jurídico em ${input.legalExecutive.legalHealthScore}/100 com compliance ${input.legalExecutive.complianceScore}/100.`
-    : "";
-
-  const googleBusinessNote = input.googleBusinessExecutive
-    ? ` Google Business em ${input.googleBusinessExecutive.googleBusinessHealthScore}/100 com reputação ${input.googleBusinessExecutive.reputationScore}/100.`
-    : "";
-
-  const googleAnalyticsNote = input.googleAnalyticsExecutive
-    ? ` Google Analytics em ${input.googleAnalyticsExecutive.googleAnalyticsHealthScore}/100 com tráfego ${input.googleAnalyticsExecutive.trafficScore}/100.`
-    : "";
-
-  const searchConsoleNote = input.searchConsoleExecutive
-    ? ` Search Console em ${input.searchConsoleExecutive.seoHealthScore}/100 com ${input.searchConsoleExecutive.clicks.toLocaleString("pt-BR")} cliques orgânicos.`
-    : "";
-
-  const metaNote = input.metaExecutive
-    ? ` Meta em ${input.metaExecutive.metaHealthScore}/100 com ROAS ${input.metaExecutive.roas}x.`
-    : "";
-
-  const linkedInNote = input.linkedInExecutive
-    ? ` LinkedIn em ${input.linkedInExecutive.linkedInHealthScore}/100 com leads B2B ${input.linkedInExecutive.leadGenerationScore}/100.`
-    : "";
-
-  const watcherNote = input.watcherExecutive
-    ? ` Watchers: ${input.watcherExecutive.summary.activeWatchers} ativo(s) e ${input.watcherExecutive.summary.criticalAlerts} alerta(s) crítico(s).`
-    : "";
-
-  const marketNote = input.marketWatcher
-    ? ` Market Watcher: ${input.marketWatcher.threats.length} ameaça(s), ${input.marketWatcher.opportunities.length} oportunidade(s), confiança ${input.marketWatcher.averageConfidence}%.`
-    : "";
-
-  const seoNote = input.seoWatcher
-    ? ` SEO Watcher: ${input.seoWatcher.alerts.length} alerta(s), CTR ${input.seoWatcher.metrics.ctr}%, confiança ${input.seoWatcher.averageConfidence}%.`
-    : "";
-
-  return `Olá, sou o CEO Digital da ${company}. ${tone} Saúde operacional em ${companyHealth.score}/100, potencial de crescimento ${growthScore}/100 e risco consolidado ${riskScore}/100.${crmNote}${marketingNote}${salesNote}${financeNote}${operationsNote}${hrNote}${legalNote}${googleBusinessNote}${googleAnalyticsNote}${searchConsoleNote}${metaNote}${linkedInNote}${watcherNote}${marketNote}${seoNote} Meta de crescimento: ${growth}. Minha diretriz imediata: ${topAction}. Confio no motor executivo Samuel AI™ para converter estratégia em resultados mensuráveis.`;
+  return `Olá, sou o CEO Digital da ${company}. ${tone} ${summary} Maior risco atual: ${biggestRisk} Maior oportunidade: ${biggestOpportunity} Foco estratégico: ${strategicFocus} Próxima ação recomendada: ${nextAction} Saúde operacional ${companyHealth.score}/100 · crescimento ${growthScore}/100 · risco consolidado ${riskScore}/100 · meta de crescimento ${growth}. Confio no motor executivo Samuel AI™ para converter estratégia em resultados mensuráveis.`;
 }
 
 export function buildExecutiveCEO(
@@ -660,8 +714,8 @@ export function buildExecutiveCEO(
     growthScore,
     riskScore,
     opportunityScore,
-    executiveDecision: buildTopDecision(input),
-    executiveRecommendation: buildTopRecommendation(input),
+    executiveDecision: buildBiggestRisk(input),
+    executiveRecommendation: buildNextRecommendedAction(input),
     topPriorities: buildTopPriorities(input),
     nextActions: buildNextActions(input),
     ceoMessage: buildCeoMessage(

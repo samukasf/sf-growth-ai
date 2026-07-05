@@ -30,8 +30,10 @@ import type { ExecutiveStrategy } from "../services/executive-strategy.service";
 import { buildExecutiveCompetitor } from "../services/executive-competitor.service";
 
 import { SamuelAiShell } from "./samuel-ai-shell";
+import type { ExecutiveBriefing } from "../executive-brain/types";
 
 type SamuelAiPageProps = {
+  executiveBriefing?: ExecutiveBriefing;
   executiveContext?: ExecutiveContext | null;
   executiveIntelligence?: ExecutiveIntelligence | null;
   executiveDecisions?: ExecutiveDecision[];
@@ -63,6 +65,7 @@ type SamuelAiPageProps = {
 };
 
 export function SamuelAiPage({
+  executiveBriefing,
   executiveContext = null,
   executiveIntelligence = null,
   executiveDecisions = [],
@@ -96,6 +99,7 @@ export function SamuelAiPage({
 
   return (
     <SamuelAiShell
+      executiveBriefing={executiveBriefing}
       executiveContext={executiveContext}
       executiveIntelligence={executiveIntelligence}
       executiveDecisions={executiveDecisions}

@@ -4,13 +4,12 @@ import { useCallback, useState } from "react";
 
 import { buildExecutiveBrainFromSnapshot } from "../executive-brain/build-executive-brain";
 import {
+  buildExecutiveBriefing,
   DEFAULT_EXECUTIVE_BRAIN,
-  getTimeGreeting,
-  MOCK_EXECUTIVE_BRIEFING,
   MOCK_EXECUTIVE_COUNCIL,
   MOCK_EXECUTIVE_STATUS,
 } from "../executive-brain";
-import type { ExecutiveBrain, ExecutiveBrainStatus } from "../executive-brain/types";
+import type { ExecutiveBrain, ExecutiveBrainStatus, ExecutiveBriefing } from "../executive-brain/types";
 import {
   buildOrchestratorSnapshot,
   generateOrchestratorResponse,
@@ -74,6 +73,7 @@ function delay(ms: number) {
 }
 
 type SamuelAiShellProps = {
+  executiveBriefing?: ExecutiveBriefing;
   executiveContext?: CompanyExecutiveContext | null;
   executiveIntelligence?: ExecutiveIntelligence | null;
   executiveDecisions?: ExecutiveDecision[];
@@ -105,6 +105,7 @@ type SamuelAiShellProps = {
 };
 
 export function SamuelAiShell({
+  executiveBriefing,
   executiveContext = null,
   executiveIntelligence = null,
   executiveDecisions = [],
@@ -147,10 +148,15 @@ export function SamuelAiShell({
   const [analysisStartedAt, setAnalysisStartedAt] = useState<number | null>(null);
   const [analysisCompletedAt, setAnalysisCompletedAt] = useState<number | null>(null);
 
-  const briefing = {
-    ...MOCK_EXECUTIVE_BRIEFING,
-    greeting: getTimeGreeting(),
-  };
+  const briefing =
+    executiveBriefing ??
+    buildExecutiveBriefing({
+      context: executiveContext,
+      intelligence: executiveIntelligence,
+      monitoring: executiveMonitoring,
+      forecast: executiveForecast,
+      priority: executivePriority,
+    });
 
   const handleFirstMessage = useCallback(() => {
     setHasActiveAnalysis(true);
