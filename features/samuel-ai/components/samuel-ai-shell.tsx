@@ -126,6 +126,8 @@ export function SamuelAiShell({
   const [executiveConversation, setExecutiveConversation] =
     useState<ExecutiveConversation | null>(null);
   const [pendingQuestion, setPendingQuestion] = useState<string | null>(null);
+  const [analysisStartedAt, setAnalysisStartedAt] = useState<number | null>(null);
+  const [analysisCompletedAt, setAnalysisCompletedAt] = useState<number | null>(null);
 
   const briefing = {
     ...MOCK_EXECUTIVE_BRIEFING,
@@ -143,6 +145,8 @@ export function SamuelAiShell({
       setHasActiveAnalysis(true);
       setPendingQuestion(content);
       setExecutiveConversation(null);
+      setAnalysisStartedAt(Date.now());
+      setAnalysisCompletedAt(null);
 
       const conversationContext: ExecutiveConversationContext = {
         companyName: executiveContext?.company.name,
@@ -197,6 +201,7 @@ export function SamuelAiShell({
       setExecutiveBrain(brain);
       setExecutiveConversation(conversation);
       setPendingQuestion(null);
+      setAnalysisCompletedAt(Date.now());
       setBrainStatus("ready");
       setIsProcessing(false);
 
@@ -339,6 +344,8 @@ export function SamuelAiShell({
             linkedInExecutive={linkedInExecutive}
             executiveConversation={executiveConversation}
             pendingQuestion={pendingQuestion}
+            analysisStartedAt={analysisStartedAt}
+            analysisCompletedAt={analysisCompletedAt}
           />
         </aside>
       </main>

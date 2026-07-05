@@ -37,6 +37,7 @@ import type { ExecutiveMonitoring } from "../../services/executive-monitoring.se
 import type { ExecutionPlan } from "../../services/executive-execution-planner.service";
 import type { ExecutiveDecision } from "../../services/executive-decision.service";
 import type { ExecutiveIntelligence } from "../../services/executive-intelligence.service";
+import { ExecutiveLiveBoard } from "../executive-live-board";
 import { CommandPanel } from "../shared/command-panel";
 import { SectionHeader } from "../section-header";
 import { ExecutiveActionPlanSection } from "./executive-action-plan-section";
@@ -85,6 +86,8 @@ type ExecutiveDashboardProps = {
   linkedInExecutive?: LinkedInExecutive | null;
   executiveConversation?: ExecutiveConversation | null;
   pendingQuestion?: string | null;
+  analysisStartedAt?: number | null;
+  analysisCompletedAt?: number | null;
 };
 
 const STATUS_LABELS: Record<ExecutiveBrainStatus, string> = {
@@ -122,6 +125,8 @@ export function ExecutiveDashboard({
   linkedInExecutive = null,
   executiveConversation = null,
   pendingQuestion = null,
+  analysisStartedAt = null,
+  analysisCompletedAt = null,
 }: ExecutiveDashboardProps) {
   const statusWithTimestamp: ExecutiveStatus = {
     ...executiveStatus,
@@ -139,6 +144,29 @@ export function ExecutiveDashboard({
         />
         <BrainStatusBadge status={status} />
       </div>
+
+      <CommandPanel className="p-4 sm:p-5" accent>
+        <ExecutiveLiveBoard
+          brainStatus={status}
+          isProcessing={isProcessing}
+          orchestratorPhase={orchestratorSnapshot?.phase ?? null}
+          executiveCeo={executiveCeo}
+          executiveConversation={executiveConversation}
+          analysisStartedAt={analysisStartedAt}
+          analysisCompletedAt={analysisCompletedAt}
+          moduleAvailability={{
+            marketing: Boolean(marketingExecutive),
+            finance: Boolean(financeExecutive),
+            sales: Boolean(salesExecutive),
+            operations: Boolean(operationsExecutive),
+            hr: Boolean(hrExecutive),
+            legal: Boolean(legalExecutive),
+            "google-business": Boolean(googleBusinessExecutive),
+            meta: Boolean(metaExecutive),
+            linkedin: Boolean(linkedInExecutive),
+          }}
+        />
+      </CommandPanel>
 
       <CommandPanel className="p-4 sm:p-5">
         <ExecutiveStatusSection
