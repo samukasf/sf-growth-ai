@@ -9,6 +9,10 @@ import {
   buildMarketingExecutive,
   buildMarketingExecutiveForCompany,
 } from "@/features/marketing/services/marketing-executive.service";
+import {
+  buildSalesExecutive,
+  buildSalesExecutiveForCompany,
+} from "@/features/sales/services/sales-executive.service";
 import { buildExecutiveAction } from "@/features/samuel-ai/services/executive-action.service";
 import { buildExecutiveCEO } from "@/features/samuel-ai/services/executive-ceo.service";
 import { buildExecutiveCompetitor } from "@/features/samuel-ai/services/executive-competitor.service";
@@ -161,6 +165,35 @@ export default async function SamuelAiRoute() {
     });
   }
 
+  const salesEngines = {
+    strategy: executiveStrategy,
+    intelligence: executiveIntelligence,
+    forecast: executiveForecast,
+    competitor: executiveCompetitor,
+    crmExecutive,
+    marketingExecutive,
+  };
+
+  let salesExecutive = buildSalesExecutive({
+    companyName: executiveContext?.company.name,
+    ...salesEngines,
+  });
+
+  try {
+    if (executiveContext?.company.id) {
+      salesExecutive = await buildSalesExecutiveForCompany(
+        executiveContext.company.id,
+        executiveContext.company.name,
+        salesEngines,
+      );
+    }
+  } catch {
+    salesExecutive = buildSalesExecutive({
+      companyName: executiveContext?.company.name,
+      ...salesEngines,
+    });
+  }
+
   const executiveCeo = buildExecutiveCEO({
     context: executiveContext,
     intelligence: executiveIntelligence,
@@ -176,6 +209,7 @@ export default async function SamuelAiRoute() {
     recommendation: executiveRecommendation,
     crmExecutive,
     marketingExecutive,
+    salesExecutive,
   });
 
   return (
@@ -195,6 +229,7 @@ export default async function SamuelAiRoute() {
       executiveCeo={executiveCeo}
       crmExecutive={crmExecutive}
       marketingExecutive={marketingExecutive}
+      salesExecutive={salesExecutive}
     />
   );
 }

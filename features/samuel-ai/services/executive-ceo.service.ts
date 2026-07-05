@@ -2,6 +2,7 @@ import type { ExecutiveContext } from "@/services/executive-context.service";
 
 import type { CrmExecutive } from "@/features/crm/services/crm-executive.service";
 import type { MarketingExecutive } from "@/features/marketing/services/marketing-executive.service";
+import type { SalesExecutive } from "@/features/sales/services/sales-executive.service";
 
 import type { ExecutiveAction } from "./executive-action.service";
 import type { ExecutiveCompetitor } from "./executive-competitor.service";
@@ -52,6 +53,7 @@ export type ExecutiveCEOInput = {
   recommendation?: ExecutiveRecommendation | null;
   crmExecutive?: CrmExecutive | null;
   marketingExecutive?: MarketingExecutive | null;
+  salesExecutive?: SalesExecutive | null;
 };
 
 function clampScore(value: number): number {
@@ -112,6 +114,14 @@ function calculateCompanyHealthScore(input: ExecutiveCEOInput): number {
     );
   }
 
+  if (input.salesExecutive) {
+    score += Math.min(10, input.salesExecutive.salesHealthScore * 0.1);
+    score -= Math.min(
+      6,
+      input.salesExecutive.salesRisks.filter((r) => r.severity === "critical").length * 3,
+    );
+  }
+
   return clampScore(score);
 }
 
@@ -147,6 +157,12 @@ function calculateGrowthScore(input: ExecutiveCEOInput): number {
   if (input.marketingExecutive) {
     score += Math.min(10, input.marketingExecutive.conversionScore * 0.1);
     score += Math.min(8, input.marketingExecutive.topChannels.length * 3);
+  }
+
+  if (input.salesExecutive) {
+    score += Math.min(10, input.salesExecutive.winRate * 0.1);
+    score += Math.min(8, input.salesExecutive.openOpportunities.length * 3);
+    if (input.salesExecutive.salesPipelineScore >= 60) score += 6;
   }
 
   return clampScore(score);
@@ -206,7 +222,7 @@ function buildExecutiveSummary(
     input.strategy?.executiveStrategy ??
     "Análise executiva em consolidação.";
 
-  return `${company} — CEO Digital Samuel AI™. ${intelligenceSummary} Score executivo ${executiveScore}/100 · Saúde ${companyHealth.score}/100 · ${input.decisions?.length ?? 0} decisão(ões) · ${input.action?.executionOrder.length ?? 0} ação(ões) mapeada(s).${input.crmExecutive ? ` ${input.crmExecutive.crmExecutiveSummary}` : ""}${input.marketingExecutive ? ` ${input.marketingExecutive.marketingExecutiveSummary}` : ""}`;
+  return `${company} — CEO Digital Samuel AI™. ${intelligenceSummary} Score executivo ${executiveScore}/100 · Saúde ${companyHealth.score}/100 · ${input.decisions?.length ?? 0} decisão(ões) · ${input.action?.executionOrder.length ?? 0} ação(ões) mapeada(s).${input.crmExecutive ? ` ${input.crmExecutive.crmExecutiveSummary}` : ""}${input.marketingExecutive ? ` ${input.marketingExecutive.marketingExecutiveSummary}` : ""}${input.salesExecutive ? ` ${input.salesExecutive.salesExecutiveSummary}` : ""}`;
 }
 
 function buildTopDecision(input: ExecutiveCEOInput): string {
@@ -246,6 +262,10 @@ function buildTopPriorities(input: ExecutiveCEOInput): string[] {
       .slice(0, 2)
       .map((r) => r.title) ?? []),
     ...(input.marketingExecutive?.marketingRecommendations
+      .filter((r) => r.priority === "critical" || r.priority === "high")
+      .slice(0, 2)
+      .map((r) => r.title) ?? []),
+    ...(input.salesExecutive?.salesRecommendations
       .filter((r) => r.priority === "critical" || r.priority === "high")
       .slice(0, 2)
       .map((r) => r.title) ?? []),
@@ -290,7 +310,11 @@ function buildCeoMessage(
     ? ` Marketing em ${input.marketingExecutive.marketingHealthScore}/100 com conversão ${input.marketingExecutive.conversionScore}/100.`
     : "";
 
-  return `Olá, sou o CEO Digital da ${company}. ${tone} Saúde operacional em ${companyHealth.score}/100, potencial de crescimento ${growthScore}/100 e risco consolidado ${riskScore}/100.${crmNote}${marketingNote} Meta de crescimento: ${growth}. Minha diretriz imediata: ${topAction}. Confio no motor executivo Samuel AI™ para converter estratégia em resultados mensuráveis.`;
+  const salesNote = input.salesExecutive
+    ? ` Vendas em ${input.salesExecutive.salesHealthScore}/100 com win rate ${input.salesExecutive.winRate}%.`
+    : "";
+
+  return `Olá, sou o CEO Digital da ${company}. ${tone} Saúde operacional em ${companyHealth.score}/100, potencial de crescimento ${growthScore}/100 e risco consolidado ${riskScore}/100.${crmNote}${marketingNote}${salesNote} Meta de crescimento: ${growth}. Minha diretriz imediata: ${topAction}. Confio no motor executivo Samuel AI™ para converter estratégia em resultados mensuráveis.`;
 }
 
 export function buildExecutiveCEO(
@@ -309,6 +333,7 @@ export function buildExecutiveCEO(
     input.competitor ||
     input.crmExecutive ||
     input.marketingExecutive ||
+    input.salesExecutive ||
     (input.decisions?.length ?? 0) > 0;
 
   if (!hasData) return null;
