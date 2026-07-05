@@ -70,14 +70,62 @@ export type CompetitiveAdvantage = {
   defensibility: string;
 };
 
+export type CompetitorStrategy = {
+  id: string;
+  competitorId: string;
+  competitorName: string;
+  strategy: string;
+  channels: string[];
+  focus: string;
+};
+
+export type MarketShareEstimate = {
+  companyShare: string;
+  competitorAverage: string;
+  marketLeader: string;
+  leaderShare: string;
+  totalAddressableShare: string;
+  byCompetitor: Array<{ name: string; share: string }>;
+};
+
+export type PriceRange = {
+  id: string;
+  competitorId: string;
+  competitorName: string;
+  tier: string;
+  range: string;
+  model: string;
+};
+
+export type CompetitiveSwot = {
+  strengths: string[];
+  weaknesses: string[];
+  opportunities: string[];
+  threats: string[];
+};
+
+export type StrategicRecommendation = {
+  id: string;
+  title: string;
+  description: string;
+  priority: "critical" | "high" | "medium" | "low";
+  horizon: string;
+};
+
 export type ExecutiveCompetitor = {
   competitors: CompetitorProfile[];
+  marketShare: MarketShareEstimate;
   strengths: CompetitorStrength[];
   weaknesses: CompetitorWeakness[];
+  strategies: CompetitorStrategy[];
+  priceRanges: PriceRange[];
+  differentiators: Array<{ competitorId: string; competitorName: string; items: string[] }>;
   opportunities: CompetitorOpportunity[];
   threats: CompetitorThreat[];
   gaps: CompetitiveGap[];
   advantages: CompetitiveAdvantage[];
+  competitiveSwot: CompetitiveSwot;
+  strategicRecommendations: StrategicRecommendation[];
   summary: string;
   analyzedAt: string;
 };
@@ -303,15 +351,151 @@ const MOCK_ADVANTAGES: CompetitiveAdvantage[] = [
   },
 ];
 
+const MOCK_STRATEGIES: CompetitorStrategy[] = [
+  {
+    id: "cstrat-1",
+    competitorId: "comp-1",
+    competitorName: "GrowthOps AI",
+    strategy: "Land-and-expand em PMEs com ROI rápido",
+    channels: ["LinkedIn Ads", "SEO", "Parcerias B2B"],
+    focus: "Redução de custos operacionais",
+  },
+  {
+    id: "cstrat-2",
+    competitorId: "comp-2",
+    competitorName: "Strategix",
+    strategy: "Consultoria premium com frameworks proprietários",
+    channels: ["Eventos", "Indicação", "Outbound enterprise"],
+    focus: "Governança e planejamento C-level",
+  },
+  {
+    id: "cstrat-3",
+    competitorId: "comp-3",
+    competitorName: "MarketPulse",
+    strategy: "Freemium + upsell para inteligência competitiva",
+    channels: ["Google Ads", "Instagram", "Freemium"],
+    focus: "Alertas e monitoramento em tempo real",
+  },
+];
+
+const MOCK_PRICE_RANGES: PriceRange[] = [
+  {
+    id: "price-1",
+    competitorId: "comp-1",
+    competitorName: "GrowthOps AI",
+    tier: "Growth",
+    range: "R$ 690 – R$ 890/mês",
+    model: "SaaS mensal por usuário",
+  },
+  {
+    id: "price-2",
+    competitorId: "comp-2",
+    competitorName: "Strategix",
+    tier: "Executive",
+    range: "R$ 1.290 – R$ 1.890/mês",
+    model: "Assinatura + advisory",
+  },
+  {
+    id: "price-3",
+    competitorId: "comp-3",
+    competitorName: "MarketPulse",
+    tier: "Pro",
+    range: "R$ 490 – R$ 650/mês",
+    model: "Freemium + plano Pro",
+  },
+];
+
+const MOCK_COMPETITIVE_SWOT: CompetitiveSwot = {
+  strengths: [
+    "Executive Command Center com pipeline completo de decisão",
+    "Memória executiva persistente por empresa",
+    "Velocidade de análise e plano de execução integrado",
+  ],
+  weaknesses: [
+    "Baixa participação de mercado (2% estimado)",
+    "Presença digital ainda em construção",
+    "Pouca prova social pública vs. concorrentes",
+  ],
+  opportunities: [
+    "Concorrentes sem camada de execução integrada",
+    "Demanda por IA executiva no mid-market brasileiro",
+    "Gap de preço entre GrowthOps e Strategix",
+  ],
+  threats: [
+    "Guerra de preços no segmento PME",
+    "Feature parity em monitoramento competitivo",
+    "Concorrentes com maior autoridade de marca",
+  ],
+};
+
+const MOCK_RECOMMENDATIONS: StrategicRecommendation[] = [
+  {
+    id: "rec-1",
+    title: "Posicionar diferencial de execução",
+    description:
+      "Comunicar que SF Growth AI vai além de insights — entrega decisão, plano e monitoramento.",
+    priority: "critical",
+    horizon: "30 dias",
+  },
+  {
+    id: "rec-2",
+    title: "Atacar fraqueza de MarketPulse",
+    description:
+      "Campanha direcionada a empresas frustradas com ferramentas que só monitoram.",
+    priority: "high",
+    horizon: "60 dias",
+  },
+  {
+    id: "rec-3",
+    title: "Pacote mid-market competitivo",
+    description:
+      "Precificar entre R$ 790–990/mês com trial executivo de 14 dias.",
+    priority: "high",
+    horizon: "90 dias",
+  },
+  {
+    id: "rec-4",
+    title: "Fortalecer prova social",
+    description:
+      "Publicar cases e reviews para fechar gap de reputação vs. concorrentes.",
+    priority: "medium",
+    horizon: "120 dias",
+  },
+];
+
 export function buildExecutiveCompetitor(): ExecutiveCompetitor {
+  const marketShare: MarketShareEstimate = {
+    companyShare: "2%",
+    competitorAverage: "13%",
+    marketLeader: "GrowthOps AI",
+    leaderShare: "18%",
+    totalAddressableShare: "100% — IA Executiva B2B Brasil",
+    byCompetitor: MOCK_COMPETITORS.map((c) => ({
+      name: c.name,
+      share: c.marketShare,
+    })),
+  };
+
+  const differentiators = MOCK_COMPETITORS.map((c) => ({
+    competitorId: c.id,
+    competitorName: c.name,
+    items: c.differentiators,
+  }));
+
   return {
     competitors: MOCK_COMPETITORS,
+    marketShare,
     strengths: MOCK_STRENGTHS,
     weaknesses: MOCK_WEAKNESSES,
+    strategies: MOCK_STRATEGIES,
+    priceRanges: MOCK_PRICE_RANGES,
+    differentiators,
     opportunities: MOCK_OPPORTUNITIES,
     threats: MOCK_THREATS,
     gaps: MOCK_GAPS,
     advantages: MOCK_ADVANTAGES,
+    competitiveSwot: MOCK_COMPETITIVE_SWOT,
+    strategicRecommendations: MOCK_RECOMMENDATIONS,
     summary:
       "Três concorrentes diretos dominam participação com focos distintos: operação (GrowthOps AI), estratégia (Strategix) e monitoramento (MarketPulse). SF Growth AI possui vantagem estrutural no Executive Command Center e memória executiva, com gaps críticos em presença digital, share de mercado e canais de aquisição.",
     analyzedAt: new Date().toISOString(),
