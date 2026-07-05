@@ -1,3 +1,4 @@
+import type { CrmExecutive } from "@/features/crm/services/crm-executive.service";
 import type { ExecutiveContext } from "@/services/executive-context.service";
 import type { ExecutiveDecision } from "../services/executive-decision.service";
 import type { ExecutionPlan } from "../services/executive-execution-planner.service";
@@ -30,6 +31,7 @@ type SamuelAiPageProps = {
   executivePriority?: ExecutivePriority | null;
   executiveRecommendation?: ExecutiveRecommendation | null;
   executiveCeo?: ExecutiveCEO | null;
+  crmExecutive?: CrmExecutive | null;
 };
 
 export function SamuelAiPage({
@@ -46,6 +48,7 @@ export function SamuelAiPage({
   executivePriority = null,
   executiveRecommendation = null,
   executiveCeo = null,
+  crmExecutive = null,
 }: SamuelAiPageProps) {
   const competitorIntelligence = executiveCompetitor ?? buildExecutiveCompetitor();
 
@@ -61,6 +64,7 @@ export function SamuelAiPage({
       executiveStrategy={executiveStrategy}
       executiveCompetitor={competitorIntelligence}
       executiveCeo={executiveCeo}
+      crmExecutive={crmExecutive}
     />
   );
 }

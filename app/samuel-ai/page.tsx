@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 
 import { samuelAi } from "@/features";
+import {
+  buildCrmExecutive,
+  buildCrmExecutiveForCompany,
+} from "@/features/crm/services/crm-executive.service";
 import { buildExecutiveAction } from "@/features/samuel-ai/services/executive-action.service";
 import { buildExecutiveCEO } from "@/features/samuel-ai/services/executive-ceo.service";
 import { buildExecutiveCompetitor } from "@/features/samuel-ai/services/executive-competitor.service";
@@ -108,6 +112,23 @@ export default async function SamuelAiRoute() {
     learning: executiveLearning,
   });
 
+  let crmExecutive = buildCrmExecutive({
+    companyName: executiveContext?.company.name,
+  });
+
+  try {
+    if (executiveContext?.company.id) {
+      crmExecutive = await buildCrmExecutiveForCompany(
+        executiveContext.company.id,
+        executiveContext.company.name,
+      );
+    }
+  } catch {
+    crmExecutive = buildCrmExecutive({
+      companyName: executiveContext?.company.name,
+    });
+  }
+
   const executiveCeo = buildExecutiveCEO({
     context: executiveContext,
     intelligence: executiveIntelligence,
@@ -121,6 +142,7 @@ export default async function SamuelAiRoute() {
     action: executiveAction,
     priority: executivePriority,
     recommendation: executiveRecommendation,
+    crmExecutive,
   });
 
   return (
@@ -138,6 +160,7 @@ export default async function SamuelAiRoute() {
       executivePriority={executivePriority}
       executiveRecommendation={executiveRecommendation}
       executiveCeo={executiveCeo}
+      crmExecutive={crmExecutive}
     />
   );
 }

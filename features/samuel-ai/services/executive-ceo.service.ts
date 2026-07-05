@@ -1,5 +1,7 @@
 import type { ExecutiveContext } from "@/services/executive-context.service";
 
+import type { CrmExecutive } from "@/features/crm/services/crm-executive.service";
+
 import type { ExecutiveAction } from "./executive-action.service";
 import type { ExecutiveCompetitor } from "./executive-competitor.service";
 import type { ExecutiveDecision } from "./executive-decision.service";
@@ -47,6 +49,7 @@ export type ExecutiveCEOInput = {
   action?: ExecutiveAction | null;
   priority?: ExecutivePriority | null;
   recommendation?: ExecutiveRecommendation | null;
+  crmExecutive?: CrmExecutive | null;
 };
 
 function clampScore(value: number): number {
@@ -94,6 +97,11 @@ function calculateCompanyHealthScore(input: ExecutiveCEOInput): number {
 
   if ((input.executionPlans?.length ?? 0) > 0) score += 8;
 
+  if (input.crmExecutive) {
+    score += Math.min(12, input.crmExecutive.crmHealthScore * 0.12);
+    score -= Math.min(8, input.crmExecutive.inactiveContacts * 2);
+  }
+
   return clampScore(score);
 }
 
@@ -119,6 +127,12 @@ function calculateGrowthScore(input: ExecutiveCEOInput): number {
   score += Math.min(10, (input.competitor?.opportunities.length ?? 0) * 3);
   score += Math.min(10, (input.learning?.evolutionScore ?? 0) * 0.1);
   score += Math.min(10, (input.strategy?.executiveScore ?? 0) * 0.1);
+
+  if (input.crmExecutive) {
+    score += Math.min(12, input.crmExecutive.conversionRate * 0.12);
+    score += Math.min(8, input.crmExecutive.activeLeads * 2);
+    if (input.crmExecutive.pipelineValue > 0) score += 8;
+  }
 
   return clampScore(score);
 }
@@ -177,7 +191,7 @@ function buildExecutiveSummary(
     input.strategy?.executiveStrategy ??
     "Análise executiva em consolidação.";
 
-  return `${company} — CEO Digital Samuel AI™. ${intelligenceSummary} Score executivo ${executiveScore}/100 · Saúde ${companyHealth.score}/100 · ${input.decisions?.length ?? 0} decisão(ões) · ${input.action?.executionOrder.length ?? 0} ação(ões) mapeada(s).`;
+  return `${company} — CEO Digital Samuel AI™. ${intelligenceSummary} Score executivo ${executiveScore}/100 · Saúde ${companyHealth.score}/100 · ${input.decisions?.length ?? 0} decisão(ões) · ${input.action?.executionOrder.length ?? 0} ação(ões) mapeada(s).${input.crmExecutive ? ` ${input.crmExecutive.crmExecutiveSummary}` : ""}`;
 }
 
 function buildTopDecision(input: ExecutiveCEOInput): string {
@@ -210,6 +224,10 @@ function buildTopPriorities(input: ExecutiveCEOInput): string[] {
     ...(input.priority?.top10Priorities.slice(0, 3).map((t) => t.title) ?? []),
     ...(input.recommendation?.executiveRecommendations
       .filter((r) => r.priority === "critical")
+      .slice(0, 2)
+      .map((r) => r.title) ?? []),
+    ...(input.crmExecutive?.crmRecommendations
+      .filter((r) => r.priority === "critical" || r.priority === "high")
       .slice(0, 2)
       .map((r) => r.title) ?? []),
   ]
@@ -245,7 +263,11 @@ function buildCeoMessage(
         ? "Temos base sólida, mas precisamos de foco imediato."
         : "Precisamos estabilizar fundamentos antes de escalar.";
 
-  return `Olá, sou o CEO Digital da ${company}. ${tone} Saúde operacional em ${companyHealth.score}/100, potencial de crescimento ${growthScore}/100 e risco consolidado ${riskScore}/100. Meta de crescimento: ${growth}. Minha diretriz imediata: ${topAction}. Confio no motor executivo Samuel AI™ para converter estratégia em resultados mensuráveis.`;
+  const crmNote = input.crmExecutive
+    ? ` CRM em ${input.crmExecutive.crmHealthScore}/100 com pipeline ativo e ${input.crmExecutive.activeLeads} leads.`
+    : "";
+
+  return `Olá, sou o CEO Digital da ${company}. ${tone} Saúde operacional em ${companyHealth.score}/100, potencial de crescimento ${growthScore}/100 e risco consolidado ${riskScore}/100.${crmNote} Meta de crescimento: ${growth}. Minha diretriz imediata: ${topAction}. Confio no motor executivo Samuel AI™ para converter estratégia em resultados mensuráveis.`;
 }
 
 export function buildExecutiveCEO(
@@ -262,6 +284,7 @@ export function buildExecutiveCEO(
     input.monitoring ||
     input.learning ||
     input.competitor ||
+    input.crmExecutive ||
     (input.decisions?.length ?? 0) > 0;
 
   if (!hasData) return null;

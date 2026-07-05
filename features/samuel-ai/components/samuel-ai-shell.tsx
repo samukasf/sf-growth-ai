@@ -25,6 +25,7 @@ import type { ExecutiveContext as CompanyExecutiveContext } from "@/services/exe
 import type { ExecutiveDecision } from "../services/executive-decision.service";
 import type { ExecutionPlan } from "../services/executive-execution-planner.service";
 import type { ExecutiveIntelligence } from "../services/executive-intelligence.service";
+import type { CrmExecutive } from "@/features/crm/services/crm-executive.service";
 import type { ExecutiveCEO } from "../services/executive-ceo.service";
 import type { ExecutiveCompetitor } from "../services/executive-competitor.service";
 import type { ExecutiveStrategy } from "../services/executive-strategy.service";
@@ -66,6 +67,7 @@ type SamuelAiShellProps = {
   executiveStrategy?: ExecutiveStrategy | null;
   executiveCompetitor?: ExecutiveCompetitor | null;
   executiveCeo?: ExecutiveCEO | null;
+  crmExecutive?: CrmExecutive | null;
 };
 
 export function SamuelAiShell({
@@ -79,6 +81,7 @@ export function SamuelAiShell({
   executiveStrategy = null,
   executiveCompetitor = null,
   executiveCeo = null,
+  crmExecutive = null,
 }: SamuelAiShellProps) {
   const [executiveBrain, setExecutiveBrain] =
     useState<ExecutiveBrain>(DEFAULT_EXECUTIVE_BRAIN);
@@ -233,6 +236,7 @@ export function SamuelAiShell({
             executiveForecast={executiveForecast}
             executiveStrategy={executiveStrategy}
             executiveCeo={executiveCeo}
+            crmExecutive={crmExecutive}
           />
         </aside>
       </main>
