@@ -11,6 +11,11 @@ import {
 } from "@/features/marketing/services/marketing-executive.service";
 import { buildLinkedInExecutive } from "@/features/linkedin/services/linkedin-executive.service";
 import { buildMetaExecutive } from "@/features/meta/services/meta-executive.service";
+import {
+  buildMetaExecutiveForCompany,
+  enrichIntelligenceWithMeta,
+  enrichMarketingWithMeta,
+} from "@/integrations/meta";
 import { buildGoogleBusinessExecutive } from "@/features/google-business/services/google-business-executive.service";
 import { buildGoogleBusinessExecutiveForCompany } from "@/features/google-business/api/google-business.adapter";
 import { buildGoogleAnalyticsExecutive } from "@/features/google-analytics/services/google-analytics-executive.service";
@@ -258,13 +263,45 @@ export default async function SamuelAiRoute() {
     searchConsoleExecutive = buildSearchConsoleExecutive(searchConsoleEngines);
   }
 
+  const metaEngines = {
+    companyName: executiveContext?.company.name,
+    strategy: executiveStrategy,
+    intelligence: executiveIntelligence,
+    competitor: executiveCompetitor,
+    marketingExecutive,
+  };
+
+  let metaExecutive = buildMetaExecutive(metaEngines);
+
+  try {
+    if (executiveContext?.company.id) {
+      metaExecutive = await buildMetaExecutiveForCompany(
+        executiveContext.company.id,
+        executiveContext.company.name,
+        {
+          strategy: executiveStrategy,
+          intelligence: executiveIntelligence,
+          competitor: executiveCompetitor,
+          marketingExecutive,
+        },
+      );
+    }
+  } catch {
+    metaExecutive = buildMetaExecutive(metaEngines);
+  }
+
   const marketingExecutiveWithIntegrations =
-    enrichMarketingWithSearchConsole(marketingExecutiveWithAnalytics, searchConsoleExecutive) ??
-    marketingExecutiveWithAnalytics;
+    enrichMarketingWithMeta(
+      enrichMarketingWithSearchConsole(marketingExecutiveWithAnalytics, searchConsoleExecutive),
+      metaExecutive,
+    ) ?? marketingExecutiveWithAnalytics;
   const executiveIntelligenceWithIntegrations =
-    enrichIntelligenceWithSearchConsole(
-      executiveIntelligenceWithAnalytics,
-      searchConsoleExecutive,
+    enrichIntelligenceWithMeta(
+      enrichIntelligenceWithSearchConsole(
+        executiveIntelligenceWithAnalytics,
+        searchConsoleExecutive,
+      ),
+      metaExecutive,
     ) ?? executiveIntelligenceWithAnalytics;
 
   const salesEngines = {
@@ -458,14 +495,6 @@ export default async function SamuelAiRoute() {
   } catch {
     googleBusinessExecutive = buildGoogleBusinessExecutive(googleBusinessEngines);
   }
-
-  const metaExecutive = buildMetaExecutive({
-    companyName: executiveContext?.company.name,
-    strategy: executiveStrategy,
-    intelligence: executiveIntelligence,
-    competitor: executiveCompetitor,
-    marketingExecutive,
-  });
 
   const linkedInExecutive = buildLinkedInExecutive({
     companyName: executiveContext?.company.name,

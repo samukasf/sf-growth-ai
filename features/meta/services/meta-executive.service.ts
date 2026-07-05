@@ -79,6 +79,8 @@ export type MetaExecutive = {
 
 export type MetaExecutiveInput = {
   metrics?: MetaPlatformMetrics;
+  bestPerformingPosts?: MetaPostPerformance[];
+  weakPerformingPosts?: MetaPostPerformance[];
   companyName?: string;
   strategy?: ExecutiveStrategy | null;
   intelligence?: ExecutiveIntelligence | null;
@@ -395,8 +397,8 @@ export function buildMetaExecutive(input: MetaExecutiveInput = {}): MetaExecutiv
 
   const facebookScore = calculateFacebookScore(metrics);
   const instagramScore = calculateInstagramScore(metrics);
-  const bestPerformingPosts = buildBestPosts();
-  const weakPerformingPosts = buildWeakPosts();
+  const bestPerformingPosts = input.bestPerformingPosts ?? buildBestPosts();
+  const weakPerformingPosts = input.weakPerformingPosts ?? buildWeakPosts();
   const contentScore = calculateContentScore(bestPerformingPosts, weakPerformingPosts);
   const engagementScore = calculateEngagementScore(metrics);
   const reachScore = calculateReachScore(metrics);
