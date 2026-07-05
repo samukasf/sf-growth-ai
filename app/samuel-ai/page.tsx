@@ -67,6 +67,11 @@ import {
   getFirstCompany,
   type ExecutiveContext,
 } from "@/services/executive-context.service";
+import {
+  buildWatcherExecutive,
+  enrichIntelligenceWithWatchers,
+  enrichMemoriesWithWatchers,
+} from "@/features/watchers";
 
 export const metadata: Metadata = {
   title: "Samuel AI™ | SF Growth AI",
@@ -506,9 +511,30 @@ export default async function SamuelAiRoute() {
     salesExecutive,
   });
 
+  const watcherExecutive = buildWatcherExecutive({
+    companyId: executiveContext?.company.id,
+    companyName: executiveContext?.company.name,
+  });
+
+  const executiveIntelligenceFinal =
+    enrichIntelligenceWithWatchers(
+      executiveIntelligenceWithIntegrations,
+      watcherExecutive,
+    ) ?? executiveIntelligenceWithIntegrations;
+
+  const executiveContextWithWatchers = executiveContext
+    ? {
+        ...executiveContext,
+        memories: enrichMemoriesWithWatchers(
+          executiveContext.memories,
+          watcherExecutive,
+        ),
+      }
+    : null;
+
   const executiveCeo = buildExecutiveCEO({
-    context: executiveContext,
-    intelligence: executiveIntelligenceWithIntegrations,
+    context: executiveContextWithWatchers,
+    intelligence: executiveIntelligenceFinal,
     decisions: executiveDecisions,
     executionPlans,
     monitoring: executiveMonitoring,
@@ -531,12 +557,13 @@ export default async function SamuelAiRoute() {
     searchConsoleExecutive,
     metaExecutive,
     linkedInExecutive,
+    watcherExecutive,
   });
 
   return (
     <samuelAi.SamuelAiPage
-      executiveContext={executiveContext}
-      executiveIntelligence={executiveIntelligenceWithIntegrations}
+      executiveContext={executiveContextWithWatchers}
+      executiveIntelligence={executiveIntelligenceFinal}
       executiveDecisions={executiveDecisions}
       executionPlans={executionPlans}
       executiveMonitoring={executiveMonitoring}
@@ -560,6 +587,7 @@ export default async function SamuelAiRoute() {
       searchConsoleExecutive={searchConsoleExecutive}
       metaExecutive={metaExecutive}
       linkedInExecutive={linkedInExecutive}
+      watcherExecutive={watcherExecutive}
     />
   );
 }

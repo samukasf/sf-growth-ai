@@ -12,6 +12,7 @@ import type { GoogleAnalyticsExecutive } from "@/features/google-analytics/servi
 import type { SearchConsoleExecutive } from "@/features/search-console/services/search-console-executive.service";
 import type { MetaExecutive } from "@/features/meta/services/meta-executive.service";
 import type { LinkedInExecutive } from "@/features/linkedin/services/linkedin-executive.service";
+import type { WatcherExecutive } from "@/features/watchers/types/watcher.types";
 
 import type { ExecutiveAction } from "./executive-action.service";
 import type { ExecutiveCompetitor } from "./executive-competitor.service";
@@ -72,6 +73,7 @@ export type ExecutiveCEOInput = {
   searchConsoleExecutive?: SearchConsoleExecutive | null;
   metaExecutive?: MetaExecutive | null;
   linkedInExecutive?: LinkedInExecutive | null;
+  watcherExecutive?: WatcherExecutive | null;
 };
 
 function clampScore(value: number): number {
@@ -213,6 +215,11 @@ function calculateCompanyHealthScore(input: ExecutiveCEOInput): number {
       6,
       input.linkedInExecutive.linkedInRisks.filter((r) => r.severity === "critical").length * 3,
     );
+  }
+
+  if (input.watcherExecutive) {
+    score += Math.min(8, input.watcherExecutive.summary.activeWatchers * 2);
+    score -= Math.min(12, input.watcherExecutive.summary.criticalAlerts * 4);
   }
 
   return clampScore(score);
@@ -369,7 +376,7 @@ function buildExecutiveSummary(
     input.strategy?.executiveStrategy ??
     "Análise executiva em consolidação.";
 
-  return `${company} — CEO Digital Samuel AI™. ${intelligenceSummary} Score executivo ${executiveScore}/100 · Saúde ${companyHealth.score}/100 · ${input.decisions?.length ?? 0} decisão(ões) · ${input.action?.executionOrder.length ?? 0} ação(ões) mapeada(s).${input.crmExecutive ? ` ${input.crmExecutive.crmExecutiveSummary}` : ""}${input.marketingExecutive ? ` ${input.marketingExecutive.marketingExecutiveSummary}` : ""}${input.salesExecutive ? ` ${input.salesExecutive.salesExecutiveSummary}` : ""}${input.financeExecutive ? ` ${input.financeExecutive.financeExecutiveSummary}` : ""}${input.operationsExecutive ? ` ${input.operationsExecutive.operationsExecutiveSummary}` : ""}${input.hrExecutive ? ` ${input.hrExecutive.hrExecutiveSummary}` : ""}${input.legalExecutive ? ` ${input.legalExecutive.legalExecutiveSummary}` : ""}${input.googleBusinessExecutive ? ` ${input.googleBusinessExecutive.googleBusinessExecutiveSummary}` : ""}${input.googleAnalyticsExecutive ? ` ${input.googleAnalyticsExecutive.googleAnalyticsExecutiveSummary}` : ""}${input.searchConsoleExecutive ? ` ${input.searchConsoleExecutive.searchConsoleExecutiveSummary}` : ""}${input.metaExecutive ? ` ${input.metaExecutive.metaExecutiveSummary}` : ""}${input.linkedInExecutive ? ` ${input.linkedInExecutive.linkedInExecutiveSummary}` : ""}`;
+  return `${company} — CEO Digital Samuel AI™. ${intelligenceSummary} Score executivo ${executiveScore}/100 · Saúde ${companyHealth.score}/100 · ${input.decisions?.length ?? 0} decisão(ões) · ${input.action?.executionOrder.length ?? 0} ação(ões) mapeada(s).${input.crmExecutive ? ` ${input.crmExecutive.crmExecutiveSummary}` : ""}${input.marketingExecutive ? ` ${input.marketingExecutive.marketingExecutiveSummary}` : ""}${input.salesExecutive ? ` ${input.salesExecutive.salesExecutiveSummary}` : ""}${input.financeExecutive ? ` ${input.financeExecutive.financeExecutiveSummary}` : ""}${input.operationsExecutive ? ` ${input.operationsExecutive.operationsExecutiveSummary}` : ""}${input.hrExecutive ? ` ${input.hrExecutive.hrExecutiveSummary}` : ""}${input.legalExecutive ? ` ${input.legalExecutive.legalExecutiveSummary}` : ""}${input.googleBusinessExecutive ? ` ${input.googleBusinessExecutive.googleBusinessExecutiveSummary}` : ""}${input.googleAnalyticsExecutive ? ` ${input.googleAnalyticsExecutive.googleAnalyticsExecutiveSummary}` : ""}${input.searchConsoleExecutive ? ` ${input.searchConsoleExecutive.searchConsoleExecutiveSummary}` : ""}${input.metaExecutive ? ` ${input.metaExecutive.metaExecutiveSummary}` : ""}${input.linkedInExecutive ? ` ${input.linkedInExecutive.linkedInExecutiveSummary}` : ""}${input.watcherExecutive ? ` ${input.watcherExecutive.watcherExecutiveSummary}` : ""}`;
 }
 
 function buildTopDecision(input: ExecutiveCEOInput): string {
@@ -452,6 +459,10 @@ function buildTopPriorities(input: ExecutiveCEOInput): string[] {
       .filter((r) => r.priority === "critical" || r.priority === "high")
       .slice(0, 2)
       .map((r) => r.title) ?? []),
+    ...(input.watcherExecutive?.recentAlerts
+      .filter((alert) => alert.severity === "critical" || alert.severity === "high")
+      .slice(0, 2)
+      .map((alert) => alert.recommendation.title) ?? []),
   ]
     .filter(Boolean)
     .slice(0, 8);
@@ -533,7 +544,11 @@ function buildCeoMessage(
     ? ` LinkedIn em ${input.linkedInExecutive.linkedInHealthScore}/100 com leads B2B ${input.linkedInExecutive.leadGenerationScore}/100.`
     : "";
 
-  return `Olá, sou o CEO Digital da ${company}. ${tone} Saúde operacional em ${companyHealth.score}/100, potencial de crescimento ${growthScore}/100 e risco consolidado ${riskScore}/100.${crmNote}${marketingNote}${salesNote}${financeNote}${operationsNote}${hrNote}${legalNote}${googleBusinessNote}${googleAnalyticsNote}${searchConsoleNote}${metaNote}${linkedInNote} Meta de crescimento: ${growth}. Minha diretriz imediata: ${topAction}. Confio no motor executivo Samuel AI™ para converter estratégia em resultados mensuráveis.`;
+  const watcherNote = input.watcherExecutive
+    ? ` Watchers: ${input.watcherExecutive.summary.activeWatchers} ativo(s) e ${input.watcherExecutive.summary.criticalAlerts} alerta(s) crítico(s).`
+    : "";
+
+  return `Olá, sou o CEO Digital da ${company}. ${tone} Saúde operacional em ${companyHealth.score}/100, potencial de crescimento ${growthScore}/100 e risco consolidado ${riskScore}/100.${crmNote}${marketingNote}${salesNote}${financeNote}${operationsNote}${hrNote}${legalNote}${googleBusinessNote}${googleAnalyticsNote}${searchConsoleNote}${metaNote}${linkedInNote}${watcherNote} Meta de crescimento: ${growth}. Minha diretriz imediata: ${topAction}. Confio no motor executivo Samuel AI™ para converter estratégia em resultados mensuráveis.`;
 }
 
 export function buildExecutiveCEO(
@@ -562,6 +577,7 @@ export function buildExecutiveCEO(
     input.searchConsoleExecutive ||
     input.metaExecutive ||
     input.linkedInExecutive ||
+    input.watcherExecutive ||
     (input.decisions?.length ?? 0) > 0;
 
   if (!hasData) return null;

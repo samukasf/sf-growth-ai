@@ -11,6 +11,7 @@ import type { SalesExecutive } from "@/features/sales/services/sales-executive.s
 import type { MarketingExecutive } from "@/features/marketing/services/marketing-executive.service";
 import type { CrmExecutive } from "@/features/crm/services/crm-executive.service";
 import type { ExecutiveContext } from "@/services/executive-context.service";
+import type { WatcherExecutive } from "@/features/watchers/types/watcher.types";
 import type { ExecutiveDecision } from "../services/executive-decision.service";
 import type { ExecutionPlan } from "../services/executive-execution-planner.service";
 import type { ExecutiveForecast } from "../services/executive-forecast.service";
@@ -54,6 +55,7 @@ type SamuelAiPageProps = {
   searchConsoleExecutive?: SearchConsoleExecutive | null;
   metaExecutive?: MetaExecutive | null;
   linkedInExecutive?: LinkedInExecutive | null;
+  watcherExecutive?: WatcherExecutive | null;
 };
 
 export function SamuelAiPage({
@@ -79,6 +81,7 @@ export function SamuelAiPage({
   searchConsoleExecutive = null,
   metaExecutive = null,
   linkedInExecutive = null,
+  watcherExecutive = null,
 }: SamuelAiPageProps) {
   const competitorIntelligence = executiveCompetitor ?? buildExecutiveCompetitor();
 
@@ -106,6 +109,7 @@ export function SamuelAiPage({
       searchConsoleExecutive={searchConsoleExecutive}
       metaExecutive={metaExecutive}
       linkedInExecutive={linkedInExecutive}
+      watcherExecutive={watcherExecutive}
     />
   );
 }
