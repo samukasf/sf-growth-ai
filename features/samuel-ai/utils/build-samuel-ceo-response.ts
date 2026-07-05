@@ -42,16 +42,23 @@ export function buildSamuelCeoResponse(
   );
   const intentLabel = formatConversationIntent(conversation.primaryIntent);
   const alignment = ALIGNMENT_LABELS[conversation.executiveConsensus.alignment];
+  const leadConclusion = conversation.executiveReasoning?.conclusions[0];
   const immediateAction =
+    leadConclusion?.positiveImpacts[0] ??
     conversation.executiveConsensus.primaryRecommendation;
   const supportingPoint =
+    leadConclusion?.justification ??
     conversation.executiveConsensus.supportingPoints[0] ??
     conversation.executiveConsensus.narrative;
+  const reasoningLine = conversation.executiveReasoning
+    ? `Raciocínio: ${conversation.executiveReasoning.hypotheses.filter((item) => item.status === "validated").length} hipótese(s) validada(s) com ${conversation.executiveReasoning.evidence.length} evidência(s).`
+    : null;
 
   return [
     `Analisei sua diretriz com o Conselho Executivo da ${company}.`,
     "",
     `Diagnóstico: foco em ${intentLabel} com confiança ${conversation.confidenceScore}/100, baseada em ${consulted.length} área(s) consultada(s).`,
+    ...(reasoningLine ? ["", reasoningLine] : []),
     "",
     `Consenso ${alignment}: ${conversation.executiveConsensus.primaryRecommendation}`,
     "",

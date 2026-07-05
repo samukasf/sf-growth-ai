@@ -15,6 +15,18 @@ export {
 } from "./executive-orchestrator.service";
 
 export {
+  buildExecutiveReasoning,
+  type ExecutiveReasoning,
+  type ExecutiveHypothesis,
+  type ExecutiveEvidence,
+  type ExecutiveConclusion,
+  type ExecutiveTradeoff,
+  type ExecutiveRiskAssessment,
+  type ExecutiveReasoningInput,
+  type ModuleReasoningInsight,
+} from "./executive-reasoning.service";
+
+export {
   buildExecutiveIntelligence,
   type ExecutiveIntelligence,
 } from "./executive-intelligence.service";

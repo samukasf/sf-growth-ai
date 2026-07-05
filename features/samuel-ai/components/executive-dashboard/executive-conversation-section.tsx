@@ -227,6 +227,41 @@ export function ExecutiveConversationSection({
             </ul>
           </ConversationBlock>
 
+          {conversation.executiveReasoning && (
+            <ConversationBlock title="Executive Reasoning" accent>
+              <p className="mb-2 text-xs leading-relaxed text-foreground/90">
+                {conversation.executiveReasoning.reasoningSummary}
+              </p>
+              <p className="mb-2 text-[11px] text-muted">
+                {conversation.executiveReasoning.confidenceRationale}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <StatusBadge
+                  label={`${conversation.executiveReasoning.hypotheses.length} hipótese(s)`}
+                  variant="muted"
+                />
+                <StatusBadge
+                  label={`${conversation.executiveReasoning.evidence.length} evidência(s)`}
+                  variant="muted"
+                />
+                <StatusBadge
+                  label={`${conversation.executiveReasoning.conclusions.length} conclusão(ões)`}
+                  variant="accent"
+                />
+              </div>
+              {conversation.executiveReasoning.conclusions[0] && (
+                <div className="mt-3 rounded-lg border border-border/60 bg-black/10 px-3 py-2.5">
+                  <p className="text-xs font-medium text-foreground">
+                    {conversation.executiveReasoning.conclusions[0].title}
+                  </p>
+                  <p className="mt-1 text-[11px] text-muted">
+                    {conversation.executiveReasoning.conclusions[0].reason}
+                  </p>
+                </div>
+              )}
+            </ConversationBlock>
+          )}
+
           <ConversationBlock title="Consenso Executivo" accent>
             <div className="mb-2 flex items-center gap-2">
               <StatusBadge

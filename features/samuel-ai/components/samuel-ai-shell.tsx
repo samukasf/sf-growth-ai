@@ -146,6 +146,10 @@ export function SamuelAiShell({
 
       const conversationContext: ExecutiveConversationContext = {
         companyName: executiveContext?.company.name,
+        executiveContext,
+        intelligence: executiveIntelligence,
+        decisions: executiveDecisions,
+        forecast: executiveForecast,
         executiveCeo,
         crmExecutive,
         marketingExecutive,
@@ -207,6 +211,9 @@ export function SamuelAiShell({
     },
     [
       executiveContext,
+      executiveIntelligence,
+      executiveDecisions,
+      executiveForecast,
       executiveCeo,
       crmExecutive,
       marketingExecutive,

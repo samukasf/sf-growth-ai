@@ -12,6 +12,14 @@ import type { SalesExecutive } from "@/features/sales/services/sales-executive.s
 import type { ExecutiveCEO } from "./executive-ceo.service";
 import type { ExecutiveCompetitor } from "./executive-competitor.service";
 import type { ExecutiveStrategy } from "./executive-strategy.service";
+import type { ExecutiveContext } from "@/services/executive-context.service";
+import type { ExecutiveDecision } from "./executive-decision.service";
+import type { ExecutiveForecast } from "./executive-forecast.service";
+import type { ExecutiveIntelligence } from "./executive-intelligence.service";
+import {
+  buildExecutiveReasoning,
+  type ExecutiveReasoning,
+} from "./executive-reasoning.service";
 
 export type ConversationIntent =
   | "marketing"
@@ -45,6 +53,10 @@ export type ExecutiveModuleId =
 
 export type ExecutiveConversationContext = {
   companyName?: string;
+  executiveContext?: ExecutiveContext | null;
+  intelligence?: ExecutiveIntelligence | null;
+  decisions?: ExecutiveDecision[];
+  forecast?: ExecutiveForecast | null;
   executiveCeo?: ExecutiveCEO | null;
   crmExecutive?: CrmExecutive | null;
   marketingExecutive?: MarketingExecutive | null;
@@ -101,6 +113,7 @@ export type ExecutiveConversation = {
   primaryIntent: ConversationIntent;
   participatingExecutives: ExecutiveParticipant[];
   responses: ExecutiveResponse[];
+  executiveReasoning: ExecutiveReasoning | null;
   executiveConsensus: ExecutiveConsensus;
   confidenceScore: number;
   executiveSummary: string;
@@ -665,6 +678,7 @@ function buildExecutiveConsensus(
   responses: ExecutiveResponse[],
   primaryIntent: ConversationIntent,
   companyName?: string,
+  reasoning?: ExecutiveReasoning | null,
 ): ExecutiveConsensus {
   const company = companyName ?? "empresa";
   const healthScores = responses
@@ -676,33 +690,55 @@ function buildExecutiveConsensus(
       ? healthScores.reduce((sum, score) => sum + score, 0) / healthScores.length
       : 50;
 
+  const reasoningBoost = reasoning ? reasoning.confidenceScore * 0.15 : 0;
+  const blendedHealth = averageHealth * 0.7 + reasoningBoost;
+
   const alignment: ExecutiveConsensus["alignment"] =
-    averageHealth >= 70 ? "strong" : averageHealth >= 50 ? "moderate" : "divergent";
+    blendedHealth >= 70 ? "strong" : blendedHealth >= 50 ? "moderate" : "divergent";
 
   const allRecommendations = responses.flatMap((response) => response.recommendations);
+  const reasoningConclusion = reasoning?.conclusions[0];
   const primaryRecommendation =
+    reasoningConclusion?.title ??
     allRecommendations[0] ??
     `Priorizar ações de ${primaryIntent} com maior impacto imediato na ${company}.`;
 
-  const supportingPoints = responses
-    .slice(0, 3)
-    .map((response) => `${response.participantName}: ${response.insight.split(".")[0]}.`);
+  const supportingPoints = [
+    ...(reasoningConclusion?.positiveImpacts.slice(0, 2).map(
+      (impact) => `Raciocínio: ${impact}`,
+    ) ?? []),
+    ...responses
+      .slice(0, 2)
+      .map((response) => `${response.participantName}: ${response.insight.split(".")[0]}.`),
+  ].slice(0, 4);
 
-  const dissentingNotes =
-    alignment === "divergent"
+  const dissentingNotes = [
+    ...(reasoning?.risks.slice(0, 2).map(
+      (risk) => `Risco: ${risk.title} — ${risk.mitigation}`,
+    ) ?? []),
+    ...(alignment === "divergent"
       ? responses
           .filter((response) => (response.healthScore ?? 100) < 50)
           .map(
             (response) =>
               `${response.participantName} sinaliza atenção (score ${response.healthScore}/100).`,
           )
-      : [];
+      : []),
+  ];
 
-  const sharedThemes = extractSharedThemes(responses);
+  const sharedThemes = [
+    ...extractSharedThemes(responses),
+    ...(reasoning?.hypotheses
+      .filter((hypothesis) => hypothesis.status === "validated")
+      .map((hypothesis) => hypothesis.statement.split(" ")[0].toLowerCase()) ?? []),
+  ].filter((theme, index, array) => array.indexOf(theme) === index);
+
   const themesLabel =
     sharedThemes.length > 0 ? sharedThemes.join(", ") : "execução integrada";
 
-  const narrative = `Consenso ${alignment === "strong" ? "forte" : alignment === "moderate" ? "moderado" : "divergente"} entre ${responses.length} executivo(s) consultado(s) sobre ${primaryIntent}. Temas convergentes: ${themesLabel}. Recomendação central: ${primaryRecommendation}`;
+  const narrative = reasoning
+    ? `${reasoning.reasoningSummary} Consenso ${alignment === "strong" ? "forte" : alignment === "moderate" ? "moderado" : "divergente"} entre ${responses.length} executivo(s) sobre ${primaryIntent}. Recomendação central: ${primaryRecommendation}.`
+    : `Consenso ${alignment === "strong" ? "forte" : alignment === "moderate" ? "moderado" : "divergente"} entre ${responses.length} executivo(s) consultado(s) sobre ${primaryIntent}. Temas convergentes: ${themesLabel}. Recomendação central: ${primaryRecommendation}`;
 
   return {
     alignment,
@@ -714,7 +750,10 @@ function buildExecutiveConsensus(
   };
 }
 
-function calculateConfidenceScore(responses: ExecutiveResponse[]): number {
+function calculateConfidenceScore(
+  responses: ExecutiveResponse[],
+  reasoning?: ExecutiveReasoning | null,
+): number {
   if (responses.length === 0) return 0;
 
   const weighted =
@@ -722,7 +761,11 @@ function calculateConfidenceScore(responses: ExecutiveResponse[]): number {
     responses.length;
 
   const coverageBonus = Math.min(12, responses.length * 2);
-  return clampScore(weighted + coverageBonus);
+  const moduleScore = clampScore(weighted + coverageBonus);
+
+  if (!reasoning) return moduleScore;
+
+  return clampScore(moduleScore * 0.55 + reasoning.confidenceScore * 0.45);
 }
 
 function buildConversationSummary(
@@ -732,12 +775,16 @@ function buildConversationSummary(
   confidenceScore: number,
   participants: ExecutiveParticipant[],
   companyName?: string,
+  reasoning?: ExecutiveReasoning | null,
 ): string {
   const company = companyName ?? "empresa";
   const consulted = participants.filter((participant) => participant.consulted);
   const participantNames = consulted.map((participant) => participant.name).join(", ");
+  const reasoningNote = reasoning
+    ? ` Raciocínio: ${reasoning.hypotheses.length} hipótese(s), ${reasoning.conclusions.length} conclusão(ões).`
+    : "";
 
-  return `Pergunta: "${question.trim()}". Intenção principal: ${primaryIntent}. ${company} — ${consulted.length} módulo(s) consultado(s) (${participantNames}). Confiança ${confidenceScore}/100. ${consensus.narrative}`;
+  return `Pergunta: "${question.trim()}". Intenção principal: ${primaryIntent}. ${company} — ${consulted.length} módulo(s) consultado(s) (${participantNames}). Confiança ${confidenceScore}/100.${reasoningNote} ${consensus.narrative}`;
 }
 
 export function buildExecutiveConversation(
@@ -757,12 +804,31 @@ export function buildExecutiveConversation(
     return null;
   }
 
+  const executiveReasoning = buildExecutiveReasoning({
+    question,
+    primaryIntent,
+    context: context.executiveContext,
+    intelligence: context.intelligence,
+    decisions: context.decisions,
+    forecast: context.forecast,
+    competitor: context.competitor,
+    strategy: context.strategy,
+    moduleInsights: responses.map((response) => ({
+      participantId: response.participantId,
+      participantName: response.participantName,
+      insight: response.insight,
+      healthScore: response.healthScore,
+      recommendations: response.recommendations,
+    })),
+  });
+
   const executiveConsensus = buildExecutiveConsensus(
     responses,
     primaryIntent,
     context.companyName,
+    executiveReasoning,
   );
-  const confidenceScore = calculateConfidenceScore(responses);
+  const confidenceScore = calculateConfidenceScore(responses, executiveReasoning);
   const executiveSummary = buildConversationSummary(
     question,
     primaryIntent,
@@ -770,6 +836,7 @@ export function buildExecutiveConversation(
     confidenceScore,
     participatingExecutives,
     context.companyName,
+    executiveReasoning,
   );
 
   return {
@@ -778,6 +845,7 @@ export function buildExecutiveConversation(
     primaryIntent,
     participatingExecutives,
     responses,
+    executiveReasoning,
     executiveConsensus,
     confidenceScore,
     executiveSummary,
