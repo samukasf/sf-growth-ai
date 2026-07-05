@@ -4,6 +4,7 @@ import type { CrmExecutive } from "@/features/crm/services/crm-executive.service
 import type { MarketingExecutive } from "@/features/marketing/services/marketing-executive.service";
 import type { SalesExecutive } from "@/features/sales/services/sales-executive.service";
 import type { FinanceExecutive } from "@/features/finance/services/finance-executive.service";
+import type { OperationsExecutive } from "@/features/operations/services/operations-executive.service";
 
 import type { ExecutiveAction } from "./executive-action.service";
 import type { ExecutiveCompetitor } from "./executive-competitor.service";
@@ -56,6 +57,7 @@ export type ExecutiveCEOInput = {
   marketingExecutive?: MarketingExecutive | null;
   salesExecutive?: SalesExecutive | null;
   financeExecutive?: FinanceExecutive | null;
+  operationsExecutive?: OperationsExecutive | null;
 };
 
 function clampScore(value: number): number {
@@ -132,6 +134,14 @@ function calculateCompanyHealthScore(input: ExecutiveCEOInput): number {
     );
   }
 
+  if (input.operationsExecutive) {
+    score += Math.min(10, input.operationsExecutive.operationsHealthScore * 0.1);
+    score -= Math.min(
+      6,
+      input.operationsExecutive.operationalRisks.filter((r) => r.severity === "critical").length * 3,
+    );
+  }
+
   return clampScore(score);
 }
 
@@ -179,6 +189,12 @@ function calculateGrowthScore(input: ExecutiveCEOInput): number {
     score += Math.min(10, input.financeExecutive.profitMargin * 0.1);
     if (input.financeExecutive.monthlyProfit > 0) score += 8;
     score += Math.min(6, input.financeExecutive.cashFlowScore * 0.06);
+  }
+
+  if (input.operationsExecutive) {
+    score += Math.min(10, input.operationsExecutive.deliveryScore * 0.1);
+    score += Math.min(8, input.operationsExecutive.productivityScore * 0.08);
+    if (input.operationsExecutive.automationScore >= 50) score += 5;
   }
 
   return clampScore(score);
@@ -238,7 +254,7 @@ function buildExecutiveSummary(
     input.strategy?.executiveStrategy ??
     "Análise executiva em consolidação.";
 
-  return `${company} — CEO Digital Samuel AI™. ${intelligenceSummary} Score executivo ${executiveScore}/100 · Saúde ${companyHealth.score}/100 · ${input.decisions?.length ?? 0} decisão(ões) · ${input.action?.executionOrder.length ?? 0} ação(ões) mapeada(s).${input.crmExecutive ? ` ${input.crmExecutive.crmExecutiveSummary}` : ""}${input.marketingExecutive ? ` ${input.marketingExecutive.marketingExecutiveSummary}` : ""}${input.salesExecutive ? ` ${input.salesExecutive.salesExecutiveSummary}` : ""}${input.financeExecutive ? ` ${input.financeExecutive.financeExecutiveSummary}` : ""}`;
+  return `${company} — CEO Digital Samuel AI™. ${intelligenceSummary} Score executivo ${executiveScore}/100 · Saúde ${companyHealth.score}/100 · ${input.decisions?.length ?? 0} decisão(ões) · ${input.action?.executionOrder.length ?? 0} ação(ões) mapeada(s).${input.crmExecutive ? ` ${input.crmExecutive.crmExecutiveSummary}` : ""}${input.marketingExecutive ? ` ${input.marketingExecutive.marketingExecutiveSummary}` : ""}${input.salesExecutive ? ` ${input.salesExecutive.salesExecutiveSummary}` : ""}${input.financeExecutive ? ` ${input.financeExecutive.financeExecutiveSummary}` : ""}${input.operationsExecutive ? ` ${input.operationsExecutive.operationsExecutiveSummary}` : ""}`;
 }
 
 function buildTopDecision(input: ExecutiveCEOInput): string {
@@ -286,6 +302,10 @@ function buildTopPriorities(input: ExecutiveCEOInput): string[] {
       .slice(0, 2)
       .map((r) => r.title) ?? []),
     ...(input.financeExecutive?.financialRecommendations
+      .filter((r) => r.priority === "critical" || r.priority === "high")
+      .slice(0, 2)
+      .map((r) => r.title) ?? []),
+    ...(input.operationsExecutive?.operationalRecommendations
       .filter((r) => r.priority === "critical" || r.priority === "high")
       .slice(0, 2)
       .map((r) => r.title) ?? []),
@@ -338,7 +358,11 @@ function buildCeoMessage(
     ? ` Financeiro em ${input.financeExecutive.financeHealthScore}/100 com margem ${input.financeExecutive.profitMargin}%.`
     : "";
 
-  return `Olá, sou o CEO Digital da ${company}. ${tone} Saúde operacional em ${companyHealth.score}/100, potencial de crescimento ${growthScore}/100 e risco consolidado ${riskScore}/100.${crmNote}${marketingNote}${salesNote}${financeNote} Meta de crescimento: ${growth}. Minha diretriz imediata: ${topAction}. Confio no motor executivo Samuel AI™ para converter estratégia em resultados mensuráveis.`;
+  const operationsNote = input.operationsExecutive
+    ? ` Operações em ${input.operationsExecutive.operationsHealthScore}/100 com produtividade ${input.operationsExecutive.productivityScore}/100.`
+    : "";
+
+  return `Olá, sou o CEO Digital da ${company}. ${tone} Saúde operacional em ${companyHealth.score}/100, potencial de crescimento ${growthScore}/100 e risco consolidado ${riskScore}/100.${crmNote}${marketingNote}${salesNote}${financeNote}${operationsNote} Meta de crescimento: ${growth}. Minha diretriz imediata: ${topAction}. Confio no motor executivo Samuel AI™ para converter estratégia em resultados mensuráveis.`;
 }
 
 export function buildExecutiveCEO(
@@ -359,6 +383,7 @@ export function buildExecutiveCEO(
     input.marketingExecutive ||
     input.salesExecutive ||
     input.financeExecutive ||
+    input.operationsExecutive ||
     (input.decisions?.length ?? 0) > 0;
 
   if (!hasData) return null;

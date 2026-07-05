@@ -10,6 +10,10 @@ import {
   buildMarketingExecutiveForCompany,
 } from "@/features/marketing/services/marketing-executive.service";
 import {
+  buildOperationsExecutive,
+  buildOperationsExecutiveForCompany,
+} from "@/features/operations/services/operations-executive.service";
+import {
   buildFinanceExecutive,
   buildFinanceExecutiveForCompany,
 } from "@/features/finance/services/finance-executive.service";
@@ -228,6 +232,42 @@ export default async function SamuelAiRoute() {
     });
   }
 
+  const operationsEngines = {
+    strategy: executiveStrategy,
+    intelligence: executiveIntelligence,
+    forecast: executiveForecast,
+    competitor: executiveCompetitor,
+    monitoring: executiveMonitoring,
+    action: executiveAction,
+    priority: executivePriority,
+    recommendation: executiveRecommendation,
+    executionPlans,
+    crmExecutive,
+    marketingExecutive,
+    salesExecutive,
+    financeExecutive,
+  };
+
+  let operationsExecutive = buildOperationsExecutive({
+    companyName: executiveContext?.company.name,
+    ...operationsEngines,
+  });
+
+  try {
+    if (executiveContext?.company.id) {
+      operationsExecutive = await buildOperationsExecutiveForCompany(
+        executiveContext.company.id,
+        executiveContext.company.name,
+        operationsEngines,
+      );
+    }
+  } catch {
+    operationsExecutive = buildOperationsExecutive({
+      companyName: executiveContext?.company.name,
+      ...operationsEngines,
+    });
+  }
+
   const executiveCeo = buildExecutiveCEO({
     context: executiveContext,
     intelligence: executiveIntelligence,
@@ -245,6 +285,7 @@ export default async function SamuelAiRoute() {
     marketingExecutive,
     salesExecutive,
     financeExecutive,
+    operationsExecutive,
   });
 
   return (
@@ -266,6 +307,7 @@ export default async function SamuelAiRoute() {
       marketingExecutive={marketingExecutive}
       salesExecutive={salesExecutive}
       financeExecutive={financeExecutive}
+      operationsExecutive={operationsExecutive}
     />
   );
 }
