@@ -9,6 +9,7 @@ import type { HrExecutive } from "@/features/hr/services/hr-executive.service";
 import type { LegalExecutive } from "@/features/legal/services/legal-executive.service";
 import type { GoogleBusinessExecutive } from "@/features/google-business/services/google-business-executive.service";
 import type { GoogleAnalyticsExecutive } from "@/features/google-analytics/services/google-analytics-executive.service";
+import type { SearchConsoleExecutive } from "@/features/search-console/services/search-console-executive.service";
 import type { MetaExecutive } from "@/features/meta/services/meta-executive.service";
 import type { LinkedInExecutive } from "@/features/linkedin/services/linkedin-executive.service";
 
@@ -68,6 +69,7 @@ export type ExecutiveCEOInput = {
   legalExecutive?: LegalExecutive | null;
   googleBusinessExecutive?: GoogleBusinessExecutive | null;
   googleAnalyticsExecutive?: GoogleAnalyticsExecutive | null;
+  searchConsoleExecutive?: SearchConsoleExecutive | null;
   metaExecutive?: MetaExecutive | null;
   linkedInExecutive?: LinkedInExecutive | null;
 };
@@ -188,6 +190,15 @@ function calculateCompanyHealthScore(input: ExecutiveCEOInput): number {
     );
   }
 
+  if (input.searchConsoleExecutive) {
+    score += Math.min(10, input.searchConsoleExecutive.seoHealthScore * 0.1);
+    score -= Math.min(
+      6,
+      input.searchConsoleExecutive.searchConsoleRisks.filter((r) => r.severity === "critical")
+        .length * 3,
+    );
+  }
+
   if (input.metaExecutive) {
     score += Math.min(10, input.metaExecutive.metaHealthScore * 0.1);
     score -= Math.min(
@@ -283,6 +294,12 @@ function calculateGrowthScore(input: ExecutiveCEOInput): number {
     if (input.googleAnalyticsExecutive.trafficTrend === "up") score += 5;
   }
 
+  if (input.searchConsoleExecutive) {
+    score += Math.min(10, input.searchConsoleExecutive.organicTrafficScore * 0.1);
+    score += Math.min(8, input.searchConsoleExecutive.ctrScore * 0.08);
+    if (input.searchConsoleExecutive.averagePosition <= 10) score += 5;
+  }
+
   if (input.metaExecutive) {
     score += Math.min(10, input.metaExecutive.engagementScore * 0.1);
     score += Math.min(8, input.metaExecutive.reachScore * 0.08);
@@ -352,7 +369,7 @@ function buildExecutiveSummary(
     input.strategy?.executiveStrategy ??
     "Análise executiva em consolidação.";
 
-  return `${company} — CEO Digital Samuel AI™. ${intelligenceSummary} Score executivo ${executiveScore}/100 · Saúde ${companyHealth.score}/100 · ${input.decisions?.length ?? 0} decisão(ões) · ${input.action?.executionOrder.length ?? 0} ação(ões) mapeada(s).${input.crmExecutive ? ` ${input.crmExecutive.crmExecutiveSummary}` : ""}${input.marketingExecutive ? ` ${input.marketingExecutive.marketingExecutiveSummary}` : ""}${input.salesExecutive ? ` ${input.salesExecutive.salesExecutiveSummary}` : ""}${input.financeExecutive ? ` ${input.financeExecutive.financeExecutiveSummary}` : ""}${input.operationsExecutive ? ` ${input.operationsExecutive.operationsExecutiveSummary}` : ""}${input.hrExecutive ? ` ${input.hrExecutive.hrExecutiveSummary}` : ""}${input.legalExecutive ? ` ${input.legalExecutive.legalExecutiveSummary}` : ""}${input.googleBusinessExecutive ? ` ${input.googleBusinessExecutive.googleBusinessExecutiveSummary}` : ""}${input.googleAnalyticsExecutive ? ` ${input.googleAnalyticsExecutive.googleAnalyticsExecutiveSummary}` : ""}${input.metaExecutive ? ` ${input.metaExecutive.metaExecutiveSummary}` : ""}${input.linkedInExecutive ? ` ${input.linkedInExecutive.linkedInExecutiveSummary}` : ""}`;
+  return `${company} — CEO Digital Samuel AI™. ${intelligenceSummary} Score executivo ${executiveScore}/100 · Saúde ${companyHealth.score}/100 · ${input.decisions?.length ?? 0} decisão(ões) · ${input.action?.executionOrder.length ?? 0} ação(ões) mapeada(s).${input.crmExecutive ? ` ${input.crmExecutive.crmExecutiveSummary}` : ""}${input.marketingExecutive ? ` ${input.marketingExecutive.marketingExecutiveSummary}` : ""}${input.salesExecutive ? ` ${input.salesExecutive.salesExecutiveSummary}` : ""}${input.financeExecutive ? ` ${input.financeExecutive.financeExecutiveSummary}` : ""}${input.operationsExecutive ? ` ${input.operationsExecutive.operationsExecutiveSummary}` : ""}${input.hrExecutive ? ` ${input.hrExecutive.hrExecutiveSummary}` : ""}${input.legalExecutive ? ` ${input.legalExecutive.legalExecutiveSummary}` : ""}${input.googleBusinessExecutive ? ` ${input.googleBusinessExecutive.googleBusinessExecutiveSummary}` : ""}${input.googleAnalyticsExecutive ? ` ${input.googleAnalyticsExecutive.googleAnalyticsExecutiveSummary}` : ""}${input.searchConsoleExecutive ? ` ${input.searchConsoleExecutive.searchConsoleExecutiveSummary}` : ""}${input.metaExecutive ? ` ${input.metaExecutive.metaExecutiveSummary}` : ""}${input.linkedInExecutive ? ` ${input.linkedInExecutive.linkedInExecutiveSummary}` : ""}`;
 }
 
 function buildTopDecision(input: ExecutiveCEOInput): string {
@@ -420,6 +437,10 @@ function buildTopPriorities(input: ExecutiveCEOInput): string[] {
       .slice(0, 2)
       .map((r) => r.title) ?? []),
     ...(input.googleAnalyticsExecutive?.googleAnalyticsRecommendations
+      .filter((r) => r.priority === "critical" || r.priority === "high")
+      .slice(0, 2)
+      .map((r) => r.title) ?? []),
+    ...(input.searchConsoleExecutive?.searchConsoleRecommendations
       .filter((r) => r.priority === "critical" || r.priority === "high")
       .slice(0, 2)
       .map((r) => r.title) ?? []),
@@ -500,6 +521,10 @@ function buildCeoMessage(
     ? ` Google Analytics em ${input.googleAnalyticsExecutive.googleAnalyticsHealthScore}/100 com tráfego ${input.googleAnalyticsExecutive.trafficScore}/100.`
     : "";
 
+  const searchConsoleNote = input.searchConsoleExecutive
+    ? ` Search Console em ${input.searchConsoleExecutive.seoHealthScore}/100 com ${input.searchConsoleExecutive.clicks.toLocaleString("pt-BR")} cliques orgânicos.`
+    : "";
+
   const metaNote = input.metaExecutive
     ? ` Meta em ${input.metaExecutive.metaHealthScore}/100 com ROAS ${input.metaExecutive.roas}x.`
     : "";
@@ -508,7 +533,7 @@ function buildCeoMessage(
     ? ` LinkedIn em ${input.linkedInExecutive.linkedInHealthScore}/100 com leads B2B ${input.linkedInExecutive.leadGenerationScore}/100.`
     : "";
 
-  return `Olá, sou o CEO Digital da ${company}. ${tone} Saúde operacional em ${companyHealth.score}/100, potencial de crescimento ${growthScore}/100 e risco consolidado ${riskScore}/100.${crmNote}${marketingNote}${salesNote}${financeNote}${operationsNote}${hrNote}${legalNote}${googleBusinessNote}${googleAnalyticsNote}${metaNote}${linkedInNote} Meta de crescimento: ${growth}. Minha diretriz imediata: ${topAction}. Confio no motor executivo Samuel AI™ para converter estratégia em resultados mensuráveis.`;
+  return `Olá, sou o CEO Digital da ${company}. ${tone} Saúde operacional em ${companyHealth.score}/100, potencial de crescimento ${growthScore}/100 e risco consolidado ${riskScore}/100.${crmNote}${marketingNote}${salesNote}${financeNote}${operationsNote}${hrNote}${legalNote}${googleBusinessNote}${googleAnalyticsNote}${searchConsoleNote}${metaNote}${linkedInNote} Meta de crescimento: ${growth}. Minha diretriz imediata: ${topAction}. Confio no motor executivo Samuel AI™ para converter estratégia em resultados mensuráveis.`;
 }
 
 export function buildExecutiveCEO(
@@ -534,6 +559,7 @@ export function buildExecutiveCEO(
     input.legalExecutive ||
     input.googleBusinessExecutive ||
     input.googleAnalyticsExecutive ||
+    input.searchConsoleExecutive ||
     input.metaExecutive ||
     input.linkedInExecutive ||
     (input.decisions?.length ?? 0) > 0;

@@ -19,6 +19,12 @@ import {
   enrichIntelligenceWithAnalytics,
   enrichMarketingWithAnalytics,
 } from "@/integrations/google-analytics";
+import { buildSearchConsoleExecutive } from "@/features/search-console/services/search-console-executive.service";
+import {
+  buildSearchConsoleExecutiveForCompany,
+  enrichIntelligenceWithSearchConsole,
+  enrichMarketingWithSearchConsole,
+} from "@/integrations/google-search-console";
 import {
   buildLegalExecutive,
   buildLegalExecutiveForCompany,
@@ -224,6 +230,42 @@ export default async function SamuelAiRoute() {
   const executiveIntelligenceWithAnalytics =
     enrichIntelligenceWithAnalytics(executiveIntelligence, googleAnalyticsExecutive) ??
     executiveIntelligence;
+
+  const searchConsoleEngines = {
+    companyName: executiveContext?.company.name,
+    strategy: executiveStrategy,
+    intelligence: executiveIntelligence,
+    competitor: executiveCompetitor,
+    marketingExecutive,
+  };
+
+  let searchConsoleExecutive = buildSearchConsoleExecutive(searchConsoleEngines);
+
+  try {
+    if (executiveContext?.company.id) {
+      searchConsoleExecutive = await buildSearchConsoleExecutiveForCompany(
+        executiveContext.company.id,
+        executiveContext.company.name,
+        {
+          strategy: executiveStrategy,
+          intelligence: executiveIntelligence,
+          competitor: executiveCompetitor,
+          marketingExecutive,
+        },
+      );
+    }
+  } catch {
+    searchConsoleExecutive = buildSearchConsoleExecutive(searchConsoleEngines);
+  }
+
+  const marketingExecutiveWithIntegrations =
+    enrichMarketingWithSearchConsole(marketingExecutiveWithAnalytics, searchConsoleExecutive) ??
+    marketingExecutiveWithAnalytics;
+  const executiveIntelligenceWithIntegrations =
+    enrichIntelligenceWithSearchConsole(
+      executiveIntelligenceWithAnalytics,
+      searchConsoleExecutive,
+    ) ?? executiveIntelligenceWithAnalytics;
 
   const salesEngines = {
     strategy: executiveStrategy,
@@ -437,7 +479,7 @@ export default async function SamuelAiRoute() {
 
   const executiveCeo = buildExecutiveCEO({
     context: executiveContext,
-    intelligence: executiveIntelligenceWithAnalytics,
+    intelligence: executiveIntelligenceWithIntegrations,
     decisions: executiveDecisions,
     executionPlans,
     monitoring: executiveMonitoring,
@@ -449,7 +491,7 @@ export default async function SamuelAiRoute() {
     priority: executivePriority,
     recommendation: executiveRecommendation,
     crmExecutive,
-    marketingExecutive: marketingExecutiveWithAnalytics,
+    marketingExecutive: marketingExecutiveWithIntegrations,
     salesExecutive,
     financeExecutive,
     operationsExecutive,
@@ -457,6 +499,7 @@ export default async function SamuelAiRoute() {
     legalExecutive,
     googleBusinessExecutive,
     googleAnalyticsExecutive,
+    searchConsoleExecutive,
     metaExecutive,
     linkedInExecutive,
   });
@@ -464,7 +507,7 @@ export default async function SamuelAiRoute() {
   return (
     <samuelAi.SamuelAiPage
       executiveContext={executiveContext}
-      executiveIntelligence={executiveIntelligenceWithAnalytics}
+      executiveIntelligence={executiveIntelligenceWithIntegrations}
       executiveDecisions={executiveDecisions}
       executionPlans={executionPlans}
       executiveMonitoring={executiveMonitoring}
@@ -477,7 +520,7 @@ export default async function SamuelAiRoute() {
       executiveRecommendation={executiveRecommendation}
       executiveCeo={executiveCeo}
       crmExecutive={crmExecutive}
-      marketingExecutive={marketingExecutiveWithAnalytics}
+      marketingExecutive={marketingExecutiveWithIntegrations}
       salesExecutive={salesExecutive}
       financeExecutive={financeExecutive}
       operationsExecutive={operationsExecutive}
@@ -485,6 +528,7 @@ export default async function SamuelAiRoute() {
       legalExecutive={legalExecutive}
       googleBusinessExecutive={googleBusinessExecutive}
       googleAnalyticsExecutive={googleAnalyticsExecutive}
+      searchConsoleExecutive={searchConsoleExecutive}
       metaExecutive={metaExecutive}
       linkedInExecutive={linkedInExecutive}
     />

@@ -45,6 +45,7 @@ export type ExecutiveExperienceProps = {
       | "legal"
       | "google-business"
       | "google-analytics"
+      | "search-console"
       | "meta"
       | "linkedin",
       boolean
@@ -410,6 +411,7 @@ export function ExecutiveExperience({
               "legal",
               "google-business",
               "google-analytics",
+              "search-console",
               "meta",
               "linkedin",
             ] as const
@@ -423,6 +425,7 @@ export function ExecutiveExperience({
               legal: "Legal",
               "google-business": "Google Business",
               "google-analytics": "Google Analytics",
+              "search-console": "Search Console",
               meta: "Meta",
               linkedin: "LinkedIn",
             };
