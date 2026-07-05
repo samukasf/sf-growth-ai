@@ -8,6 +8,8 @@ import type {
 } from "../../executive-brain/types";
 import type { OrchestratorSnapshot } from "../../services/executive-orchestrator.types";
 import type { ExecutiveContext as CompanyExecutiveContext } from "@/services/executive-context.service";
+import { LegalExecutiveSummarySection } from "@/features/legal/components/legal-executive-summary-section";
+import type { LegalExecutive } from "@/features/legal/services/legal-executive.service";
 import { HrExecutiveSummarySection } from "@/features/hr/components/hr-executive-summary-section";
 import type { HrExecutive } from "@/features/hr/services/hr-executive.service";
 import { OperationsExecutiveSummarySection } from "@/features/operations/components/operations-executive-summary-section";
@@ -69,6 +71,7 @@ type ExecutiveDashboardProps = {
   financeExecutive?: FinanceExecutive | null;
   operationsExecutive?: OperationsExecutive | null;
   hrExecutive?: HrExecutive | null;
+  legalExecutive?: LegalExecutive | null;
 };
 
 const STATUS_LABELS: Record<ExecutiveBrainStatus, string> = {
@@ -100,6 +103,7 @@ export function ExecutiveDashboard({
   financeExecutive = null,
   operationsExecutive = null,
   hrExecutive = null,
+  legalExecutive = null,
 }: ExecutiveDashboardProps) {
   const statusWithTimestamp: ExecutiveStatus = {
     ...executiveStatus,
@@ -173,6 +177,10 @@ export function ExecutiveDashboard({
 
       <CommandPanel className="p-4 sm:p-5" accent>
         <HrExecutiveSummarySection hr={hrExecutive} />
+      </CommandPanel>
+
+      <CommandPanel className="p-4 sm:p-5" accent>
+        <LegalExecutiveSummarySection legal={legalExecutive} />
       </CommandPanel>
 
       <CommandPanel className="p-4 sm:p-5" accent>

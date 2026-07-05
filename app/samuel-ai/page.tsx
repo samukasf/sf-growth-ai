@@ -10,6 +10,10 @@ import {
   buildMarketingExecutiveForCompany,
 } from "@/features/marketing/services/marketing-executive.service";
 import {
+  buildLegalExecutive,
+  buildLegalExecutiveForCompany,
+} from "@/features/legal/services/legal-executive.service";
+import {
   buildHrExecutive,
   buildHrExecutiveForCompany,
 } from "@/features/hr/services/hr-executive.service";
@@ -307,6 +311,41 @@ export default async function SamuelAiRoute() {
     });
   }
 
+  const legalEngines = {
+    strategy: executiveStrategy,
+    intelligence: executiveIntelligence,
+    forecast: executiveForecast,
+    competitor: executiveCompetitor,
+    monitoring: executiveMonitoring,
+    action: executiveAction,
+    priority: executivePriority,
+    recommendation: executiveRecommendation,
+    crmExecutive,
+    salesExecutive,
+    financeExecutive,
+    hrExecutive,
+  };
+
+  let legalExecutive = buildLegalExecutive({
+    companyName: executiveContext?.company.name,
+    ...legalEngines,
+  });
+
+  try {
+    if (executiveContext?.company.id) {
+      legalExecutive = await buildLegalExecutiveForCompany(
+        executiveContext.company.id,
+        executiveContext.company.name,
+        legalEngines,
+      );
+    }
+  } catch {
+    legalExecutive = buildLegalExecutive({
+      companyName: executiveContext?.company.name,
+      ...legalEngines,
+    });
+  }
+
   const executiveCeo = buildExecutiveCEO({
     context: executiveContext,
     intelligence: executiveIntelligence,
@@ -326,6 +365,7 @@ export default async function SamuelAiRoute() {
     financeExecutive,
     operationsExecutive,
     hrExecutive,
+    legalExecutive,
   });
 
   return (
@@ -349,6 +389,7 @@ export default async function SamuelAiRoute() {
       financeExecutive={financeExecutive}
       operationsExecutive={operationsExecutive}
       hrExecutive={hrExecutive}
+      legalExecutive={legalExecutive}
     />
   );
 }

@@ -4,6 +4,7 @@ export * as sales from "./sales";
 export * as finance from "./finance";
 export * as operations from "./operations";
 export * as hr from "./hr";
+export * as legal from "./legal";
 export * as auth from "./auth";
 export * as business from "./business";
 export * as dashboard from "./dashboard";
