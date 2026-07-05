@@ -109,6 +109,8 @@ type ExecutiveDashboardProps = {
   analysisStartedAt?: number | null;
   analysisCompletedAt?: number | null;
   inboxActions?: ExecutiveInboxActionRecord[];
+  /** Oculta painéis já promovidos na área principal do Dashboard. */
+  hidePromotedPanels?: boolean;
 };
 
 const STATUS_LABELS: Record<ExecutiveBrainStatus, string> = {
@@ -155,6 +157,7 @@ export function ExecutiveDashboard({
   analysisStartedAt = null,
   analysisCompletedAt = null,
   inboxActions = [],
+  hidePromotedPanels = false,
 }: ExecutiveDashboardProps) {
   const statusWithTimestamp: ExecutiveStatus = {
     ...executiveStatus,
@@ -284,9 +287,11 @@ export function ExecutiveDashboard({
         </CommandPanel>
       )}
 
-      <CommandPanel className="p-4 sm:p-5" accent>
-        <ExecutiveCeoSection ceo={executiveCeo} />
-      </CommandPanel>
+      {!hidePromotedPanels && (
+        <CommandPanel className="p-4 sm:p-5" accent>
+          <ExecutiveCeoSection ceo={executiveCeo} />
+        </CommandPanel>
+      )}
 
       <CommandPanel className="p-4 sm:p-5" accent>
         <CrmExecutiveSummarySection crm={crmExecutive} />
@@ -360,17 +365,23 @@ export function ExecutiveDashboard({
         <SeoWatcherSection seoWatcher={seoWatcher ?? null} />
       </CommandPanel>
 
-      <CommandPanel className="p-4 sm:p-5" accent>
-        <ExecutiveLearningSection learning={executiveLearning} />
-      </CommandPanel>
+      {!hidePromotedPanels && (
+        <CommandPanel className="p-4 sm:p-5" accent>
+          <ExecutiveLearningSection learning={executiveLearning} />
+        </CommandPanel>
+      )}
 
-      <CommandPanel className="p-4 sm:p-5" accent>
-        <ExecutiveForecastSection forecast={executiveForecast} />
-      </CommandPanel>
+      {!hidePromotedPanels && (
+        <CommandPanel className="p-4 sm:p-5" accent>
+          <ExecutiveForecastSection forecast={executiveForecast} />
+        </CommandPanel>
+      )}
 
-      <CommandPanel className="p-4 sm:p-5" accent>
-        <ExecutiveStrategySection strategy={executiveStrategy} />
-      </CommandPanel>
+      {!hidePromotedPanels && (
+        <CommandPanel className="p-4 sm:p-5" accent>
+          <ExecutiveStrategySection strategy={executiveStrategy} />
+        </CommandPanel>
+      )}
 
       <CommandPanel className="p-4 sm:p-5">
         <ExecutiveIntelligenceSection intelligence={executiveIntelligence} />
@@ -380,12 +391,14 @@ export function ExecutiveDashboard({
         <ExecutiveMemorySection memories={executiveContext?.memories ?? []} />
       </CommandPanel>
 
-      <CommandPanel className="p-4 sm:p-5">
-        <ExecutiveContextSection
-          context={brain.context}
-          executiveContext={executiveContext}
-        />
-      </CommandPanel>
+      {!hidePromotedPanels && (
+        <CommandPanel className="p-4 sm:p-5">
+          <ExecutiveContextSection
+            context={brain.context}
+            executiveContext={executiveContext}
+          />
+        </CommandPanel>
+      )}
 
       {hasActiveAnalysis && status === "ready" && (
         <CommandPanel className="p-4 sm:p-5" accent>

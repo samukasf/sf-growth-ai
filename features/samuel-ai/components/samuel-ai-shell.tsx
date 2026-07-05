@@ -53,6 +53,7 @@ import type { ExecutiveRecommendation } from "../services/executive-recommendati
 import type { ExecutiveForecast } from "../services/executive-forecast.service";
 import type { ExecutiveLearning } from "../services/executive-learning.service";
 import type { ExecutiveMonitoring } from "../services/executive-monitoring.service";
+import { captureKnowledgeFromConversation } from "@/features/executive-knowledge";
 import { ExecutiveWorkspace } from "./executive-workspace";
 
 const ORCHESTRATION_PHASES: OrchestratorPhase[] = [
@@ -153,9 +154,14 @@ export function SamuelAiShell({
     buildExecutiveBriefing({
       context: executiveContext,
       intelligence: executiveIntelligence,
+      decisions: executiveDecisions,
       monitoring: executiveMonitoring,
       forecast: executiveForecast,
+      learning: executiveLearning,
+      strategy: executiveStrategy,
       priority: executivePriority,
+      recommendation: executiveRecommendation,
+      ceo: executiveCeo,
     });
 
   const handleFirstMessage = useCallback(() => {
@@ -230,6 +236,9 @@ export function SamuelAiShell({
       setAnalysisCompletedAt(Date.now());
       setBrainStatus("ready");
       setIsProcessing(false);
+
+      const companyId = executiveContext?.company.id ?? "default-company";
+      void captureKnowledgeFromConversation(companyId, content, conversation);
 
       if (conversation) {
         return buildSamuelCeoResponse(

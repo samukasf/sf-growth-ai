@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { cn } from "@/utils/cn";
 
@@ -12,6 +12,7 @@ import {
   loadExecutiveInboxActions,
   persistExecutiveInboxAction,
 } from "@/features/executive-inbox/services/executive-inbox-persistence.service";
+import { captureKnowledgeFromInboxAction } from "@/features/executive-knowledge";
 import type { ExecutiveInboxActionRecord } from "@/features/executive-inbox/executive-inbox.types";
 import type { ExecutiveInboxItem, InboxActionType } from "@/features/executive-inbox/executive-inbox.types";
 
@@ -36,11 +37,15 @@ export function ExecutiveWorkspace({
   const [activeSection, setActiveSection] = useState<WorkspaceSection>("executive-inbox");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const companyId = data.executiveContext?.company.id ?? "default-company";
-  const [inboxActions, setInboxActions] = useState<ExecutiveInboxActionRecord[]>([]);
+  const [inboxActions, setInboxActions] = useState<ExecutiveInboxActionRecord[]>(() =>
+    loadExecutiveInboxActions(companyId),
+  );
+  const [loadedCompanyId, setLoadedCompanyId] = useState(companyId);
 
-  useEffect(() => {
+  if (loadedCompanyId !== companyId) {
+    setLoadedCompanyId(companyId);
     setInboxActions(loadExecutiveInboxActions(companyId));
-  }, [companyId]);
+  }
 
   const handleInboxAction = useCallback(
     async (item: ExecutiveInboxItem, action: InboxActionType) => {
@@ -51,6 +56,7 @@ export function ExecutiveWorkspace({
         inboxActions,
       );
       setInboxActions(nextActions);
+      void captureKnowledgeFromInboxAction(companyId, item, action);
     },
     [companyId, inboxActions],
   );

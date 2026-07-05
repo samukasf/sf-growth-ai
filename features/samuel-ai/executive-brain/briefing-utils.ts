@@ -1,19 +1,12 @@
-import type { ExecutiveContext } from "@/services/executive-context.service";
-
 import type { ExecutiveForecast } from "../services/executive-forecast.service";
-import type { ExecutiveIntelligence } from "../services/executive-intelligence.service";
-import type { ExecutiveMonitoring } from "../services/executive-monitoring.service";
-import type { ExecutivePriority } from "../services/executive-priority.service";
 
-import type { ExecutiveBriefing, ExecutiveMetric, MetricTrend } from "./types";
+import {
+  buildExecutiveSituation,
+  type BuildExecutiveSituationInput,
+} from "./executive-situation";
+import type { ExecutiveBriefing, MetricTrend } from "./types";
 
-export type BuildExecutiveBriefingInput = {
-  context?: ExecutiveContext | null;
-  intelligence?: ExecutiveIntelligence | null;
-  monitoring?: ExecutiveMonitoring | null;
-  forecast?: ExecutiveForecast | null;
-  priority?: ExecutivePriority | null;
-};
+export type BuildExecutiveBriefingInput = BuildExecutiveSituationInput;
 
 function toMetricTrend(direction: string): MetricTrend {
   if (direction === "up") return "up";
@@ -113,35 +106,14 @@ function buildMetrics(input: BuildExecutiveBriefingInput): ExecutiveBriefing["me
   };
 }
 
-function buildLast24hSummary(input: BuildExecutiveBriefingInput, companyName: string): string {
-  const { context, intelligence, monitoring, priority } = input;
-  const parts: string[] = [];
-
-  for (const alert of monitoring?.alerts.slice(0, 2) ?? []) {
-    parts.push(`${alert.title}: ${alert.message}`);
-  }
-
-  if (intelligence?.executiveSummary) {
-    parts.push(intelligence.executiveSummary);
-  }
-
-  if (priority?.executivePrioritySummary) {
-    parts.push(priority.executivePrioritySummary);
-  }
-
-  for (const indicator of monitoring?.indicators.slice(0, 1) ?? []) {
-    parts.push(indicator);
-  }
-
-  if (parts.length === 0 && context?.summary) {
-    const summaryLine = context.summary
-      .split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .slice(0, 2)
-      .join(". ");
-    if (summaryLine) parts.push(summaryLine);
-  }
+function buildLast24hSummary(
+  situation: ReturnType<typeof buildExecutiveSituation>,
+  companyName: string,
+): string {
+  const parts = [
+    situation.executiveSummary,
+    ...situation.supportingEvidence.slice(0, 2),
+  ].filter(Boolean);
 
   if (parts.length === 0) {
     return `Monitoramento ativo para ${companyName}. Consolidando contexto operacional para o próximo ciclo executivo.`;
@@ -199,61 +171,24 @@ function buildMarketText(input: BuildExecutiveBriefingInput): string {
     : `${segment} — crescimento projetado ${growth}.`;
 }
 
-function buildDayPriority(input: BuildExecutiveBriefingInput): string {
-  const { priority, intelligence } = input;
+function buildOpportunities(
+  situation: ReturnType<typeof buildExecutiveSituation>,
+  input: BuildExecutiveBriefingInput,
+): string[] {
+  const opportunities = [situation.principalOpportunity];
 
-  if (priority?.top10Priorities[0]?.title) {
-    return priority.top10Priorities[0].title;
-  }
-
-  if (priority?.executivePrioritySummary) {
-    return priority.executivePrioritySummary.split(".")[0] ?? priority.executivePrioritySummary;
-  }
-
-  if (intelligence?.priorities[0]) {
-    return intelligence.priorities[0];
-  }
-
-  return "Consolidar contexto operacional e definir a próxima ação estratégica.";
-}
-
-function buildCurrentRisk(input: BuildExecutiveBriefingInput): string {
-  const { monitoring, intelligence, priority } = input;
-
-  const criticalAlert = monitoring?.alerts.find(
-    (alert) => alert.severity === "critical" || alert.severity === "high",
-  );
-  if (criticalAlert) {
-    return `${criticalAlert.title}: ${criticalAlert.message}`;
-  }
-
-  if (intelligence?.risks[0]) {
-    return intelligence.risks[0];
-  }
-
-  if (priority?.riskLevel === "critical" || priority?.riskLevel === "high") {
-    return `Risco ${priority.riskLevel} na fila de prioridades — ${priority.criticalTasks.length} tarefa(s) crítica(s) ativa(s).`;
-  }
-
-  return "Nenhum risco crítico identificado no ciclo atual.";
-}
-
-function buildOpportunities(input: BuildExecutiveBriefingInput): string[] {
-  const { intelligence, forecast } = input;
-  const opportunities: string[] = [];
-
-  for (const opportunity of intelligence?.opportunities ?? []) {
+  for (const opportunity of input.intelligence?.opportunities ?? []) {
     opportunities.push(opportunity);
   }
 
-  for (const scenario of forecast?.scenarios ?? []) {
+  for (const scenario of input.forecast?.scenarios ?? []) {
     for (const opportunity of scenario.opportunities.slice(0, 1)) {
       opportunities.push(`${opportunity.title}: ${opportunity.description}`);
     }
   }
 
-  if (opportunities.length === 0) {
-    for (const strength of intelligence?.strengths.slice(0, 3) ?? []) {
+  if (opportunities.length <= 1) {
+    for (const strength of input.intelligence?.strengths.slice(0, 3) ?? []) {
       opportunities.push(strength);
     }
   }
@@ -261,42 +196,24 @@ function buildOpportunities(input: BuildExecutiveBriefingInput): string[] {
   return [...new Set(opportunities)].slice(0, 3);
 }
 
-function buildNextRecommendation(input: BuildExecutiveBriefingInput): string {
-  const { forecast, intelligence, priority } = input;
-  const recommendation = forecast?.recommendations[0];
-
-  if (recommendation) {
-    return `${recommendation.title}: ${recommendation.description}`;
-  }
-
-  if (priority?.top10Priorities[1]?.title) {
-    return priority.top10Priorities[1].title;
-  }
-
-  if (intelligence?.priorities[1]) {
-    return intelligence.priorities[1];
-  }
-
-  return "Executar a prioridade do dia e revisar KPIs no próximo ciclo de monitoramento.";
-}
-
 export function buildExecutiveBriefing(
   input: BuildExecutiveBriefingInput = {},
 ): ExecutiveBriefing {
   const companyName = input.context?.company.name ?? "Sua empresa";
+  const situation = buildExecutiveSituation(input);
 
   return {
     greeting: getTimeGreeting(),
     companyName,
-    last24hSummary: buildLast24hSummary(input, companyName),
+    last24hSummary: buildLast24hSummary(situation, companyName),
     metrics: buildMetrics(input),
     campaigns: buildCampaignsText(input),
     competitors: buildCompetitorsText(input),
     market: buildMarketText(input),
-    dayPriority: buildDayPriority(input),
-    currentRisk: buildCurrentRisk(input),
-    opportunities: buildOpportunities(input),
-    nextRecommendation: buildNextRecommendation(input),
+    dayPriority: situation.currentPriority,
+    currentRisk: situation.principalProblem,
+    opportunities: buildOpportunities(situation, input),
+    nextRecommendation: situation.recommendedExecution,
   };
 }
 

@@ -27,12 +27,17 @@ import { CommandPanel } from "../shared/command-panel";
 import { SectionHeader } from "../section-header";
 import {
   ExecutiveBriefingSection,
+  ExecutiveCeoSection,
+  ExecutiveContextSection,
   ExecutiveCouncilSection,
   ExecutiveDashboard,
   ExecutiveDecisionsSection,
   ExecutiveExecutionPlanSection,
+  ExecutiveForecastSection,
   ExecutiveIntelligenceSection,
+  ExecutiveLearningSection,
   ExecutiveMonitoringSection,
+  ExecutiveStrategySection,
 } from "../executive-dashboard";
 import { ExecutiveLiveBoard } from "../executive-live-board";
 import type { ExecutiveWorkspaceData, ExecutiveWorkspaceHandlers } from "./executive-workspace.types";
@@ -328,6 +333,24 @@ export function ExecutiveWorkspaceCenter({
                 }}
               />
             </CommandPanel>
+            <CommandPanel className="p-4 sm:p-5" accent>
+              <ExecutiveStrategySection strategy={data.executiveStrategy ?? null} />
+            </CommandPanel>
+            <CommandPanel className="p-4 sm:p-5" accent>
+              <ExecutiveForecastSection forecast={data.executiveForecast ?? null} />
+            </CommandPanel>
+            <CommandPanel className="p-4 sm:p-5" accent>
+              <ExecutiveLearningSection learning={data.executiveLearning ?? null} />
+            </CommandPanel>
+            <CommandPanel className="p-4 sm:p-5">
+              <ExecutiveContextSection
+                context={data.brain.context}
+                executiveContext={data.executiveContext}
+              />
+            </CommandPanel>
+            <CommandPanel className="p-4 sm:p-5" accent>
+              <ExecutiveCeoSection ceo={data.executiveCeo ?? null} />
+            </CommandPanel>
             <CommandPanel className="p-4 sm:p-5">
               <ExecutiveCouncilSection council={data.council} />
             </CommandPanel>
@@ -563,6 +586,7 @@ export function ExecutiveWorkspaceCenter({
               analysisStartedAt={data.analysisStartedAt}
               analysisCompletedAt={data.analysisCompletedAt}
               inboxActions={inboxActions}
+              hidePromotedPanels
             />
           </div>
         </details>

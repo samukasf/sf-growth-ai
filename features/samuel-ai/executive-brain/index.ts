@@ -11,6 +11,14 @@ export {
 } from "./briefing-utils";
 export type { BuildExecutiveBriefingInput } from "./briefing-utils";
 export {
+  buildExecutiveSituation,
+} from "./executive-situation";
+export type {
+  BuildExecutiveSituationInput,
+  ExecutiveRiskLevel,
+  ExecutiveSituation,
+} from "./executive-situation";
+export {
   DEFAULT_EXECUTIVE_BRAIN,
   MOCK_EXECUTIVE_BRIEFING,
   MOCK_EXECUTIVE_COUNCIL,
