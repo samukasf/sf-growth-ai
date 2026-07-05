@@ -89,13 +89,6 @@ const HORIZON_URGENCY = {
   long: 25,
 } as const;
 
-const HORIZON_DAYS = {
-  immediate: 7,
-  short: 30,
-  medium: 90,
-  long: 365,
-} as const;
-
 const SOURCE_ORDER = ["strategy", "intelligence", "decision", "monitoring", "forecast", "default"];
 
 function parseDeadlineDays(deadline: string): number {
@@ -245,7 +238,7 @@ function buildPriorityTasks(input: ExecutivePriorityInput): PriorityTask[] {
   }));
 
   const blockedIds = new Set<string>();
-  for (const { action, dependencies } of dependencyMap) {
+  for (const { action } of dependencyMap) {
     const metricBlocked = [...blockedMetricTitles].some(
       (title) => action.title.includes(title) || action.description.includes(title),
     );

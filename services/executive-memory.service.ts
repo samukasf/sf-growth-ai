@@ -52,7 +52,9 @@ export async function getMemoryByCategory(
   return data;
 }
 
-export async function addMemory(memory: any) {
+export async function addMemory(
+  memory: Omit<CompanyMemoryRecord, "id"> & { id?: string },
+) {
   return supabase
     .from("company_memory")
     .insert(memory)

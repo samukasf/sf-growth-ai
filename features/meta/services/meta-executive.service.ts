@@ -219,7 +219,7 @@ function calculatePaidAdsScore(metrics: MetaPlatformMetrics): number {
   return clampScore(score);
 }
 
-function buildBestPosts(metrics: MetaPlatformMetrics): MetaPostPerformance[] {
+function buildBestPosts(): MetaPostPerformance[] {
   return MOCK_BEST_POSTS.map((p) => ({ ...p }));
 }
 
@@ -395,7 +395,7 @@ export function buildMetaExecutive(input: MetaExecutiveInput = {}): MetaExecutiv
 
   const facebookScore = calculateFacebookScore(metrics);
   const instagramScore = calculateInstagramScore(metrics);
-  const bestPerformingPosts = buildBestPosts(metrics);
+  const bestPerformingPosts = buildBestPosts();
   const weakPerformingPosts = buildWeakPosts();
   const contentScore = calculateContentScore(bestPerformingPosts, weakPerformingPosts);
   const engagementScore = calculateEngagementScore(metrics);

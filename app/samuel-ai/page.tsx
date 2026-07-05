@@ -12,6 +12,7 @@ import {
 import { buildLinkedInExecutive } from "@/features/linkedin/services/linkedin-executive.service";
 import { buildMetaExecutive } from "@/features/meta/services/meta-executive.service";
 import { buildGoogleBusinessExecutive } from "@/features/google-business/services/google-business-executive.service";
+import { buildGoogleBusinessExecutiveForCompany } from "@/features/google-business/api/google-business.adapter";
 import {
   buildLegalExecutive,
   buildLegalExecutiveForCompany,
@@ -349,13 +350,32 @@ export default async function SamuelAiRoute() {
     });
   }
 
-  const googleBusinessExecutive = buildGoogleBusinessExecutive({
+  const googleBusinessEngines = {
     companyName: executiveContext?.company.name,
     strategy: executiveStrategy,
     intelligence: executiveIntelligence,
     competitor: executiveCompetitor,
     marketingExecutive,
-  });
+  };
+
+  let googleBusinessExecutive = buildGoogleBusinessExecutive(googleBusinessEngines);
+
+  try {
+    if (executiveContext?.company.id) {
+      googleBusinessExecutive = await buildGoogleBusinessExecutiveForCompany(
+        executiveContext.company.id,
+        executiveContext.company.name,
+        {
+          strategy: executiveStrategy,
+          intelligence: executiveIntelligence,
+          competitor: executiveCompetitor,
+          marketingExecutive,
+        },
+      );
+    }
+  } catch {
+    googleBusinessExecutive = buildGoogleBusinessExecutive(googleBusinessEngines);
+  }
 
   const metaExecutive = buildMetaExecutive({
     companyName: executiveContext?.company.name,
