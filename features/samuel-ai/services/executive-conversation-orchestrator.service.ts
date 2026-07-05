@@ -1,6 +1,7 @@
 import type { CrmExecutive } from "@/features/crm/services/crm-executive.service";
 import type { FinanceExecutive } from "@/features/finance/services/finance-executive.service";
 import type { GoogleBusinessExecutive } from "@/features/google-business/services/google-business-executive.service";
+import type { GoogleAnalyticsExecutive } from "@/features/google-analytics/services/google-analytics-executive.service";
 import type { HrExecutive } from "@/features/hr/services/hr-executive.service";
 import type { LegalExecutive } from "@/features/legal/services/legal-executive.service";
 import type { LinkedInExecutive } from "@/features/linkedin/services/linkedin-executive.service";
@@ -31,6 +32,7 @@ export type ConversationIntent =
   | "strategy"
   | "competition"
   | "google-business"
+  | "google-analytics"
   | "meta"
   | "linkedin"
   | "crm"
@@ -48,6 +50,7 @@ export type ExecutiveModuleId =
   | "strategy"
   | "competitor"
   | "google-business"
+  | "google-analytics"
   | "meta"
   | "linkedin";
 
@@ -68,6 +71,7 @@ export type ExecutiveConversationContext = {
   strategy?: ExecutiveStrategy | null;
   competitor?: ExecutiveCompetitor | null;
   googleBusinessExecutive?: GoogleBusinessExecutive | null;
+  googleAnalyticsExecutive?: GoogleAnalyticsExecutive | null;
   metaExecutive?: MetaExecutive | null;
   linkedInExecutive?: LinkedInExecutive | null;
 };
@@ -191,6 +195,11 @@ const MODULE_METADATA: Record<
     role: "Local Presence Lead",
     domain: "Google Business Profile",
   },
+  "google-analytics": {
+    name: "Google Analytics Executive",
+    role: "Web Intelligence Lead",
+    domain: "Google Analytics 4",
+  },
   meta: {
     name: "Meta Executive",
     role: "Social Ads Lead",
@@ -212,6 +221,21 @@ const INTENT_PATTERNS: IntentPattern[] = [
   {
     intent: "meta",
     keywords: ["meta", "facebook", "instagram", "ads meta", "reels", "stories"],
+    weight: 3,
+  },
+  {
+    intent: "google-analytics",
+    keywords: [
+      "google analytics",
+      "analytics",
+      "ga4",
+      "tráfego web",
+      "trafego web",
+      "sessões",
+      "sessoes",
+      "conversões web",
+      "pageviews",
+    ],
     weight: 3,
   },
   {
@@ -347,7 +371,7 @@ const INTENT_PATTERNS: IntentPattern[] = [
 ];
 
 const INTENT_MODULE_MAP: Record<ConversationIntent, ExecutiveModuleId[]> = {
-  marketing: ["marketing", "meta", "google-business", "linkedin", "strategy"],
+  marketing: ["marketing", "google-analytics", "meta", "google-business", "linkedin", "strategy"],
   finance: ["finance", "sales", "operations", "ceo"],
   sales: ["sales", "crm", "finance", "marketing"],
   operations: ["operations", "hr", "finance"],
@@ -356,6 +380,7 @@ const INTENT_MODULE_MAP: Record<ConversationIntent, ExecutiveModuleId[]> = {
   strategy: ["strategy", "ceo", "competitor", "marketing"],
   competition: ["competitor", "marketing", "strategy", "sales"],
   "google-business": ["google-business", "marketing"],
+  "google-analytics": ["google-analytics", "marketing", "strategy"],
   meta: ["meta", "marketing"],
   linkedin: ["linkedin", "marketing", "sales"],
   crm: ["crm", "sales", "marketing"],
@@ -374,6 +399,7 @@ const MODULE_SELECTION_REASONS: Record<ExecutiveModuleId, string> = {
   strategy: "Contextualizar direção estratégica e crescimento",
   competitor: "Mapear pressão competitiva e oportunidades de mercado",
   "google-business": "Avaliar presença local e reputação no Google",
+  "google-analytics": "Analisar tráfego web, conversões e comportamento GA4",
   meta: "Analisar performance em Meta Ads e redes sociais",
   linkedin: "Avaliar autoridade B2B e geração de leads no LinkedIn",
 };
@@ -443,6 +469,7 @@ export function selectExecutiveModules(
     "legal",
     "competitor",
     "google-business",
+    "google-analytics",
     "meta",
     "linkedin",
   ];
@@ -579,6 +606,15 @@ function consultExecutiveModule(
         summary: data.googleBusinessExecutiveSummary,
         healthScore: data.googleBusinessHealthScore,
         recommendations: topRecommendationTitles(data.googleBusinessRecommendations),
+      };
+    }
+    case "google-analytics": {
+      const data = context.googleAnalyticsExecutive;
+      if (!data) return null;
+      return {
+        summary: data.googleAnalyticsExecutiveSummary,
+        healthScore: data.googleAnalyticsHealthScore,
+        recommendations: topRecommendationTitles(data.googleAnalyticsRecommendations),
       };
     }
     case "meta": {

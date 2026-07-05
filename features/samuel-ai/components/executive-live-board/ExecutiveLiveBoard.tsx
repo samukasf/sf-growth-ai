@@ -22,6 +22,7 @@ export type LiveBoardModuleId =
   | "hr"
   | "legal"
   | "google-business"
+  | "google-analytics"
   | "meta"
   | "linkedin";
 
@@ -52,6 +53,7 @@ const MODULE_LABELS: Record<LiveBoardModuleId, string> = {
   hr: "HR",
   legal: "Legal",
   "google-business": "Google Business",
+  "google-analytics": "Google Analytics",
   meta: "Meta",
   linkedin: "LinkedIn",
 };
@@ -64,6 +66,7 @@ const MODULE_ORDER: LiveBoardModuleId[] = [
   "hr",
   "legal",
   "google-business",
+  "google-analytics",
   "meta",
   "linkedin",
 ];

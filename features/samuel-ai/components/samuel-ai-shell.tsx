@@ -34,6 +34,7 @@ import type { ExecutiveIntelligence } from "../services/executive-intelligence.s
 import type { MetaExecutive } from "@/features/meta/services/meta-executive.service";
 import type { LinkedInExecutive } from "@/features/linkedin/services/linkedin-executive.service";
 import type { GoogleBusinessExecutive } from "@/features/google-business/services/google-business-executive.service";
+import type { GoogleAnalyticsExecutive } from "@/features/google-analytics/services/google-analytics-executive.service";
 import type { LegalExecutive } from "@/features/legal/services/legal-executive.service";
 import type { HrExecutive } from "@/features/hr/services/hr-executive.service";
 import type { OperationsExecutive } from "@/features/operations/services/operations-executive.service";
@@ -91,6 +92,7 @@ type SamuelAiShellProps = {
   hrExecutive?: HrExecutive | null;
   legalExecutive?: LegalExecutive | null;
   googleBusinessExecutive?: GoogleBusinessExecutive | null;
+  googleAnalyticsExecutive?: GoogleAnalyticsExecutive | null;
   metaExecutive?: MetaExecutive | null;
   linkedInExecutive?: LinkedInExecutive | null;
 };
@@ -114,6 +116,7 @@ export function SamuelAiShell({
   hrExecutive = null,
   legalExecutive = null,
   googleBusinessExecutive = null,
+  googleAnalyticsExecutive = null,
   metaExecutive = null,
   linkedInExecutive = null,
 }: SamuelAiShellProps) {
@@ -166,6 +169,7 @@ export function SamuelAiShell({
         strategy: executiveStrategy,
         competitor: executiveCompetitor,
         googleBusinessExecutive,
+        googleAnalyticsExecutive,
         metaExecutive,
         linkedInExecutive,
       };
@@ -231,6 +235,7 @@ export function SamuelAiShell({
       executiveStrategy,
       executiveCompetitor,
       googleBusinessExecutive,
+      googleAnalyticsExecutive,
       metaExecutive,
       linkedInExecutive,
     ],
@@ -313,6 +318,7 @@ export function SamuelAiShell({
                   hr: Boolean(hrExecutive),
                   legal: Boolean(legalExecutive),
                   "google-business": Boolean(googleBusinessExecutive),
+                  "google-analytics": Boolean(googleAnalyticsExecutive),
                   meta: Boolean(metaExecutive),
                   linkedin: Boolean(linkedInExecutive),
                 }}
@@ -369,6 +375,7 @@ export function SamuelAiShell({
             hrExecutive={hrExecutive}
             legalExecutive={legalExecutive}
             googleBusinessExecutive={googleBusinessExecutive}
+            googleAnalyticsExecutive={googleAnalyticsExecutive}
             metaExecutive={metaExecutive}
             linkedInExecutive={linkedInExecutive}
             executiveConversation={executiveConversation}

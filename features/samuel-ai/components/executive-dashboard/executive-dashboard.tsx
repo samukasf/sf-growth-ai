@@ -15,6 +15,8 @@ import { LinkedInExecutiveSummarySection } from "@/features/linkedin/components/
 import type { LinkedInExecutive } from "@/features/linkedin/services/linkedin-executive.service";
 import { GoogleBusinessExecutiveSummarySection } from "@/features/google-business/components/google-business-executive-summary-section";
 import type { GoogleBusinessExecutive } from "@/features/google-business/services/google-business-executive.service";
+import { GoogleAnalyticsExecutiveSummarySection } from "@/features/google-analytics/components/google-analytics-executive-summary-section";
+import type { GoogleAnalyticsExecutive } from "@/features/google-analytics/services/google-analytics-executive.service";
 import { LegalExecutiveSummarySection } from "@/features/legal/components/legal-executive-summary-section";
 import type { LegalExecutive } from "@/features/legal/services/legal-executive.service";
 import { HrExecutiveSummarySection } from "@/features/hr/components/hr-executive-summary-section";
@@ -82,6 +84,7 @@ type ExecutiveDashboardProps = {
   hrExecutive?: HrExecutive | null;
   legalExecutive?: LegalExecutive | null;
   googleBusinessExecutive?: GoogleBusinessExecutive | null;
+  googleAnalyticsExecutive?: GoogleAnalyticsExecutive | null;
   metaExecutive?: MetaExecutive | null;
   linkedInExecutive?: LinkedInExecutive | null;
   executiveConversation?: ExecutiveConversation | null;
@@ -121,6 +124,7 @@ export function ExecutiveDashboard({
   hrExecutive = null,
   legalExecutive = null,
   googleBusinessExecutive = null,
+  googleAnalyticsExecutive = null,
   metaExecutive = null,
   linkedInExecutive = null,
   executiveConversation = null,
@@ -162,6 +166,7 @@ export function ExecutiveDashboard({
             hr: Boolean(hrExecutive),
             legal: Boolean(legalExecutive),
             "google-business": Boolean(googleBusinessExecutive),
+            "google-analytics": Boolean(googleAnalyticsExecutive),
             meta: Boolean(metaExecutive),
             linkedin: Boolean(linkedInExecutive),
           }}
@@ -218,6 +223,10 @@ export function ExecutiveDashboard({
 
       <CommandPanel className="p-4 sm:p-5" accent>
         <MarketingExecutiveSummarySection marketing={marketingExecutive} />
+      </CommandPanel>
+
+      <CommandPanel className="p-4 sm:p-5" accent>
+        <GoogleAnalyticsExecutiveSummarySection googleAnalytics={googleAnalyticsExecutive} />
       </CommandPanel>
 
       <CommandPanel className="p-4 sm:p-5" accent>

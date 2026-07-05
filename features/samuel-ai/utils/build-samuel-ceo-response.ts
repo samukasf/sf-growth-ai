@@ -13,6 +13,7 @@ const INTENT_LABELS: Record<ConversationIntent, string> = {
   strategy: "Estratégia",
   competition: "Concorrência",
   "google-business": "Google Business",
+  "google-analytics": "Google Analytics",
   meta: "Meta",
   linkedin: "LinkedIn",
   crm: "CRM",

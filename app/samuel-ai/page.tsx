@@ -13,6 +13,12 @@ import { buildLinkedInExecutive } from "@/features/linkedin/services/linkedin-ex
 import { buildMetaExecutive } from "@/features/meta/services/meta-executive.service";
 import { buildGoogleBusinessExecutive } from "@/features/google-business/services/google-business-executive.service";
 import { buildGoogleBusinessExecutiveForCompany } from "@/features/google-business/api/google-business.adapter";
+import { buildGoogleAnalyticsExecutive } from "@/features/google-analytics/services/google-analytics-executive.service";
+import {
+  buildGoogleAnalyticsExecutiveForCompany,
+  enrichIntelligenceWithAnalytics,
+  enrichMarketingWithAnalytics,
+} from "@/integrations/google-analytics";
 import {
   buildLegalExecutive,
   buildLegalExecutiveForCompany,
@@ -184,6 +190,40 @@ export default async function SamuelAiRoute() {
       ...marketingEngines,
     });
   }
+
+  const googleAnalyticsEngines = {
+    companyName: executiveContext?.company.name,
+    strategy: executiveStrategy,
+    intelligence: executiveIntelligence,
+    competitor: executiveCompetitor,
+    marketingExecutive,
+  };
+
+  let googleAnalyticsExecutive = buildGoogleAnalyticsExecutive(googleAnalyticsEngines);
+
+  try {
+    if (executiveContext?.company.id) {
+      googleAnalyticsExecutive = await buildGoogleAnalyticsExecutiveForCompany(
+        executiveContext.company.id,
+        executiveContext.company.name,
+        {
+          strategy: executiveStrategy,
+          intelligence: executiveIntelligence,
+          competitor: executiveCompetitor,
+          marketingExecutive,
+        },
+      );
+    }
+  } catch {
+    googleAnalyticsExecutive = buildGoogleAnalyticsExecutive(googleAnalyticsEngines);
+  }
+
+  const marketingExecutiveWithAnalytics =
+    enrichMarketingWithAnalytics(marketingExecutive, googleAnalyticsExecutive) ??
+    marketingExecutive;
+  const executiveIntelligenceWithAnalytics =
+    enrichIntelligenceWithAnalytics(executiveIntelligence, googleAnalyticsExecutive) ??
+    executiveIntelligence;
 
   const salesEngines = {
     strategy: executiveStrategy,
@@ -397,7 +437,7 @@ export default async function SamuelAiRoute() {
 
   const executiveCeo = buildExecutiveCEO({
     context: executiveContext,
-    intelligence: executiveIntelligence,
+    intelligence: executiveIntelligenceWithAnalytics,
     decisions: executiveDecisions,
     executionPlans,
     monitoring: executiveMonitoring,
@@ -409,13 +449,14 @@ export default async function SamuelAiRoute() {
     priority: executivePriority,
     recommendation: executiveRecommendation,
     crmExecutive,
-    marketingExecutive,
+    marketingExecutive: marketingExecutiveWithAnalytics,
     salesExecutive,
     financeExecutive,
     operationsExecutive,
     hrExecutive,
     legalExecutive,
     googleBusinessExecutive,
+    googleAnalyticsExecutive,
     metaExecutive,
     linkedInExecutive,
   });
@@ -423,7 +464,7 @@ export default async function SamuelAiRoute() {
   return (
     <samuelAi.SamuelAiPage
       executiveContext={executiveContext}
-      executiveIntelligence={executiveIntelligence}
+      executiveIntelligence={executiveIntelligenceWithAnalytics}
       executiveDecisions={executiveDecisions}
       executionPlans={executionPlans}
       executiveMonitoring={executiveMonitoring}
@@ -436,13 +477,14 @@ export default async function SamuelAiRoute() {
       executiveRecommendation={executiveRecommendation}
       executiveCeo={executiveCeo}
       crmExecutive={crmExecutive}
-      marketingExecutive={marketingExecutive}
+      marketingExecutive={marketingExecutiveWithAnalytics}
       salesExecutive={salesExecutive}
       financeExecutive={financeExecutive}
       operationsExecutive={operationsExecutive}
       hrExecutive={hrExecutive}
       legalExecutive={legalExecutive}
       googleBusinessExecutive={googleBusinessExecutive}
+      googleAnalyticsExecutive={googleAnalyticsExecutive}
       metaExecutive={metaExecutive}
       linkedInExecutive={linkedInExecutive}
     />

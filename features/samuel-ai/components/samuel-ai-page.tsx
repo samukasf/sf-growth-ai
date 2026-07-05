@@ -1,6 +1,7 @@
 import type { MetaExecutive } from "@/features/meta/services/meta-executive.service";
 import type { LinkedInExecutive } from "@/features/linkedin/services/linkedin-executive.service";
 import type { GoogleBusinessExecutive } from "@/features/google-business/services/google-business-executive.service";
+import type { GoogleAnalyticsExecutive } from "@/features/google-analytics/services/google-analytics-executive.service";
 import type { LegalExecutive } from "@/features/legal/services/legal-executive.service";
 import type { HrExecutive } from "@/features/hr/services/hr-executive.service";
 import type { OperationsExecutive } from "@/features/operations/services/operations-executive.service";
@@ -48,6 +49,7 @@ type SamuelAiPageProps = {
   hrExecutive?: HrExecutive | null;
   legalExecutive?: LegalExecutive | null;
   googleBusinessExecutive?: GoogleBusinessExecutive | null;
+  googleAnalyticsExecutive?: GoogleAnalyticsExecutive | null;
   metaExecutive?: MetaExecutive | null;
   linkedInExecutive?: LinkedInExecutive | null;
 };
@@ -71,6 +73,7 @@ export function SamuelAiPage({
   hrExecutive = null,
   legalExecutive = null,
   googleBusinessExecutive = null,
+  googleAnalyticsExecutive = null,
   metaExecutive = null,
   linkedInExecutive = null,
 }: SamuelAiPageProps) {
@@ -96,6 +99,7 @@ export function SamuelAiPage({
       hrExecutive={hrExecutive}
       legalExecutive={legalExecutive}
       googleBusinessExecutive={googleBusinessExecutive}
+      googleAnalyticsExecutive={googleAnalyticsExecutive}
       metaExecutive={metaExecutive}
       linkedInExecutive={linkedInExecutive}
     />
