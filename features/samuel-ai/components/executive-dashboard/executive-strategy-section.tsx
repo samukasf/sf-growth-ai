@@ -1,9 +1,9 @@
 import { cn } from "@/utils/cn";
 
 import type {
+  AreaStrategy,
   ExecutiveStrategy,
-  StrategicObjective,
-  StrategicPlan,
+  GrowthPlan,
 } from "../../services/executive-strategy.service";
 import { StatusBadge } from "../shared/status-badge";
 import { SectionHeader } from "../section-header";
@@ -12,36 +12,13 @@ type ExecutiveStrategySectionProps = {
   strategy: ExecutiveStrategy | null;
 };
 
-function ObjectiveList({ objectives }: { objectives: StrategicObjective[] }) {
-  if (objectives.length === 0) {
-    return <p className="text-[11px] text-muted">Nenhum objetivo definido</p>;
-  }
-
+function GrowthPlanCard({ plan }: { plan: GrowthPlan }) {
   return (
-    <ul className="flex flex-col gap-2">
-      {objectives.map((objective) => (
-        <li
-          key={objective.id}
-          className="rounded-lg border border-border/60 bg-black/10 px-3 py-2.5"
-        >
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-semibold text-foreground">{objective.title}</p>
-            <StatusBadge label={objective.priority} variant="muted" />
-          </div>
-          <p className="mt-1 text-[11px] text-muted">{objective.description}</p>
-          <p className="mt-1 text-[10px] text-accent">Métrica: {objective.metric}</p>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function PlanCard({ plan }: { plan: StrategicPlan }) {
-  return (
-    <div className="rounded-lg border border-border/60 bg-white/[0.02] px-3 py-2.5">
+    <div className="rounded-lg border border-border/60 bg-black/10 px-3 py-2.5">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-semibold text-foreground">{plan.title}</p>
-        <span className="text-[10px] text-muted">{plan.horizon}</span>
+        <p className="text-xs font-semibold text-foreground">
+          Plano de Crescimento — {plan.horizon}
+        </p>
       </div>
       <p className="mt-1 text-[11px] text-muted">{plan.summary}</p>
       <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -50,7 +27,7 @@ function PlanCard({ plan }: { plan: StrategicPlan }) {
             Metas
           </p>
           <ul className="mt-1 flex flex-col gap-0.5">
-            {plan.goals.slice(0, 3).map((goal) => (
+            {plan.goals.map((goal) => (
               <li key={goal} className="text-[10px] text-foreground/80">
                 • {goal}
               </li>
@@ -62,7 +39,7 @@ function PlanCard({ plan }: { plan: StrategicPlan }) {
             Ações
           </p>
           <ul className="mt-1 flex flex-col gap-0.5">
-            {plan.actions.slice(0, 3).map((action) => (
+            {plan.actions.map((action) => (
               <li key={action} className="text-[10px] text-foreground/80">
                 • {action}
               </li>
@@ -75,6 +52,59 @@ function PlanCard({ plan }: { plan: StrategicPlan }) {
           </p>
           <ul className="mt-1 flex flex-col gap-0.5">
             {plan.kpis.map((kpi) => (
+              <li key={kpi} className="text-[10px] text-foreground/80">
+                • {kpi}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AreaStrategyCard({
+  title,
+  strategy,
+}: {
+  title: string;
+  strategy: AreaStrategy;
+}) {
+  return (
+    <div className="rounded-lg border border-border/60 bg-white/[0.02] px-3 py-2.5">
+      <p className="text-xs font-semibold text-foreground">{title}</p>
+      <p className="mt-1 text-[11px] text-muted">{strategy.summary}</p>
+      <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <div>
+          <p className="text-[10px] font-medium uppercase tracking-wider text-emerald-400">
+            Foco
+          </p>
+          <ul className="mt-1 flex flex-col gap-0.5">
+            {strategy.focus.map((item) => (
+              <li key={item} className="text-[10px] text-foreground/80">
+                • {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div>
+          <p className="text-[10px] font-medium uppercase tracking-wider text-accent">
+            Ações
+          </p>
+          <ul className="mt-1 flex flex-col gap-0.5">
+            {strategy.actions.map((action) => (
+              <li key={action} className="text-[10px] text-foreground/80">
+                • {action}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div>
+          <p className="text-[10px] font-medium uppercase tracking-wider text-muted">
+            KPIs
+          </p>
+          <ul className="mt-1 flex flex-col gap-0.5">
+            {strategy.kpis.map((kpi) => (
               <li key={kpi} className="text-[10px] text-foreground/80">
                 • {kpi}
               </li>
@@ -103,14 +133,13 @@ export function ExecutiveStrategySection({
     );
   }
 
-  const plans: StrategicPlan[] = [
-    strategy.commercialPlan,
-    strategy.financialPlan,
-    strategy.marketingPlan,
-    strategy.productPlan,
-    strategy.operationsPlan,
-    strategy.growthPlan,
-    strategy.expansionPlan,
+  const areaStrategies: Array<{ title: string; data: AreaStrategy }> = [
+    { title: "Estratégia Comercial", data: strategy.commercialStrategy },
+    { title: "Estratégia Financeira", data: strategy.financialStrategy },
+    { title: "Estratégia de Marketing", data: strategy.marketingStrategy },
+    { title: "Estratégia de Produto", data: strategy.productStrategy },
+    { title: "Estratégia Operacional", data: strategy.operationalStrategy },
+    { title: "Estratégia de Expansão", data: strategy.expansionStrategy },
   ];
 
   return (
@@ -180,20 +209,55 @@ export function ExecutiveStrategySection({
 
       <div className="rounded-lg border border-accent/15 bg-accent/[0.03] px-3 py-2.5">
         <p className="text-[10px] font-medium uppercase tracking-wider text-accent">
-          Estratégia Principal
+          Estratégia Executiva
         </p>
         <p className="mt-2 text-xs leading-relaxed text-foreground/90">
-          {strategy.mainStrategy}
+          {strategy.executiveStrategy}
         </p>
       </div>
 
-      <div className="rounded-lg border border-border/60 bg-black/10 px-3 py-2.5">
-        <p className="text-[10px] font-medium uppercase tracking-wider text-muted">
-          Missão Operacional
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <div className="rounded-lg border border-border/60 bg-black/10 px-3 py-2.5">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-muted">
+            Visão Estratégica
+          </p>
+          <p className="mt-2 text-xs leading-relaxed text-foreground/90">
+            {strategy.strategicVision}
+          </p>
+        </div>
+        <div className="rounded-lg border border-border/60 bg-black/10 px-3 py-2.5">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-muted">
+            Missão
+          </p>
+          <p className="mt-2 text-xs leading-relaxed text-foreground/90">
+            {strategy.mission}
+          </p>
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-accent/15 bg-accent/[0.03] px-3 py-2.5">
+        <p className="text-[10px] font-medium uppercase tracking-wider text-accent">
+          Posicionamento
         </p>
         <p className="mt-2 text-xs leading-relaxed text-foreground/90">
-          {strategy.operationalMission}
+          {strategy.positioning}
         </p>
+      </div>
+
+      <div>
+        <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-emerald-400">
+          Diferenciação
+        </p>
+        <ul className="flex flex-col gap-1.5">
+          {strategy.differentiation.map((item) => (
+            <li
+              key={item}
+              className="rounded-lg border border-emerald-500/15 bg-emerald-500/[0.03] px-3 py-2 text-[11px] text-emerald-300/90"
+            >
+              • {item}
+            </li>
+          ))}
+        </ul>
       </div>
 
       <div>
@@ -213,49 +277,23 @@ export function ExecutiveStrategySection({
       </div>
 
       <div>
-        <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-emerald-400">
-          Diferenciais Competitivos
+        <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-muted">
+          Planos de Crescimento
         </p>
-        <ul className="flex flex-col gap-1.5">
-          {strategy.competitiveDifferentiators.map((item) => (
-            <li
-              key={item}
-              className="rounded-lg border border-emerald-500/15 bg-emerald-500/[0.03] px-3 py-2 text-[11px] text-emerald-300/90"
-            >
-              • {item}
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-        <div>
-          <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-muted">
-            Objetivos — 30 dias
-          </p>
-          <ObjectiveList objectives={strategy.objectives.days30} />
-        </div>
-        <div>
-          <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-muted">
-            Objetivos — 90 dias
-          </p>
-          <ObjectiveList objectives={strategy.objectives.days90} />
-        </div>
-        <div>
-          <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-muted">
-            Objetivos — 365 dias
-          </p>
-          <ObjectiveList objectives={strategy.objectives.days365} />
+        <div className="flex flex-col gap-2">
+          <GrowthPlanCard plan={strategy.growthPlan30d} />
+          <GrowthPlanCard plan={strategy.growthPlan90d} />
+          <GrowthPlanCard plan={strategy.growthPlan365d} />
         </div>
       </div>
 
       <div>
         <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-muted">
-          Planos Estratégicos
+          Estratégias por Área
         </p>
         <div className="flex flex-col gap-2">
-          {plans.map((plan) => (
-            <PlanCard key={plan.id} plan={plan} />
+          {areaStrategies.map(({ title, data }) => (
+            <AreaStrategyCard key={title} title={title} strategy={data} />
           ))}
         </div>
       </div>
