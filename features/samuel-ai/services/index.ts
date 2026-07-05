@@ -87,6 +87,20 @@ export {
   type CompetitorRecommendation,
 } from "./executive-competitor.service";
 
+export {
+  buildExecutiveAction,
+  type ExecutiveAction,
+  type ExecutiveActionInput,
+  type ExecutiveActionItem,
+  type ActionHorizon,
+  type ActionPriority,
+  type ActionImpact,
+  type AutomationLevel,
+  type ResponsibleArea,
+  type ExpectedResult,
+  type EstimatedROI,
+} from "./executive-action.service";
+
 /** @deprecated Use buildQueryExecutiveContext */
 export { buildQueryExecutiveContext as buildExecutiveContext } from "./executive-orchestrator.service";
 

@@ -5,6 +5,7 @@ import type { ExecutiveForecast } from "../services/executive-forecast.service";
 import type { ExecutiveIntelligence } from "../services/executive-intelligence.service";
 import type { ExecutiveLearning } from "../services/executive-learning.service";
 import type { ExecutiveMonitoring } from "../services/executive-monitoring.service";
+import type { ExecutiveAction } from "../services/executive-action.service";
 import type { ExecutiveCompetitor } from "../services/executive-competitor.service";
 import type { ExecutiveStrategy } from "../services/executive-strategy.service";
 
@@ -22,6 +23,7 @@ type SamuelAiPageProps = {
   executiveForecast?: ExecutiveForecast | null;
   executiveStrategy?: ExecutiveStrategy | null;
   executiveCompetitor?: ExecutiveCompetitor | null;
+  executiveAction?: ExecutiveAction | null;
 };
 
 export function SamuelAiPage({
@@ -34,6 +36,7 @@ export function SamuelAiPage({
   executiveForecast = null,
   executiveStrategy = null,
   executiveCompetitor = null,
+  executiveAction = null,
 }: SamuelAiPageProps) {
   const competitorIntelligence = executiveCompetitor ?? buildExecutiveCompetitor();
 
