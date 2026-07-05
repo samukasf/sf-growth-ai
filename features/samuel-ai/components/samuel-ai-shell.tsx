@@ -26,6 +26,7 @@ import type { ExecutiveDecision } from "../services/executive-decision.service";
 import type { ExecutionPlan } from "../services/executive-execution-planner.service";
 import type { ExecutiveIntelligence } from "../services/executive-intelligence.service";
 import type { MetaExecutive } from "@/features/meta/services/meta-executive.service";
+import type { LinkedInExecutive } from "@/features/linkedin/services/linkedin-executive.service";
 import type { GoogleBusinessExecutive } from "@/features/google-business/services/google-business-executive.service";
 import type { LegalExecutive } from "@/features/legal/services/legal-executive.service";
 import type { HrExecutive } from "@/features/hr/services/hr-executive.service";
@@ -84,6 +85,7 @@ type SamuelAiShellProps = {
   legalExecutive?: LegalExecutive | null;
   googleBusinessExecutive?: GoogleBusinessExecutive | null;
   metaExecutive?: MetaExecutive | null;
+  linkedInExecutive?: LinkedInExecutive | null;
 };
 
 export function SamuelAiShell({
@@ -106,6 +108,7 @@ export function SamuelAiShell({
   legalExecutive = null,
   googleBusinessExecutive = null,
   metaExecutive = null,
+  linkedInExecutive = null,
 }: SamuelAiShellProps) {
   const [executiveBrain, setExecutiveBrain] =
     useState<ExecutiveBrain>(DEFAULT_EXECUTIVE_BRAIN);
@@ -269,6 +272,7 @@ export function SamuelAiShell({
             legalExecutive={legalExecutive}
             googleBusinessExecutive={googleBusinessExecutive}
             metaExecutive={metaExecutive}
+            linkedInExecutive={linkedInExecutive}
           />
         </aside>
       </main>

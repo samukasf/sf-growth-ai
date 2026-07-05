@@ -7,6 +7,7 @@ export * as hr from "./hr";
 export * as legal from "./legal";
 export * as googleBusiness from "./google-business";
 export * as meta from "./meta";
+export * as linkedin from "./linkedin";
 export * as auth from "./auth";
 export * as business from "./business";
 export * as dashboard from "./dashboard";

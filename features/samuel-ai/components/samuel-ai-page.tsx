@@ -1,4 +1,5 @@
 import type { MetaExecutive } from "@/features/meta/services/meta-executive.service";
+import type { LinkedInExecutive } from "@/features/linkedin/services/linkedin-executive.service";
 import type { GoogleBusinessExecutive } from "@/features/google-business/services/google-business-executive.service";
 import type { LegalExecutive } from "@/features/legal/services/legal-executive.service";
 import type { HrExecutive } from "@/features/hr/services/hr-executive.service";
@@ -48,6 +49,7 @@ type SamuelAiPageProps = {
   legalExecutive?: LegalExecutive | null;
   googleBusinessExecutive?: GoogleBusinessExecutive | null;
   metaExecutive?: MetaExecutive | null;
+  linkedInExecutive?: LinkedInExecutive | null;
 };
 
 export function SamuelAiPage({
@@ -73,6 +75,7 @@ export function SamuelAiPage({
   legalExecutive = null,
   googleBusinessExecutive = null,
   metaExecutive = null,
+  linkedInExecutive = null,
 }: SamuelAiPageProps) {
   const competitorIntelligence = executiveCompetitor ?? buildExecutiveCompetitor();
 
@@ -97,6 +100,7 @@ export function SamuelAiPage({
       legalExecutive={legalExecutive}
       googleBusinessExecutive={googleBusinessExecutive}
       metaExecutive={metaExecutive}
+      linkedInExecutive={linkedInExecutive}
     />
   );
 }

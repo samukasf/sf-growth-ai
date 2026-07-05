@@ -10,6 +10,8 @@ import type { OrchestratorSnapshot } from "../../services/executive-orchestrator
 import type { ExecutiveContext as CompanyExecutiveContext } from "@/services/executive-context.service";
 import { MetaExecutiveSummarySection } from "@/features/meta/components/meta-executive-summary-section";
 import type { MetaExecutive } from "@/features/meta/services/meta-executive.service";
+import { LinkedInExecutiveSummarySection } from "@/features/linkedin/components/linkedin-executive-summary-section";
+import type { LinkedInExecutive } from "@/features/linkedin/services/linkedin-executive.service";
 import { GoogleBusinessExecutiveSummarySection } from "@/features/google-business/components/google-business-executive-summary-section";
 import type { GoogleBusinessExecutive } from "@/features/google-business/services/google-business-executive.service";
 import { LegalExecutiveSummarySection } from "@/features/legal/components/legal-executive-summary-section";
@@ -78,6 +80,7 @@ type ExecutiveDashboardProps = {
   legalExecutive?: LegalExecutive | null;
   googleBusinessExecutive?: GoogleBusinessExecutive | null;
   metaExecutive?: MetaExecutive | null;
+  linkedInExecutive?: LinkedInExecutive | null;
 };
 
 const STATUS_LABELS: Record<ExecutiveBrainStatus, string> = {
@@ -112,6 +115,7 @@ export function ExecutiveDashboard({
   legalExecutive = null,
   googleBusinessExecutive = null,
   metaExecutive = null,
+  linkedInExecutive = null,
 }: ExecutiveDashboardProps) {
   const statusWithTimestamp: ExecutiveStatus = {
     ...executiveStatus,
@@ -197,6 +201,10 @@ export function ExecutiveDashboard({
 
       <CommandPanel className="p-4 sm:p-5" accent>
         <MetaExecutiveSummarySection meta={metaExecutive} />
+      </CommandPanel>
+
+      <CommandPanel className="p-4 sm:p-5" accent>
+        <LinkedInExecutiveSummarySection linkedin={linkedInExecutive} />
       </CommandPanel>
 
       <CommandPanel className="p-4 sm:p-5" accent>

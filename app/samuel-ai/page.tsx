@@ -9,6 +9,7 @@ import {
   buildMarketingExecutive,
   buildMarketingExecutiveForCompany,
 } from "@/features/marketing/services/marketing-executive.service";
+import { buildLinkedInExecutive } from "@/features/linkedin/services/linkedin-executive.service";
 import { buildMetaExecutive } from "@/features/meta/services/meta-executive.service";
 import { buildGoogleBusinessExecutive } from "@/features/google-business/services/google-business-executive.service";
 import {
@@ -364,6 +365,16 @@ export default async function SamuelAiRoute() {
     marketingExecutive,
   });
 
+  const linkedInExecutive = buildLinkedInExecutive({
+    companyName: executiveContext?.company.name,
+    strategy: executiveStrategy,
+    intelligence: executiveIntelligence,
+    competitor: executiveCompetitor,
+    marketingExecutive,
+    crmExecutive,
+    salesExecutive,
+  });
+
   const executiveCeo = buildExecutiveCEO({
     context: executiveContext,
     intelligence: executiveIntelligence,
@@ -386,6 +397,7 @@ export default async function SamuelAiRoute() {
     legalExecutive,
     googleBusinessExecutive,
     metaExecutive,
+    linkedInExecutive,
   });
 
   return (
@@ -412,6 +424,7 @@ export default async function SamuelAiRoute() {
       legalExecutive={legalExecutive}
       googleBusinessExecutive={googleBusinessExecutive}
       metaExecutive={metaExecutive}
+      linkedInExecutive={linkedInExecutive}
     />
   );
 }
