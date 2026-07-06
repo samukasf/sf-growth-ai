@@ -1,0 +1,10 @@
+export type LearningRecordId = string;
+export type CompanyId = string;
+export type KnowledgeId = string;
+export type LearningEventId = string;
+export type DecisionId = string;
+export type LearningPatternId = string;
+export type LearningExperienceId = string;
+export type LearningFeedbackId = string;
+export type LearningHypothesisId = string;
+export type DomainEventId = string;
