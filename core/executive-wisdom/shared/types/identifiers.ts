@@ -1,0 +1,12 @@
+export type WisdomId = string;
+export type CompanyId = string;
+export type KnowledgeId = string;
+export type LearningId = string;
+export type BestPracticeId = string;
+export type LessonId = string;
+export type ExperienceId = string;
+export type PlaybookId = string;
+export type BusinessRuleId = string;
+export type RecommendationPatternId = string;
+export type DecisionHistoryId = string;
+export type DomainEventId = string;
