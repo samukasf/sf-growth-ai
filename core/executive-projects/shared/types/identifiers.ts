@@ -1,0 +1,12 @@
+export type ExecutiveProjectId = string;
+export type CompanyId = string;
+export type ProjectRequirementId = string;
+export type ProjectArchitectureId = string;
+export type ProjectScopeId = string;
+export type ProjectMilestoneId = string;
+export type ProjectBudgetId = string;
+export type ProjectRiskId = string;
+export type ProjectROIId = string;
+export type ProjectApprovalId = string;
+export type ProjectExecutionPlanId = string;
+export type DomainEventId = string;
