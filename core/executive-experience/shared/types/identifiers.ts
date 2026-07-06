@@ -1,0 +1,13 @@
+export type ExperienceId = string;
+export type CompanyId = string;
+export type BusinessCaseId = string;
+export type ExecutionHistoryId = string;
+export type SuccessCaseId = string;
+export type FailureCaseId = string;
+export type BusinessScenarioId = string;
+export type ExperiencePatternId = string;
+export type OperationalContextId = string;
+export type KnowledgeReferenceId = string;
+export type LearningReferenceId = string;
+export type WisdomReferenceId = string;
+export type DomainEventId = string;
