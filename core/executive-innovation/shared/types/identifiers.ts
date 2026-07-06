@@ -1,0 +1,11 @@
+export type InnovationOpportunityId = string;
+export type CompanyId = string;
+export type InnovationProjectId = string;
+export type AutomationOpportunityId = string;
+export type SoftwareOpportunityId = string;
+export type BusinessImprovementId = string;
+export type InnovationHypothesisId = string;
+export type InnovationImpactId = string;
+export type InnovationROIId = string;
+export type InnovationApprovalRequestId = string;
+export type DomainEventId = string;
