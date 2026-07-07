@@ -40,6 +40,7 @@ import {
   ExecutiveStrategySection,
 } from "../executive-dashboard";
 import { ExecutiveLiveBoard } from "../executive-live-board";
+import { SupercerebroToday } from "../supercerebro-today";
 import type { ExecutiveWorkspaceData, ExecutiveWorkspaceHandlers } from "./executive-workspace.types";
 import { getWorkspaceSectionLabel, type WorkspaceSection } from "./workspace-navigation";
 
@@ -301,6 +302,12 @@ export function ExecutiveWorkspaceCenter({
       case "dashboard":
         return (
           <div className="flex flex-col gap-4">
+            <CommandPanel accent className="p-5 sm:p-6">
+              <SupercerebroToday
+                briefing={data.briefing}
+                companyId={data.executiveContext?.company.id}
+              />
+            </CommandPanel>
             <CommandPanel accent className="p-5 sm:p-6">
               <ExecutiveBriefingSection briefing={data.briefing} />
             </CommandPanel>
