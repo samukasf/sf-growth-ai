@@ -1,0 +1,16 @@
+export type CalendarId = string;
+export type ScheduleId = string;
+export type AppointmentId = string;
+export type ReservationId = string;
+export type AvailabilityId = string;
+export type ResourceId = string;
+export type MeetingId = string;
+export type ServiceId = string;
+export type EmployeeScheduleId = string;
+export type WorkingHoursId = string;
+export type HolidayId = string;
+export type AppointmentReminderId = string;
+export type WaitingListId = string;
+export type RecurringScheduleId = string;
+export type OrganizationId = string;
+export type DomainEventId = string;
