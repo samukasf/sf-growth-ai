@@ -1,4 +1,4 @@
-import type { BusinessWorkflow, WorkflowCoordinator } from "../../domain";
+import { BusinessWorkflow, type WorkflowCoordinator } from "../../domain";
 
 export class DefaultWorkflowCoordinator implements WorkflowCoordinator {
   start(workflow: BusinessWorkflow) {
