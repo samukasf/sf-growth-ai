@@ -1,0 +1,17 @@
+export type ProductId = string;
+export type ServiceId = string;
+export type OfferId = string;
+export type OrderId = string;
+export type OrderItemId = string;
+export type CartId = string;
+export type CheckoutId = string;
+export type PaymentId = string;
+export type InvoiceId = string;
+export type SubscriptionId = string;
+export type DeliveryId = string;
+export type PurchaseRequestId = string;
+export type SupplierQuoteId = string;
+export type QuoteComparisonId = string;
+export type CommercialProposalId = string;
+export type OrganizationId = string;
+export type DomainEventId = string;

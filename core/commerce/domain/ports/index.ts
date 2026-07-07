@@ -1,0 +1,11 @@
+export type { ProductRepository } from "./product-repository.port";
+export type { ServiceRepository } from "./service-repository.port";
+export type { OrderRepository } from "./order-repository.port";
+export type { PaymentRepository } from "./payment-repository.port";
+export type { SubscriptionRepository } from "./subscription-repository.port";
+export type { SupplierQuoteRepository } from "./supplier-quote-repository.port";
+export type { CommerceEngine, CommerceSummary } from "./commerce-engine.port";
+export type { PricingEngine, PriceBreakdown } from "./pricing-engine.port";
+export type { QuoteComparisonEngine } from "./quote-comparison-engine.port";
+export type { PurchaseApprovalEngine, ApprovalResult } from "./purchase-approval-engine.port";
+export type { DeliveryManager, DeliveryPlan } from "./delivery-manager.port";
