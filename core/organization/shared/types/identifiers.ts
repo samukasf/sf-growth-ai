@@ -1,0 +1,17 @@
+export type OrganizationId = string;
+export type OrganizationMemberId = string;
+export type DepartmentId = string;
+export type RoleId = string;
+export type PermissionId = string;
+export type AccessPolicyId = string;
+export type ExecutiveIdentityId = string;
+export type DecisionAuthorityId = string;
+export type ApprovalLevelId = string;
+export type AuditEntryId = string;
+export type OrganizationProfileId = string;
+export type OrganizationSettingsId = string;
+export type OrganizationPolicyId = string;
+export type OrganizationStructureId = string;
+export type OrganizationHierarchyId = string;
+export type DepartmentProfileId = string;
+export type DomainEventId = string;
