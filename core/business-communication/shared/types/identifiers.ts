@@ -1,0 +1,12 @@
+export type CommunicationChannelId = string;
+export type ConversationId = string;
+export type MessageId = string;
+export type ParticipantId = string;
+export type AttachmentId = string;
+export type CommunicationSessionId = string;
+export type CommunicationRuleId = string;
+export type AutoReplyPolicyId = string;
+export type CommunicationTaskId = string;
+export type CommunicationSummaryId = string;
+export type OrganizationId = string;
+export type DomainEventId = string;
