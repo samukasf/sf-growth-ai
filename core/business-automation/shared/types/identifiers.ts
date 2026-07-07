@@ -1,0 +1,12 @@
+export type AutomationId = string;
+export type AutomationWorkflowId = string;
+export type AutomationTriggerId = string;
+export type AutomationConditionId = string;
+export type AutomationActionId = string;
+export type AutomationExecutionId = string;
+export type AutomationLogId = string;
+export type AutomationApprovalId = string;
+export type AutomationScheduleId = string;
+export type AutomationResultId = string;
+export type OrganizationId = string;
+export type DomainEventId = string;
