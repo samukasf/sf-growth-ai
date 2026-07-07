@@ -1,0 +1,9 @@
+export { CreateLeadUseCase } from "./create-lead.use-case";
+export { QualifyLeadUseCase } from "./qualify-lead.use-case";
+export { CreateCustomerUseCase } from "./create-customer.use-case";
+export { CreateOpportunityUseCase } from "./create-opportunity.use-case";
+export { SendProposalUseCase } from "./send-proposal.use-case";
+export { SignContractUseCase } from "./sign-contract.use-case";
+export { UpdateRelationshipUseCase } from "./update-relationship.use-case";
+export { MarkCustomerLostUseCase } from "./mark-customer-lost.use-case";
+export { RecoverCustomerUseCase } from "./recover-customer.use-case";

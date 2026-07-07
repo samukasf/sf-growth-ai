@@ -1,0 +1,13 @@
+export { InMemoryCrmRepository } from "./persistence/in-memory-crm.repository";
+export { InMemoryLeadRepository } from "./persistence/in-memory-lead.repository";
+export { InMemoryCustomerRepository } from "./persistence/in-memory-customer.repository";
+export { InMemorySupplierRepository } from "./persistence/in-memory-supplier.repository";
+export { InMemoryOpportunityRepository } from "./persistence/in-memory-opportunity.repository";
+export { InMemoryPipelineRepository } from "./persistence/in-memory-pipeline.repository";
+export { InMemoryEventBus } from "./events/in-memory-event-bus";
+export { DefaultLeadScoringEngine } from "./services/default-lead-scoring-engine";
+export { DefaultRelationshipScoreEngine } from "./services/default-relationship-score-engine";
+export { DefaultRecommendationEngine } from "./services/default-recommendation-engine";
+export { DefaultRelationshipAnalyzer } from "./services/default-relationship-analyzer";
+export { DefaultJourneyAnalyzer } from "./services/default-journey-analyzer";
+export { createExecutiveCrm } from "./factories/create-executive-crm";

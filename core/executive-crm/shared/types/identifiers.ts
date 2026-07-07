@@ -1,0 +1,17 @@
+export type LeadId = string;
+export type CustomerId = string;
+export type SupplierId = string;
+export type PartnerId = string;
+export type ContactId = string;
+export type OpportunityId = string;
+export type DealId = string;
+export type PipelineId = string;
+export type PipelineStageId = string;
+export type InteractionId = string;
+export type MeetingId = string;
+export type ProposalId = string;
+export type ContractId = string;
+export type RelationshipProfileId = string;
+export type CustomerJourneyId = string;
+export type OrganizationId = string;
+export type DomainEventId = string;
