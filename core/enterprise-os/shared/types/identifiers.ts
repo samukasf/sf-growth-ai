@@ -1,0 +1,12 @@
+export type EnterprisePlatformId = string;
+export type BusinessCapabilityId = string;
+export type PlatformRegistryId = string;
+export type CapabilityRegistryId = string;
+export type BusinessServiceId = string;
+export type BusinessContextId = string;
+export type BusinessWorkflowId = string;
+export type BusinessEventId = string;
+export type BusinessStateId = string;
+export type OperatingSessionId = string;
+export type OrganizationId = string;
+export type DomainEventId = string;
