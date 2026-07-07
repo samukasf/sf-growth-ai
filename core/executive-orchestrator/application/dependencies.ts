@@ -12,6 +12,7 @@ import type { ExecutiveDecisionTree } from "../domain";
 import type {
   AIProviderPort,
   CompanyBrainPort,
+  EnterpriseBrainRuntimePort,
   ExecutiveCEOPort,
   ExecutiveParticipantRegistry,
 } from "./ports/integration";
@@ -29,5 +30,6 @@ export type ExecutiveOrchestratorEngineDependencies = {
   eventDispatcher: EventDispatcher;
   executiveCeo: ExecutiveCEOPort;
   companyBrain: CompanyBrainPort;
+  enterpriseBrainRuntime: EnterpriseBrainRuntimePort;
   aiProvider: AIProviderPort;
 };

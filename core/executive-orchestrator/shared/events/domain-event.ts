@@ -6,6 +6,10 @@ import type {
 
 export type DomainEventType =
   | "ExecutiveRequestReceived"
+  | "EnterpriseSnapshotRequested"
+  | "EnterpriseSnapshotLoaded"
+  | "OrchestratorContextResolved"
+  | "OrchestratorRoutingCompleted"
   | "ExecutiveWorkflowStarted"
   | "ExecutiveExecutiveInvited"
   | "ExecutiveConsensusStarted"

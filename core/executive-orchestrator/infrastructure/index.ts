@@ -11,6 +11,7 @@ export { DefaultParticipantRegistry } from "./integration/default-participant-re
 export { createNoopEnginePort } from "./integration/noop-engine.adapter";
 export { NoopCompanyBrainAdapter } from "./integration/noop-company-brain.adapter";
 export { NoopExecutiveCEOAdapter } from "./integration/noop-executive-ceo.adapter";
+export { DefaultEnterpriseBrainRuntimeAdapter } from "./integration/default-enterprise-brain-runtime.adapter";
 export { NoopAIProviderAdapter } from "./integration/noop-ai-provider.adapter";
 export {
   createExecutiveOrchestrator,

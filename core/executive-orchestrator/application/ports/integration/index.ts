@@ -59,3 +59,5 @@ export interface ExecutiveParticipantRegistry {
   getPort(participantId: ExecutiveParticipantId): ExecutiveEnginePort | null;
   getAllPorts(): ExecutiveEnginePort[];
 }
+
+export type { EnterpriseBrainRuntimePort } from "./enterprise-brain-runtime.port";

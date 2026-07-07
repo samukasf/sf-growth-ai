@@ -2,12 +2,16 @@ import {
   ExecutiveContextResolver,
   ExecutiveRequest,
   ExecutiveSession,
+  createEnterpriseSnapshotLoadedEvent,
+  createEnterpriseSnapshotRequestedEvent,
   createExecutiveConsensusCompletedEvent,
   createExecutiveConsensusStartedEvent,
   createExecutiveExecutiveInvitedEvent,
   createExecutiveRequestReceivedEvent,
   createExecutiveResponseGeneratedEvent,
   createExecutiveWorkflowStartedEvent,
+  createOrchestratorContextResolvedEvent,
+  createOrchestratorRoutingCompletedEvent,
 } from "../../domain";
 import type { ExecutiveParticipantId } from "../../shared";
 import type { ProcessExecutiveRequestDto } from "../dto";
@@ -39,19 +43,60 @@ export class ProcessExecutiveRequestUseCase {
   constructor(private readonly deps: ExecutiveOrchestratorEngineDependencies) {}
 
   async execute(dto: ProcessExecutiveRequestDto) {
+    const organizationId = dto.organizationId ?? "default-org";
     const session = await this.resolveSession(dto);
 
     const request = ExecutiveRequest.create({
       companyId: dto.companyId,
       sessionId: session.id,
       query: dto.query,
-      metadata: dto.metadata ?? {},
+      metadata: {
+        ...dto.metadata,
+        organizationId,
+      },
     });
 
     await this.deps.repository.saveRequest(request);
     await this.deps.eventDispatcher.publish(createExecutiveRequestReceivedEvent(request));
 
-    const brainContext = await this.deps.companyBrain.enrichContext(
+    await this.deps.eventDispatcher.publish(
+      createEnterpriseSnapshotRequestedEvent({
+        requestId: request.id,
+        organizationId,
+        companyId: dto.companyId,
+      }),
+    );
+
+    const snapshot = await this.deps.enterpriseBrainRuntime.buildSnapshot(
+      organizationId,
+      dto.companyId,
+    );
+
+    await this.deps.eventDispatcher.publish(
+      createEnterpriseSnapshotLoadedEvent({
+        requestId: request.id,
+        organizationId,
+        companyId: dto.companyId,
+        snapshot,
+      }),
+    );
+
+    const brainContext = await this.deps.enterpriseBrainRuntime.buildContext(
+      organizationId,
+      dto.companyId,
+    );
+
+    await this.deps.eventDispatcher.publish(
+      createOrchestratorContextResolvedEvent({
+        requestId: request.id,
+        organizationId,
+        companyId: dto.companyId,
+        snapshot,
+        brainContext,
+      }),
+    );
+
+    const legacyBrainContext = await this.deps.companyBrain.enrichContext(
       dto.query,
       dto.companyId,
     );
@@ -61,21 +106,40 @@ export class ProcessExecutiveRequestUseCase {
       requestId: request.id,
       query: dto.query,
       resolved: {
-        goals: this.extractGoals(dto.query),
-        constraints: [],
-        signals: Object.keys(brainContext),
+        goals: this.extractGoals(dto.query, snapshot.priorities),
+        constraints: snapshot.risks,
+        signals: [
+          ...snapshot.activeSignals.map((signal) => signal.title),
+          ...Object.keys(brainContext.businessContext),
+          ...Object.keys(legacyBrainContext),
+        ],
       },
-      confidence: 70,
+      confidence: snapshot.confidence,
     });
     await this.deps.repository.saveContextResolver(contextResolver);
 
-    const routing = this.deps.routingEngine.route(request, this.deps.decisionTree);
+    const routing = this.deps.routingEngine.route(
+      request,
+      this.deps.decisionTree,
+      { snapshot, brainContext },
+    );
+
     let participants = this.deps.dependencyResolver.resolve(routing.participants);
     participants = this.deps.priorityResolver.resolve(participants);
 
     if (!participants.includes("ceo")) {
       participants = [...participants, "ceo"];
     }
+
+    await this.deps.eventDispatcher.publish(
+      createOrchestratorRoutingCompletedEvent({
+        requestId: request.id,
+        organizationId,
+        companyId: dto.companyId,
+        routing,
+        participants,
+      }),
+    );
 
     for (const participantId of participants) {
       await this.deps.eventDispatcher.publish(
@@ -101,9 +165,14 @@ export class ProcessExecutiveRequestUseCase {
       if (!port) continue;
 
       const contribution = await port.contribute(dto.query, {
-        ...brainContext,
+        ...legacyBrainContext,
+        brainSnapshot: snapshot,
+        brainContext: brainContext,
         context: contextResolver.toJSON(),
         intent: routing.intent,
+        risks: snapshot.risks,
+        opportunities: snapshot.opportunities,
+        priorities: snapshot.priorities,
       });
       contributions.push(contribution);
     }
@@ -153,6 +222,8 @@ export class ProcessExecutiveRequestUseCase {
     return {
       request: completedRequest,
       session,
+      snapshot,
+      brainContext,
       context: contextResolver,
       routing,
       workflow: completedWorkflow,
@@ -177,7 +248,11 @@ export class ProcessExecutiveRequestUseCase {
     return session;
   }
 
-  private extractGoals(query: string): string[] {
+  private extractGoals(query: string, priorities: string[]): string[] {
+    if (priorities.length > 0) {
+      return priorities.slice(0, 3);
+    }
+
     const normalized = query.toLowerCase();
     if (normalized.includes("faturamento") || normalized.includes("receita")) {
       return ["Aumentar faturamento"];

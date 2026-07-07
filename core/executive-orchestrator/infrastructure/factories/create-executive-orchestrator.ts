@@ -2,6 +2,7 @@ import type { ExecutiveOrchestratorEngineDependencies } from "../../application"
 import { ExecutiveOrchestratorService } from "../../application";
 import { InMemoryEventBus } from "../events/in-memory-event-bus";
 import { DefaultParticipantRegistry } from "../integration/default-participant-registry";
+import { DefaultEnterpriseBrainRuntimeAdapter } from "../integration/default-enterprise-brain-runtime.adapter";
 import { NoopAIProviderAdapter } from "../integration/noop-ai-provider.adapter";
 import { NoopCompanyBrainAdapter } from "../integration/noop-company-brain.adapter";
 import { NoopExecutiveCEOAdapter } from "../integration/noop-executive-ceo.adapter";
@@ -16,6 +17,7 @@ import { DefaultExecutiveWorkflowEngine } from "../services/default-executive-wo
 
 export type CreateExecutiveOrchestratorOptions = {
   companyId?: string;
+  organizationId?: string;
   dependencies?: Partial<ExecutiveOrchestratorEngineDependencies>;
 };
 
@@ -43,6 +45,8 @@ export function createExecutiveOrchestrator(
     eventDispatcher: options.dependencies?.eventDispatcher ?? new InMemoryEventBus(),
     executiveCeo: options.dependencies?.executiveCeo ?? new NoopExecutiveCEOAdapter(),
     companyBrain: options.dependencies?.companyBrain ?? new NoopCompanyBrainAdapter(),
+    enterpriseBrainRuntime:
+      options.dependencies?.enterpriseBrainRuntime ?? new DefaultEnterpriseBrainRuntimeAdapter(),
     aiProvider: options.dependencies?.aiProvider ?? new NoopAIProviderAdapter(),
   };
 
