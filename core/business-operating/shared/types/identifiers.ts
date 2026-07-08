@@ -1,0 +1,27 @@
+export type OrganizationId = string;
+export type AgencyId = string;
+export type CompanyId = string;
+export type BusinessOperationId = string;
+export type BusinessRoutineId = string;
+export type BusinessProcessId = string;
+export type BusinessActivityId = string;
+export type BusinessObjectiveId = string;
+export type BusinessExecutionId = string;
+export type BusinessAlertId = string;
+export type BusinessIndicatorId = string;
+export type BusinessPriorityId = string;
+export type BusinessReviewId = string;
+export type BusinessDayId = string;
+export type DomainEventId = string;
+
+export type BusinessOperationStatus = "planned" | "active" | "paused" | "completed" | "cancelled";
+export type BusinessRoutineStatus = "draft" | "scheduled" | "running" | "completed" | "skipped";
+export type BusinessProcessStatus = "draft" | "active" | "blocked" | "completed";
+export type BusinessActivityStatus = "pending" | "in_progress" | "done" | "blocked";
+export type BusinessObjectiveStatus = "planned" | "in_progress" | "achieved" | "missed";
+export type BusinessExecutionStatus = "queued" | "running" | "completed" | "failed";
+export type BusinessAlertSeverity = "info" | "warning" | "critical";
+export type BusinessAlertStatus = "open" | "acknowledged" | "resolved";
+export type BusinessIndicatorTrend = "up" | "down" | "stable";
+export type BusinessPriorityLevel = "low" | "medium" | "high" | "critical";
+export type BusinessReviewStatus = "draft" | "in_progress" | "completed";
