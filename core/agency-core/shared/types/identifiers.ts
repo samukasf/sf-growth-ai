@@ -1,0 +1,25 @@
+export type OrganizationId = string;
+export type AgencyId = string;
+export type AgencyWorkspaceId = string;
+export type AgencyClientId = string;
+export type AgencyDepartmentId = string;
+export type AgencyEmployeeId = string;
+export type AgencyPartnerId = string;
+export type AgencyServiceId = string;
+export type AgencyProjectId = string;
+export type AgencyPipelineId = string;
+export type AgencyGoalId = string;
+export type AgencyKpiId = string;
+export type AgencyContextId = string;
+export type AgencyHealthId = string;
+export type AgencyDashboardId = string;
+export type AgencyMetricsSnapshotId = string;
+export type CompanyId = string;
+export type DomainEventId = string;
+
+export type AgencyStatus = "active" | "inactive" | "suspended";
+export type AgencyClientStatus = "active" | "inactive" | "archived";
+export type AgencyProjectStatus = "draft" | "active" | "completed" | "cancelled";
+export type AgencyPipelineStage = "lead" | "proposal" | "negotiation" | "won" | "lost";
+export type AgencyGoalStatus = "planned" | "in_progress" | "achieved" | "missed";
+export type AgencyKpiStatus = "on_track" | "at_risk" | "off_track";
