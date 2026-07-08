@@ -306,63 +306,11 @@ export function ExecutiveWorkspaceCenter({
               <SupercerebroToday
                 briefing={data.briefing}
                 companyId={data.executiveContext?.company.id}
-              />
-            </CommandPanel>
-            <CommandPanel accent className="p-5 sm:p-6">
-              <ExecutiveBriefingSection briefing={data.briefing} />
-            </CommandPanel>
-            <CommandPanel className="p-4 sm:p-5" accent>
-              <ExecutiveLiveBoard
-                brainStatus={data.brainStatus}
-                isProcessing={isProcessing}
-                orchestratorPhase={data.orchestratorSnapshot?.phase ?? null}
-                executiveCeo={data.executiveCeo}
-                executiveMonitoring={data.executiveMonitoring}
-                executiveForecast={data.executiveForecast}
-                executiveStrategy={data.executiveStrategy}
-                executiveRecommendation={data.executiveRecommendation}
-                executiveConversation={data.executiveConversation}
-                analysisStartedAt={data.analysisStartedAt}
-                analysisCompletedAt={data.analysisCompletedAt}
-                inboxActions={inboxActions}
-                moduleAvailability={{
-                  marketing: Boolean(data.marketingExecutive),
-                  finance: Boolean(data.financeExecutive),
-                  sales: Boolean(data.salesExecutive),
-                  operations: Boolean(data.operationsExecutive),
-                  hr: Boolean(data.hrExecutive),
-                  legal: Boolean(data.legalExecutive),
-                  "google-business": Boolean(data.googleBusinessExecutive),
-                  "google-analytics": Boolean(data.googleAnalyticsExecutive),
-                  "search-console": Boolean(data.searchConsoleExecutive),
-                  meta: Boolean(data.metaExecutive),
-                  linkedin: Boolean(data.linkedInExecutive),
+                organizationId="default-org"
+                onQuickAction={(prompt) => {
+                  void handlers.onSendMessage(prompt);
                 }}
               />
-            </CommandPanel>
-            <CommandPanel className="p-4 sm:p-5" accent>
-              <ExecutiveStrategySection strategy={data.executiveStrategy ?? null} />
-            </CommandPanel>
-            <CommandPanel className="p-4 sm:p-5" accent>
-              <ExecutiveForecastSection forecast={data.executiveForecast ?? null} />
-            </CommandPanel>
-            <CommandPanel className="p-4 sm:p-5" accent>
-              <ExecutiveLearningSection learning={data.executiveLearning ?? null} />
-            </CommandPanel>
-            <CommandPanel className="p-4 sm:p-5">
-              <ExecutiveContextSection
-                context={data.brain.context}
-                executiveContext={data.executiveContext}
-              />
-            </CommandPanel>
-            <CommandPanel className="p-4 sm:p-5" accent>
-              <ExecutiveCeoSection ceo={data.executiveCeo ?? null} />
-            </CommandPanel>
-            <CommandPanel className="p-4 sm:p-5">
-              <ExecutiveCouncilSection council={data.council} />
-            </CommandPanel>
-            <CommandPanel className="p-4 sm:p-5">
-              <ExecutiveIntelligenceSection intelligence={data.executiveIntelligence ?? null} />
             </CommandPanel>
           </div>
         );
