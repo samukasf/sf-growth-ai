@@ -1,11 +1,13 @@
 import { Panel, MetricCard } from "./shared";
 import type { AgencyWorkspaceData } from "../types/agency-workspace.types";
+import type { ClientOnboardingResult } from "../types/client-onboarding.types";
 
 type BusinessHealthPanelProps = {
   data: AgencyWorkspaceData;
+  onboarding?: ClientOnboardingResult | null;
 };
 
-export function BusinessHealthPanel({ data }: BusinessHealthPanelProps) {
+export function BusinessHealthPanel({ data, onboarding }: BusinessHealthPanelProps) {
   const health = data.businessHealth;
   const assessment = data.assessments[0];
 
@@ -33,6 +35,17 @@ export function BusinessHealthPanel({ data }: BusinessHealthPanelProps) {
           <p className="text-sm text-muted">Health data unavailable.</p>
         )}
       </Panel>
+
+      {onboarding ? (
+        <Panel title="Scores de Onboarding" subtitle="Enterprise Assessment">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <MetricCard label="Business Health" value={onboarding.scores.businessHealth} hint="/100" />
+            <MetricCard label="Enterprise Maturity" value={onboarding.scores.enterpriseMaturity} hint="/100" />
+            <MetricCard label="Automation Score" value={onboarding.scores.automation} hint="/100" />
+            <MetricCard label="AI Readiness" value={onboarding.scores.aiReadiness} hint="/100" />
+          </div>
+        </Panel>
+      ) : null}
 
       {data.agencyHealth ? (
         <Panel title="Agency Health" subtitle="Agency Core">

@@ -9,7 +9,9 @@ import {
   getAgencySectionLabel,
   type AgencyWorkspaceSection,
 } from "../navigation/workspace-navigation";
+import { mergeOnboardingIntoWorkspace } from "../services/onboard-client.service";
 import type { AgencyWorkspaceData } from "../types/agency-workspace.types";
+import type { ClientOnboardingResult } from "../types/client-onboarding.types";
 import { AgencyClientList } from "./AgencyClientList";
 import { AgencyExecutivePanel } from "./AgencyExecutivePanel";
 import { AgencyMissionPanel } from "./AgencyMissionPanel";
@@ -17,14 +19,28 @@ import { AgencyOpportunityPanel } from "./AgencyOpportunityPanel";
 import { AgencyOverview } from "./AgencyOverview";
 import { AgencyProjectPanel } from "./AgencyProjectPanel";
 import { BusinessHealthPanel } from "./BusinessHealthPanel";
+import { ClientOnboardingFlow } from "./ClientOnboardingFlow";
 
 export type AgencyWorkspaceProps = {
   data: AgencyWorkspaceData;
 };
 
-export function AgencyWorkspace({ data }: AgencyWorkspaceProps) {
+export function AgencyWorkspace({ data: initialData }: AgencyWorkspaceProps) {
+  const [workspaceData, setWorkspaceData] = useState(initialData);
   const [activeSection, setActiveSection] = useState<AgencyWorkspaceSection>("agency-overview");
-  const [selectedClientId, setSelectedClientId] = useState<string | null>(data.selectedClientId);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(
+    initialData.selectedClientId,
+  );
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [latestOnboarding, setLatestOnboarding] = useState<ClientOnboardingResult | null>(null);
+
+  const handleOnboardingComplete = (result: ClientOnboardingResult) => {
+    setWorkspaceData((current) => mergeOnboardingIntoWorkspace(current, result));
+    setSelectedClientId(result.companyId);
+    setLatestOnboarding(result);
+    setShowOnboarding(false);
+    setActiveSection("client-portfolio");
+  };
 
   return (
     <div className="relative flex min-h-dvh flex-col xl:h-dvh xl:overflow-hidden">
@@ -40,7 +56,7 @@ export function AgencyWorkspace({ data }: AgencyWorkspaceProps) {
               SF Growth AI · ALPHA 01
             </p>
             <h1 className="text-lg font-semibold tracking-tight text-foreground sm:text-xl">
-              {data.agencyName}
+              {workspaceData.agencyName}
             </h1>
             <p className="mt-0.5 text-xs text-muted">
               {getAgencySectionLabel(activeSection)} · Agency Executive Workspace
@@ -75,30 +91,54 @@ export function AgencyWorkspace({ data }: AgencyWorkspaceProps) {
         </aside>
 
         <main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
-          {activeSection === "agency-overview" ? <AgencyOverview data={data} /> : null}
-          {activeSection === "client-portfolio" ? (
-            <AgencyClientList
-              data={data}
-              selectedClientId={selectedClientId}
-              onSelectClient={setSelectedClientId}
+          {showOnboarding ? (
+            <ClientOnboardingFlow
+              organizationId={workspaceData.organizationId}
+              agencyId={workspaceData.agencyId}
+              onComplete={handleOnboardingComplete}
+              onCancel={() => setShowOnboarding(false)}
             />
           ) : null}
-          {activeSection === "company-brain" ? (
-            <AgencyExecutivePanel data={data} variant="company-brain" />
+
+          {!showOnboarding && activeSection === "agency-overview" ? (
+            <AgencyOverview data={workspaceData} latestOnboarding={latestOnboarding} />
           ) : null}
-          {activeSection === "executive-dashboard" ? (
-            <AgencyExecutivePanel data={data} variant="dashboard" />
+          {!showOnboarding && activeSection === "client-portfolio" ? (
+            <AgencyClientList
+              data={workspaceData}
+              selectedClientId={selectedClientId}
+              onSelectClient={setSelectedClientId}
+              onNewClient={() => setShowOnboarding(true)}
+            />
           ) : null}
-          {activeSection === "executive-council" ? (
-            <AgencyExecutivePanel data={data} variant="council" />
+          {!showOnboarding && activeSection === "company-brain" ? (
+            <AgencyExecutivePanel data={workspaceData} variant="company-brain" />
           ) : null}
-          {activeSection === "executive-ceo" ? (
-            <AgencyExecutivePanel data={data} variant="ceo" />
+          {!showOnboarding && activeSection === "executive-dashboard" ? (
+            <AgencyExecutivePanel data={workspaceData} variant="dashboard" />
           ) : null}
-          {activeSection === "projects" ? <AgencyProjectPanel data={data} /> : null}
-          {activeSection === "missions" ? <AgencyMissionPanel data={data} /> : null}
-          {activeSection === "opportunities" ? <AgencyOpportunityPanel data={data} /> : null}
-          {activeSection === "business-health" ? <BusinessHealthPanel data={data} /> : null}
+          {!showOnboarding && activeSection === "executive-council" ? (
+            <AgencyExecutivePanel data={workspaceData} variant="council" />
+          ) : null}
+          {!showOnboarding && activeSection === "executive-ceo" ? (
+            <AgencyExecutivePanel
+              data={workspaceData}
+              variant="ceo"
+              onboarding={latestOnboarding}
+            />
+          ) : null}
+          {!showOnboarding && activeSection === "projects" ? (
+            <AgencyProjectPanel data={workspaceData} />
+          ) : null}
+          {!showOnboarding && activeSection === "missions" ? (
+            <AgencyMissionPanel data={workspaceData} />
+          ) : null}
+          {!showOnboarding && activeSection === "opportunities" ? (
+            <AgencyOpportunityPanel data={workspaceData} />
+          ) : null}
+          {!showOnboarding && activeSection === "business-health" ? (
+            <BusinessHealthPanel data={workspaceData} onboarding={latestOnboarding} />
+          ) : null}
         </main>
       </div>
     </div>

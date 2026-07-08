@@ -7,3 +7,4 @@ export { AgencyOpportunityPanel } from "./AgencyOpportunityPanel";
 export { AgencyMissionPanel } from "./AgencyMissionPanel";
 export { AgencyProjectPanel } from "./AgencyProjectPanel";
 export { BusinessHealthPanel } from "./BusinessHealthPanel";
+export { ClientOnboardingFlow } from "./ClientOnboardingFlow";

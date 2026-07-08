@@ -5,9 +5,10 @@ type PanelProps = {
   subtitle?: string;
   children: React.ReactNode;
   className?: string;
+  action?: React.ReactNode;
 };
 
-export function Panel({ title, subtitle, children, className }: PanelProps) {
+export function Panel({ title, subtitle, children, className, action }: PanelProps) {
   return (
     <section
       className={cn(
@@ -15,9 +16,12 @@ export function Panel({ title, subtitle, children, className }: PanelProps) {
         className,
       )}
     >
-      <header className="mb-4">
-        <h2 className="text-sm font-semibold text-foreground">{title}</h2>
-        {subtitle ? <p className="mt-1 text-xs text-muted">{subtitle}</p> : null}
+      <header className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+          {subtitle ? <p className="mt-1 text-xs text-muted">{subtitle}</p> : null}
+        </div>
+        {action}
       </header>
       {children}
     </section>

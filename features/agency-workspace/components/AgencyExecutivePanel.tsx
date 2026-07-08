@@ -1,12 +1,14 @@
 import { Panel, MetricCard } from "./shared";
 import type { AgencyWorkspaceData } from "../types/agency-workspace.types";
+import type { ClientOnboardingResult } from "../types/client-onboarding.types";
 
 type AgencyExecutivePanelProps = {
   data: AgencyWorkspaceData;
   variant: "dashboard" | "council" | "ceo" | "company-brain";
+  onboarding?: ClientOnboardingResult | null;
 };
 
-export function AgencyExecutivePanel({ data, variant }: AgencyExecutivePanelProps) {
+export function AgencyExecutivePanel({ data, variant, onboarding }: AgencyExecutivePanelProps) {
   if (variant === "company-brain") {
     return (
       <div className="grid gap-4 lg:grid-cols-2">
@@ -75,28 +77,56 @@ export function AgencyExecutivePanel({ data, variant }: AgencyExecutivePanelProp
   }
 
   return (
-    <Panel title="Executive CEO" subtitle="Síntese executiva do dia">
-      <p className="text-sm font-medium text-foreground">{data.executiveCeoSummary.headline}</p>
-      <p className="mt-2 text-3xl font-semibold text-accent">
-        {data.executiveCeoSummary.healthScore}
-        <span className="text-base text-muted"> /100</span>
-      </p>
-      <div className="mt-4">
-        <p className="text-[10px] uppercase tracking-wider text-muted">Prioridades</p>
-        <ul className="mt-2 space-y-1 text-sm text-foreground">
-          {data.executiveCeoSummary.topPriorities.map((item) => (
-            <li key={item}>• {item}</li>
-          ))}
-        </ul>
-      </div>
-      <div className="mt-4">
-        <p className="text-[10px] uppercase tracking-wider text-muted">Recomendações</p>
-        <ul className="mt-2 space-y-1 text-sm text-muted">
-          {data.executiveCeoSummary.recommendations.map((item) => (
-            <li key={item}>• {item}</li>
-          ))}
-        </ul>
-      </div>
-    </Panel>
+    <div className="flex flex-col gap-4">
+      <Panel title="Executive CEO" subtitle="Síntese executiva do dia">
+        <p className="text-sm font-medium text-foreground">{data.executiveCeoSummary.headline}</p>
+        <p className="mt-2 text-3xl font-semibold text-accent">
+          {data.executiveCeoSummary.healthScore}
+          <span className="text-base text-muted"> /100</span>
+        </p>
+        <div className="mt-4">
+          <p className="text-[10px] uppercase tracking-wider text-muted">Prioridades</p>
+          <ul className="mt-2 space-y-1 text-sm text-foreground">
+            {data.executiveCeoSummary.topPriorities.map((item) => (
+              <li key={item}>• {item}</li>
+            ))}
+          </ul>
+        </div>
+        <div className="mt-4">
+          <p className="text-[10px] uppercase tracking-wider text-muted">Plano 90 dias</p>
+          <ul className="mt-2 space-y-1 text-sm text-muted">
+            {data.executiveCeoSummary.recommendations.map((item) => (
+              <li key={item}>• {item}</li>
+            ))}
+          </ul>
+        </div>
+      </Panel>
+
+      {onboarding ? (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Panel title="Oportunidades" subtitle="Top 5">
+            <ul className="space-y-1 text-sm text-muted">
+              {onboarding.opportunities.map((item) => (
+                <li key={item}>• {item}</li>
+              ))}
+            </ul>
+          </Panel>
+          <Panel title="Riscos" subtitle="Top 5">
+            <ul className="space-y-1 text-sm text-muted">
+              {onboarding.risks.map((item) => (
+                <li key={item}>• {item}</li>
+              ))}
+            </ul>
+          </Panel>
+          <Panel title="Projetos recomendados" subtitle="Top 5">
+            <ul className="space-y-1 text-sm text-muted">
+              {onboarding.recommendedProjects.map((item) => (
+                <li key={item}>• {item}</li>
+              ))}
+            </ul>
+          </Panel>
+        </div>
+      ) : null}
+    </div>
   );
 }

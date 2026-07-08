@@ -1,11 +1,13 @@
 import { Panel, MetricCard } from "./shared";
 import type { AgencyWorkspaceData } from "../types/agency-workspace.types";
+import type { ClientOnboardingResult } from "../types/client-onboarding.types";
 
 type AgencyOverviewProps = {
   data: AgencyWorkspaceData;
+  latestOnboarding?: ClientOnboardingResult | null;
 };
 
-export function AgencyOverview({ data }: AgencyOverviewProps) {
+export function AgencyOverview({ data, latestOnboarding }: AgencyOverviewProps) {
   const clientSection = data.agencyDashboard?.sections.find((s) => s.key === "clients");
   const projectSection = data.agencyDashboard?.sections.find((s) => s.key === "projects");
 
@@ -27,6 +29,15 @@ export function AgencyOverview({ data }: AgencyOverviewProps) {
           />
         </div>
       </Panel>
+
+      {latestOnboarding ? (
+        <Panel
+          title="Último onboarding"
+          subtitle={`${latestOnboarding.client.name} · Tenant ${latestOnboarding.tenantId}`}
+        >
+          <p className="text-sm text-muted">{latestOnboarding.discoverySummary}</p>
+        </Panel>
+      ) : null}
 
       {data.agencyBrain ? (
         <Panel title="Agency Brain" subtitle="Contexto operacional da agência">
