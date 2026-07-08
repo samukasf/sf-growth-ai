@@ -194,6 +194,7 @@ export async function buildAgencyWorkspace(): Promise<AgencyWorkspaceData> {
     businessHealth,
     businessReview: businessReview.toJSON(),
     companyBrains,
+    companyDashboards: [],
     council,
     executiveCeoSummary: {
       headline: businessReview.title,

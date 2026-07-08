@@ -39,7 +39,7 @@ export function AgencyWorkspace({ data: initialData }: AgencyWorkspaceProps) {
     setSelectedClientId(result.companyId);
     setLatestOnboarding(result);
     setShowOnboarding(false);
-    setActiveSection("client-portfolio");
+    setActiveSection("company-dashboard");
   };
 
   return (
@@ -113,6 +113,14 @@ export function AgencyWorkspace({ data: initialData }: AgencyWorkspaceProps) {
           ) : null}
           {!showOnboarding && activeSection === "company-brain" ? (
             <AgencyExecutivePanel data={workspaceData} variant="company-brain" />
+          ) : null}
+          {!showOnboarding && activeSection === "company-dashboard" ? (
+            <AgencyExecutivePanel
+              data={workspaceData}
+              variant="company-dashboard"
+              onboarding={latestOnboarding}
+              selectedClientId={selectedClientId}
+            />
           ) : null}
           {!showOnboarding && activeSection === "executive-dashboard" ? (
             <AgencyExecutivePanel data={workspaceData} variant="dashboard" />

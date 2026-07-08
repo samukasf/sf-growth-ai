@@ -15,6 +15,20 @@ export type CompanyBrainSnapshot = {
   signals: string[];
 };
 
+export type CompanyDashboardSnapshot = {
+  companyId: string;
+  companyName: string;
+  healthScore: number;
+  maturityScore: number;
+  automationScore: number;
+  aiReadinessScore: number;
+  activeProjects: number;
+  opportunities: number;
+  memoryRecords: number;
+  timelineSteps: number;
+  councilReady: boolean;
+};
+
 export type AgencyWorkspaceData = {
   organizationId: string;
   agencyId: string;
@@ -31,6 +45,7 @@ export type AgencyWorkspaceData = {
   businessHealth: BusinessHealthReport | null;
   businessReview: ReturnType<BusinessReview["toJSON"]> | null;
   companyBrains: CompanyBrainSnapshot[];
+  companyDashboards: CompanyDashboardSnapshot[];
   council: ProcessCouncilResult | null;
   executiveCeoSummary: {
     headline: string;

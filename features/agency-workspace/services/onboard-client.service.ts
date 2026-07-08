@@ -7,10 +7,11 @@ import { createExecutiveCouncil } from "@/core/executive-council";
 import { createExecutiveOpportunity } from "@/core/executive-opportunity";
 import { createExecutiveProjectEngine } from "@/core/executive-projects";
 import { createMultiTenant } from "@/core/multi-tenant";
-import { registerExecutiveMemory } from "@/features/executive-memory-engine";
+import { registerExecutiveMemory, listExecutiveMemoryRecords } from "@/features/executive-memory-engine";
 import { buildMarketingExecutive } from "@/features/marketing/services/marketing-executive.service";
 import { buildOperationsExecutive } from "@/features/operations/services/operations-executive.service";
 import { buildSalesExecutive } from "@/features/sales/services/sales-executive.service";
+import { buildExecutiveTimeline } from "@/features/samuel-ai/components/executive-timeline/build-executive-timeline";
 import { buildExecutiveCEO } from "@/features/samuel-ai/services/executive-ceo.service";
 import { buildExecutiveIntelligence } from "@/features/samuel-ai/services/executive-intelligence.service";
 import { buildExecutiveStrategy } from "@/features/samuel-ai/services/executive-strategy.service";
@@ -287,6 +288,47 @@ export async function onboardNewClient(
     .filter(Boolean)
     .slice(0, 5);
 
+  const now = Date.now();
+  const executiveTimeline = buildExecutiveTimeline({
+    brainStatus: "ready",
+    isProcessing: false,
+    executiveContext,
+    executiveIntelligence,
+    executiveStrategy,
+    executiveCeo,
+    marketingExecutive,
+    salesExecutive,
+    operationsExecutive,
+    analysisStartedAt: now - 8000,
+    analysisCompletedAt: now,
+  });
+
+  const memoryRecords = listExecutiveMemoryRecords(companyId);
+
+  const companyDashboard = {
+    companyId,
+    companyName: input.companyName,
+    healthScore: businessHealth.overallScore,
+    maturityScore: assessment.assessment.enterpriseMaturityScore,
+    automationScore: assessment.assessment.automationScore,
+    aiReadinessScore: assessment.assessment.aiReadinessScore,
+    activeProjects: projects.length,
+    opportunities: opportunitiesResult.opportunities.length,
+    memoryRecords: memoryRecords.length,
+    timelineSteps: executiveTimeline.steps.length,
+    councilReady: council.recommendations.length > 0,
+  };
+
+  const provisioning = {
+    tenant: Boolean(tenant.id),
+    companyBrain: brainHealth.overallScore >= 0,
+    executiveMemory: memoryRecords.length > 0,
+    executiveTimeline: executiveTimeline.steps.length > 0,
+    executiveDashboard: companyDashboard.healthScore >= 0,
+    executiveCouncil: council.recommendations.length > 0,
+    executiveWorkspace: true,
+  };
+
   return {
     companyId,
     tenantId: tenant.id,
@@ -298,6 +340,7 @@ export async function onboardNewClient(
       healthScore: brainHealth.overallScore,
       signals: brainHealth.issues,
     },
+    companyDashboard,
     discoverySummary:
       discoveryRun.report?.summary ??
       `Discovery concluído para ${input.companyName} no segmento ${input.segment}.`,
@@ -305,6 +348,8 @@ export async function onboardNewClient(
     businessHealth,
     council,
     executiveCeo,
+    executiveTimeline,
+    provisioning,
     opportunities: opportunitiesResult.opportunities
       .map((result) => result.opportunity.title)
       .slice(0, 5),
@@ -337,6 +382,11 @@ export function mergeOnboardingIntoWorkspace(
     result.companyBrain,
   ];
 
+  const companyDashboards = [
+    ...data.companyDashboards.filter((dashboard) => dashboard.companyId !== result.companyId),
+    result.companyDashboard,
+  ];
+
   const agencyDashboard = data.agencyDashboard
     ? {
         ...data.agencyDashboard,
@@ -358,6 +408,7 @@ export function mergeOnboardingIntoWorkspace(
     ...data,
     clients,
     companyBrains,
+    companyDashboards,
     selectedClientId: result.companyId,
     businessHealth: result.businessHealth,
     council: result.council,

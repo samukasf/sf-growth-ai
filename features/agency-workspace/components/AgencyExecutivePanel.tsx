@@ -4,11 +4,50 @@ import type { ClientOnboardingResult } from "../types/client-onboarding.types";
 
 type AgencyExecutivePanelProps = {
   data: AgencyWorkspaceData;
-  variant: "dashboard" | "council" | "ceo" | "company-brain";
+  variant: "dashboard" | "council" | "ceo" | "company-brain" | "company-dashboard";
   onboarding?: ClientOnboardingResult | null;
+  selectedClientId?: string | null;
 };
 
-export function AgencyExecutivePanel({ data, variant, onboarding }: AgencyExecutivePanelProps) {
+export function AgencyExecutivePanel({
+  data,
+  variant,
+  onboarding,
+  selectedClientId,
+}: AgencyExecutivePanelProps) {
+  if (variant === "company-dashboard") {
+    const dashboard =
+      data.companyDashboards.find((item) => item.companyId === selectedClientId) ??
+      onboarding?.companyDashboard ??
+      data.companyDashboards[0];
+
+    if (!dashboard) {
+      return (
+        <Panel title="Company Dashboard" subtitle="Nenhum cliente onboarded ainda">
+          <p className="text-sm text-muted">Cadastre um novo cliente para ativar o dashboard.</p>
+        </Panel>
+      );
+    }
+
+    return (
+      <Panel title={dashboard.companyName} subtitle="Company Dashboard · Executive Workspace">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <MetricCard label="Health Score" value={dashboard.healthScore} hint="/100" />
+          <MetricCard label="Enterprise Maturity" value={dashboard.maturityScore} hint="/100" />
+          <MetricCard label="Automation Score" value={dashboard.automationScore} hint="/100" />
+          <MetricCard label="AI Readiness" value={dashboard.aiReadinessScore} hint="/100" />
+          <MetricCard label="Projetos" value={dashboard.activeProjects} />
+          <MetricCard label="Oportunidades" value={dashboard.opportunities} />
+          <MetricCard label="Memory Records" value={dashboard.memoryRecords} />
+          <MetricCard label="Timeline Steps" value={dashboard.timelineSteps} />
+        </div>
+        <p className="mt-4 text-xs text-muted">
+          Executive Council: {dashboard.councilReady ? "ativo" : "pendente"}
+        </p>
+      </Panel>
+    );
+  }
+
   if (variant === "company-brain") {
     return (
       <div className="grid gap-4 lg:grid-cols-2">

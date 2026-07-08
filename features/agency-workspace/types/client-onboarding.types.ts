@@ -5,8 +5,9 @@ import type { ProcessCouncilResult } from "@/core/executive-council";
 import type { OpportunityResult } from "@/core/executive-opportunity";
 import type { ExecutiveProject } from "@/core/executive-projects";
 import type { ExecutiveCEO } from "@/features/samuel-ai/services/executive-ceo.service";
+import type { ExecutiveTimelineState } from "@/features/samuel-ai/components/executive-timeline/executive-timeline.types";
 
-import type { CompanyBrainSnapshot } from "./agency-workspace.types";
+import type { CompanyBrainSnapshot, CompanyDashboardSnapshot } from "./agency-workspace.types";
 
 export type NewClientFormInput = {
   companyName: string;
@@ -28,16 +29,29 @@ export type ClientOnboardingScores = {
   aiReadiness: number;
 };
 
+export type OnboardingProvisioning = {
+  tenant: boolean;
+  companyBrain: boolean;
+  executiveMemory: boolean;
+  executiveTimeline: boolean;
+  executiveDashboard: boolean;
+  executiveCouncil: boolean;
+  executiveWorkspace: boolean;
+};
+
 export type ClientOnboardingResult = {
   companyId: string;
   tenantId: string;
   client: ReturnType<AgencyClient["toJSON"]>;
   companyBrain: CompanyBrainSnapshot;
+  companyDashboard: CompanyDashboardSnapshot;
   discoverySummary: string;
   assessment: AssessmentResult;
   businessHealth: BusinessHealthReport;
   council: ProcessCouncilResult;
   executiveCeo: ExecutiveCEO;
+  executiveTimeline: ExecutiveTimelineState;
+  provisioning: OnboardingProvisioning;
   opportunities: string[];
   risks: string[];
   recommendedProjects: string[];

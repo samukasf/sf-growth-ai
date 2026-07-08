@@ -160,6 +160,25 @@ export function ClientOnboardingFlow({
           </Panel>
         </div>
 
+        <Panel title="Critérios de aceite" subtitle="Story 001 · Definition of Done">
+          <ul className="grid gap-2 sm:grid-cols-2 text-sm text-muted">
+            {[
+              ["Cliente na lista da agência", result.provisioning.executiveWorkspace],
+              ["Company Brain", result.provisioning.companyBrain],
+              ["Executive Dashboard", result.provisioning.executiveDashboard],
+              ["Executive Council", result.provisioning.executiveCouncil],
+              ["Executive Memory", result.provisioning.executiveMemory],
+              ["Executive Timeline", result.provisioning.executiveTimeline],
+              ["Executive Workspace", result.provisioning.executiveWorkspace],
+              ["CEO — primeiro resumo", Boolean(result.executiveCeo.executiveSummary)],
+            ].map(([label, ok], index) => (
+              <li key={`acceptance-${index}`} className={ok ? "text-emerald-400" : "text-red-400"}>
+                {ok ? "✓" : "✗"} {label}
+              </li>
+            ))}
+          </ul>
+        </Panel>
+
         <div className="flex justify-end gap-3">
           <button
             type="button"
