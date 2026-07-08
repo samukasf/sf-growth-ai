@@ -1,0 +1,9 @@
+export { createClientLifecycle } from "./factories/create-client-lifecycle";
+export { InMemoryClientLifecycleRepository } from "./persistence/in-memory-lifecycle.repository";
+export { InMemoryEventBus } from "./events/in-memory-event-bus";
+export { DefaultJourneyCoordinator } from "./services/default-journey-coordinator";
+export { DefaultHealthEngine } from "./services/default-health-engine";
+export { DefaultRenewalEngine } from "./services/default-renewal-engine";
+export { DefaultRelationshipManager } from "./services/default-relationship-manager";
+export { DefaultUpsellEngine } from "./services/default-upsell-engine";
+export { DefaultClientTimelineBuilder } from "./services/default-client-timeline-builder";

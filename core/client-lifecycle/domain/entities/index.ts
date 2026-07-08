@@ -1,0 +1,23 @@
+export { ClientLead } from "./client-lead";
+export { ClientOpportunity } from "./client-opportunity";
+export { ClientProposal } from "./client-proposal";
+export { ClientContract } from "./client-contract";
+export { ClientOnboarding } from "./client-onboarding";
+export { ClientSuccessPlan } from "./client-success-plan";
+export { ClientRelationship } from "./client-relationship";
+export { ClientRenewal } from "./client-renewal";
+export { ClientUpsell } from "./client-upsell";
+export { ClientHealth } from "./client-health";
+export { ClientJourney } from "./client-journey";
+
+export type { ClientLeadProps } from "./client-lead";
+export type { ClientOpportunityProps } from "./client-opportunity";
+export type { ClientProposalProps } from "./client-proposal";
+export type { ClientContractProps } from "./client-contract";
+export type { ClientOnboardingProps, ClientOnboardingChecklistItem } from "./client-onboarding";
+export type { ClientSuccessPlanProps } from "./client-success-plan";
+export type { ClientRelationshipProps } from "./client-relationship";
+export type { ClientRenewalProps } from "./client-renewal";
+export type { ClientUpsellProps } from "./client-upsell";
+export type { ClientHealthProps, ClientHealthScore } from "./client-health";
+export type { ClientJourneyProps, ClientExecutiveStackProps } from "./client-journey";
