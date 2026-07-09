@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useState } from "react";
 import {
   Building2,
@@ -61,21 +62,33 @@ function companyHint(count: number, empty: string, singular: string, plural: str
 
 type FirstStepStatus = "completed" | "current" | "pending";
 
-function getFirstSteps(hasCompanies: boolean): Array<{ label: string; status: FirstStepStatus }> {
+function getFirstSteps(
+  hasCompanies: boolean,
+  hasActiveBrain: boolean,
+): Array<{ label: string; status: FirstStepStatus }> {
   return [
     {
       label: "Criar primeira empresa",
       status: hasCompanies ? "completed" : "current",
     },
-    { label: "Ativar Company Brain", status: "pending" },
+    {
+      label: "Ativar Company Brain",
+      status: hasActiveBrain ? "completed" : hasCompanies ? "current" : "pending",
+    },
     { label: "Executar Discovery", status: "pending" },
     { label: "Gerar Assessment", status: "pending" },
     { label: "Primeira conversa com Samuel", status: "pending" },
   ];
 }
 
-function FirstStepsTimeline({ hasCompanies }: { hasCompanies: boolean }) {
-  const steps = getFirstSteps(hasCompanies);
+function FirstStepsTimeline({
+  hasCompanies,
+  hasActiveBrain,
+}: {
+  hasCompanies: boolean;
+  hasActiveBrain: boolean;
+}) {
+  const steps = getFirstSteps(hasCompanies, hasActiveBrain);
 
   return (
     <DsCard padding="lg" className="xl:sticky xl:top-6">
@@ -121,14 +134,19 @@ function CompanyList({ companies }: { companies: PortfolioCompanyRecord[] }) {
       <h2 className="ds-heading text-[var(--ds-text)]">Empresas cadastradas</h2>
       <ul className="mt-4 divide-y divide-[var(--ds-border)]">
         {companies.map((company) => (
-          <li key={company.id} className="flex items-center justify-between gap-4 py-3 first:pt-0">
-            <div>
-              <p className="text-sm font-medium text-[var(--ds-text)]">{company.name}</p>
-              <p className="text-xs text-[var(--ds-text-muted)]">
-                {[company.industry, company.city].filter(Boolean).join(" · ") || "—"}
-              </p>
-            </div>
-            <span className="text-xs text-[var(--ds-primary)]">Novo Cliente</span>
+          <li key={company.id}>
+            <Link
+              href={`/empresas/${company.id}`}
+              className="flex items-center justify-between gap-4 py-3 first:pt-0 transition-colors hover:bg-[var(--ds-surface-muted)]/50 -mx-2 px-2 rounded-[var(--ds-radius-md)]"
+            >
+              <div>
+                <p className="text-sm font-medium text-[var(--ds-text)]">{company.name}</p>
+                <p className="text-xs text-[var(--ds-text-muted)]">
+                  {[company.industry, company.city].filter(Boolean).join(" · ") || "—"}
+                </p>
+              </div>
+              <span className="text-xs text-[var(--ds-primary)]">Abrir dashboard →</span>
+            </Link>
           </li>
         ))}
       </ul>
@@ -147,7 +165,9 @@ export function ExecutiveHome({
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const companyCount = companies.length;
+  const activeBrainCount = companies.filter((c) => c.brain_status === "active").length;
   const hasCompanies = companyCount > 0;
+  const hasActiveBrain = activeBrainCount > 0;
 
   const sidebarItems: DsSidebarItem[] = [
     {
@@ -160,7 +180,7 @@ export function ExecutiveHome({
     {
       id: "companies",
       label: "Empresas",
-      href: "/",
+      href: "/empresas",
       icon: <Building2 size={ICON_SIZE} strokeWidth={ICON_STROKE} />,
     },
     {
@@ -253,8 +273,14 @@ export function ExecutiveHome({
               />
               <DsStatCard
                 label="Company Brains"
-                value={0}
-                hint="Nenhum Supercérebro ativo."
+                value={activeBrainCount}
+                hint={
+                  activeBrainCount === 0
+                    ? "Nenhum Supercérebro ativo."
+                    : activeBrainCount === 1
+                      ? "1 Supercérebro ativo."
+                      : `${activeBrainCount} Supercérebros ativos.`
+                }
               />
             </section>
 
@@ -301,7 +327,7 @@ export function ExecutiveHome({
                 </DsCard>
               </div>
 
-              <FirstStepsTimeline hasCompanies={hasCompanies} />
+              <FirstStepsTimeline hasCompanies={hasCompanies} hasActiveBrain={hasActiveBrain} />
             </div>
           </div>
         </main>

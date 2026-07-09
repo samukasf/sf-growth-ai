@@ -35,9 +35,13 @@ export type PortfolioCompanyRecord = {
   employee_count: string | null;
   main_objective: string | null;
   notes: string | null;
+  brain_status: CompanyBrainStatus;
+  brain_activated_at: string | null;
   created_at: string;
   updated_at: string;
 };
+
+export type CompanyBrainStatus = "inactive" | "active";
 
 export async function listPortfolioCompaniesAction(): Promise<PortfolioCompanyRecord[]> {
   const supabase = createServerSupabase();
@@ -89,5 +93,6 @@ export async function createPortfolioCompanyAction(
   }
 
   revalidatePath("/");
+  revalidatePath("/empresas");
   return data as PortfolioCompanyRecord;
 }
