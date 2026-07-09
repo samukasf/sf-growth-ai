@@ -188,6 +188,7 @@ export async function buildAgencyWorkspace(): Promise<AgencyWorkspaceData> {
     agencyHealth: agencyHealth.toJSON(),
     agencyMetrics: agencyMetrics.toJSON(),
     clients: clientRecords,
+    clientProfiles: {},
     businessDay,
     routines: routines.map((r) => r.toJSON()),
     priorities: priorities.map((p) => p.toJSON()),

@@ -1,4 +1,5 @@
 import type { AgencyClient, AgencyContext, AgencyDashboard, AgencyHealth, AgencyMetrics } from "@/core/agency-core";
+import type { NewClientFormInput } from "./new-client.types";
 import type { BusinessHealthReport, BusinessDayState, BusinessPriority, BusinessReview, BusinessRoutine } from "@/core/business-operating";
 import type { AssessmentResult } from "@/core/enterprise-assessment";
 import type { ProcessCouncilResult } from "@/core/executive-council";
@@ -39,6 +40,7 @@ export type AgencyWorkspaceData = {
   agencyHealth: ReturnType<AgencyHealth["toJSON"]> | null;
   agencyMetrics: ReturnType<AgencyMetrics["toJSON"]> | null;
   clients: ReturnType<AgencyClient["toJSON"]>[];
+  clientProfiles: Record<string, NewClientFormInput>;
   businessDay: BusinessDayState | null;
   routines: ReturnType<BusinessRoutine["toJSON"]>[];
   priorities: ReturnType<BusinessPriority["toJSON"]>[];

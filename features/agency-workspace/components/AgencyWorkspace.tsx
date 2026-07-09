@@ -9,9 +9,10 @@ import {
   getAgencySectionLabel,
   type AgencyWorkspaceSection,
 } from "../navigation/workspace-navigation";
-import { mergeOnboardingIntoWorkspace } from "../services/onboard-client.service";
+import { mergeClientIntoWorkspace } from "../services/save-client.service";
 import type { AgencyWorkspaceData } from "../types/agency-workspace.types";
 import type { ClientOnboardingResult } from "../types/client-onboarding.types";
+import type { SaveClientResult } from "../types/new-client.types";
 import { AgencyClientList } from "./AgencyClientList";
 import { AgencyExecutivePanel } from "./AgencyExecutivePanel";
 import { AgencyMissionPanel } from "./AgencyMissionPanel";
@@ -32,14 +33,13 @@ export function AgencyWorkspace({ data: initialData }: AgencyWorkspaceProps) {
     initialData.selectedClientId,
   );
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [latestOnboarding, setLatestOnboarding] = useState<ClientOnboardingResult | null>(null);
+  const latestOnboarding: ClientOnboardingResult | null = null;
 
-  const handleOnboardingComplete = (result: ClientOnboardingResult) => {
-    setWorkspaceData((current) => mergeOnboardingIntoWorkspace(current, result));
+  const handleSaveClient = (result: SaveClientResult) => {
+    setWorkspaceData((current) => mergeClientIntoWorkspace(current, result));
     setSelectedClientId(result.companyId);
-    setLatestOnboarding(result);
     setShowOnboarding(false);
-    setActiveSection("company-dashboard");
+    setActiveSection("client-portfolio");
   };
 
   return (
@@ -95,7 +95,7 @@ export function AgencyWorkspace({ data: initialData }: AgencyWorkspaceProps) {
             <ClientOnboardingFlow
               organizationId={workspaceData.organizationId}
               agencyId={workspaceData.agencyId}
-              onComplete={handleOnboardingComplete}
+              onSave={handleSaveClient}
               onCancel={() => setShowOnboarding(false)}
             />
           ) : null}
