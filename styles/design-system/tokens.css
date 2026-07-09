@@ -1,0 +1,99 @@
+/* SF Growth AI — Design System Tokens */
+
+:root {
+  /* Brand colors */
+  --ds-primary: #2563eb;
+  --ds-primary-hover: #1d4ed8;
+  --ds-primary-soft: #eff6ff;
+  --ds-secondary: #0f172a;
+  --ds-secondary-soft: #1e293b;
+  --ds-success: #16a34a;
+  --ds-success-soft: #f0fdf4;
+  --ds-warning: #f59e0b;
+  --ds-warning-soft: #fffbeb;
+  --ds-danger: #dc2626;
+  --ds-danger-soft: #fef2f2;
+
+  /* Surfaces */
+  --ds-background: #f8fafc;
+  --ds-surface: #ffffff;
+  --ds-surface-muted: #f1f5f9;
+  --ds-border: #e2e8f0;
+  --ds-border-strong: #cbd5e1;
+
+  /* Text */
+  --ds-text: #0f172a;
+  --ds-text-muted: #64748b;
+  --ds-text-subtle: #94a3b8;
+  --ds-text-inverse: #ffffff;
+
+  /* Typography */
+  --ds-font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --ds-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --ds-text-xs: 0.75rem;
+  --ds-text-sm: 0.875rem;
+  --ds-text-base: 1rem;
+  --ds-text-lg: 1.125rem;
+  --ds-text-xl: 1.25rem;
+  --ds-text-2xl: 1.5rem;
+  --ds-text-3xl: 1.875rem;
+
+  --ds-leading-tight: 1.25;
+  --ds-leading-normal: 1.5;
+  --ds-leading-relaxed: 1.625;
+
+  --ds-font-regular: 400;
+  --ds-font-medium: 500;
+  --ds-font-semibold: 600;
+  --ds-font-bold: 700;
+
+  /* Spacing */
+  --ds-space-1: 0.25rem;
+  --ds-space-2: 0.5rem;
+  --ds-space-3: 0.75rem;
+  --ds-space-4: 1rem;
+  --ds-space-5: 1.25rem;
+  --ds-space-6: 1.5rem;
+  --ds-space-8: 2rem;
+  --ds-space-10: 2.5rem;
+  --ds-space-12: 3rem;
+  --ds-space-16: 4rem;
+
+  /* Radius */
+  --ds-radius-sm: 0.375rem;
+  --ds-radius-md: 0.5rem;
+  --ds-radius-lg: 0.75rem;
+  --ds-radius-xl: 1rem;
+  --ds-radius-full: 9999px;
+
+  /* Shadows */
+  --ds-shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --ds-shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --ds-shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --ds-shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.1);
+
+  /* Layout */
+  --ds-sidebar-width: 16rem;
+  --ds-topbar-height: 4rem;
+  --ds-grid-gap: 1.5rem;
+  --ds-container-max: 80rem;
+
+  /* Motion */
+  --ds-transition: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --ds-z-modal: 50;
+  --ds-z-notification: 60;
+}
+
+@theme inline {
+  --color-ds-primary: var(--ds-primary);
+  --color-ds-secondary: var(--ds-secondary);
+  --color-ds-success: var(--ds-success);
+  --color-ds-warning: var(--ds-warning);
+  --color-ds-danger: var(--ds-danger);
+  --color-ds-background: var(--ds-background);
+  --color-ds-surface: var(--ds-surface);
+  --color-ds-border: var(--ds-border);
+  --color-ds-text: var(--ds-text);
+  --color-ds-text-muted: var(--ds-text-muted);
+}
