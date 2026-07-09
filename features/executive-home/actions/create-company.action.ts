@@ -37,11 +37,16 @@ export type PortfolioCompanyRecord = {
   notes: string | null;
   brain_status: CompanyBrainStatus;
   brain_activated_at: string | null;
+  first_conversation_status: FirstConversationStatus;
+  first_conversation_answers: Record<string, string> | null;
+  first_conversation_completed_at: string | null;
   created_at: string;
   updated_at: string;
 };
 
 export type CompanyBrainStatus = "inactive" | "active";
+
+export type FirstConversationStatus = "pending" | "deferred" | "completed";
 
 export async function listPortfolioCompaniesAction(): Promise<PortfolioCompanyRecord[]> {
   const supabase = createServerSupabase();

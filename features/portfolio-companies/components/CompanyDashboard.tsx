@@ -8,6 +8,10 @@ import { cn } from "@/utils/cn";
 import type { PortfolioCompanyRecord } from "@/features/executive-home/actions/create-company.action";
 
 import { activateCompanyBrainAction } from "../actions/company-brain.action";
+import {
+  FirstConversationDeferred,
+  FirstConversationIntro,
+} from "./FirstConversation";
 
 const ACTIVATION_STEPS = [
   "Criando Company Brain",
@@ -196,6 +200,10 @@ export function CompanyDashboard({ company: initialCompany }: CompanyDashboardPr
   const [company, setCompany] = useState(initialCompany);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const isActive = (company.brain_status ?? "inactive") === "active";
+  const conversationStatus = company.first_conversation_status ?? "pending";
+  const showIntro = isActive && conversationStatus === "pending";
+  const showDeferred = isActive && conversationStatus === "deferred";
+  const conversationComplete = isActive && conversationStatus === "completed";
 
   return (
     <>
@@ -210,6 +218,12 @@ export function CompanyDashboard({ company: initialCompany }: CompanyDashboardPr
             Dashboard da empresa · {company.industry}
           </p>
         </div>
+
+        {showIntro ? (
+          <FirstConversationIntro companyId={company.id} onDeferred={setCompany} />
+        ) : null}
+
+        {showDeferred ? <FirstConversationDeferred companyId={company.id} /> : null}
 
         <DsCard padding="lg">
           <h2 className="ds-heading">Company Brain</h2>
@@ -234,6 +248,19 @@ export function CompanyDashboard({ company: initialCompany }: CompanyDashboardPr
                     <DsBadge variant="success">Ativo</DsBadge>
                   </dd>
                 </div>
+                {conversationComplete ? (
+                  <div className="sm:col-span-2">
+                    <dt className="ds-caption">Primeira conversa</dt>
+                    <dd className="mt-2">
+                      <DsBadge variant="primary">Concluída</DsBadge>
+                      {company.first_conversation_completed_at ? (
+                        <p className="mt-2 text-sm text-[var(--ds-text-muted)]">
+                          {formatActivationDate(company.first_conversation_completed_at)}
+                        </p>
+                      ) : null}
+                    </dd>
+                  </div>
+                ) : null}
               </dl>
             </div>
           ) : (
