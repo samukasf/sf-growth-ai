@@ -9,6 +9,7 @@ import { createExecutiveProjectEngine } from "@/core/executive-projects";
 import { createSoftwareFactory } from "@/core/software-factory";
 
 import type { AgencyWorkspaceData, ClientDisplayMeta, CompanyBrainSnapshot } from "../types/agency-workspace.types";
+import type { NewClientFormInput } from "../types/new-client.types";
 
 const INFLUENCE_ORG_ID = "org-influence";
 
@@ -22,6 +23,57 @@ const DEMO_CLIENT_DISPLAY: Record<string, ClientDisplayMeta> = {
   "company-grafgil": { segment: "Gráfica", city: "Lisboa", lifecycleLabel: "Saudável" },
   "company-prime-house": { segment: "Imobiliária", city: "Flórida", lifecycleLabel: "Novo Cliente" },
   "company-praia-do-sol": { segment: "Mudanças", city: "Lisboa", lifecycleLabel: "Em Onboarding" },
+};
+
+const DEMO_CLIENT_PROFILES: Record<string, NewClientFormInput> = {
+  "company-grafgil": {
+    companyName: "Grafgil",
+    responsibleName: "Ricardo Gil",
+    email: "ricardo@grafgil.pt",
+    phone: "+351 21 000 0001",
+    website: "https://grafgil.pt",
+    instagram: "@grafgil",
+    facebook: "grafgil",
+    googleBusiness: "Grafgil Comunicação Visual",
+    city: "Lisboa",
+    country: "Portugal",
+    segment: "Gráfica",
+    employeeCount: "45",
+    mainObjective: "Aumentar visibilidade digital e automatizar reporting para clientes B2B.",
+    notes: "Cliente piloto G01. Relacionamento ativo desde 2019.",
+  },
+  "company-prime-house": {
+    companyName: "Prime House",
+    responsibleName: "Ana Martins",
+    email: "ana@primehouse.com",
+    phone: "+1 305 000 0002",
+    website: "https://primehouse.com",
+    instagram: "@primehouse",
+    facebook: "primehouse",
+    googleBusiness: "Prime House Realty",
+    city: "Flórida",
+    country: "Estados Unidos",
+    segment: "Imobiliária",
+    employeeCount: "12",
+    mainObjective: "Gerar leads qualificados para imóveis de luxo na Flórida.",
+    notes: "Novo cliente cadastrado. Aguardando kickoff comercial.",
+  },
+  "company-praia-do-sol": {
+    companyName: "Praia do Sol",
+    responsibleName: "João Ferreira",
+    email: "joao@praiadosol.pt",
+    phone: "+351 21 000 0003",
+    website: "https://praiadosol.pt",
+    instagram: "@praiadosol",
+    facebook: "praiadosol",
+    googleBusiness: "Praia do Sol Mudanças",
+    city: "Lisboa",
+    country: "Portugal",
+    segment: "Mudanças",
+    employeeCount: "8",
+    mainObjective: "Expandir serviços de mudanças residenciais na Grande Lisboa.",
+    notes: "Em onboarding. Documentação inicial em revisão.",
+  },
 };
 
 export async function buildAgencyWorkspace(): Promise<AgencyWorkspaceData> {
@@ -194,7 +246,7 @@ export async function buildAgencyWorkspace(): Promise<AgencyWorkspaceData> {
     agencyHealth: agencyHealth.toJSON(),
     agencyMetrics: agencyMetrics.toJSON(),
     clients: clientRecords,
-    clientProfiles: {},
+    clientProfiles: DEMO_CLIENT_PROFILES,
     clientDisplay: DEMO_CLIENT_DISPLAY,
     businessDay,
     routines: routines.map((r) => r.toJSON()),
