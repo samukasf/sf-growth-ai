@@ -6,6 +6,7 @@ export type DsSidebarItem = {
   href?: string;
   active?: boolean;
   disabled?: boolean;
+  icon?: React.ReactNode;
 };
 
 type DsSidebarProps = {
@@ -40,17 +41,26 @@ export function DsSidebar({
       <nav className="flex flex-1 flex-col gap-1 p-3">
         {items.map((item) => {
           const classNames = cn(
-            "rounded-[var(--ds-radius-md)] px-3 py-2 text-sm transition-colors",
+            "flex items-center gap-2.5 rounded-[var(--ds-radius-md)] px-3 py-2 text-sm transition-colors",
             item.active
               ? "bg-[var(--ds-primary-soft)] font-medium text-[var(--ds-primary)]"
               : "text-[var(--ds-text-muted)] hover:bg-[var(--ds-surface-muted)] hover:text-[var(--ds-text)]",
             item.disabled && "pointer-events-none opacity-40",
           );
 
+          const content = (
+            <>
+              {item.icon ? (
+                <span className="flex size-5 shrink-0 items-center justify-center">{item.icon}</span>
+              ) : null}
+              <span>{item.label}</span>
+            </>
+          );
+
           if (item.disabled) {
             return (
               <span key={item.id} className={classNames} title="Em breve">
-                {item.label}
+                {content}
               </span>
             );
           }
@@ -58,14 +68,14 @@ export function DsSidebar({
           if (item.href) {
             return (
               <a key={item.id} href={item.href} className={classNames}>
-                {item.label}
+                {content}
               </a>
             );
           }
 
           return (
             <span key={item.id} className={classNames}>
-              {item.label}
+              {content}
             </span>
           );
         })}
