@@ -14,7 +14,6 @@ type DsSidebarProps = {
   items: DsSidebarItem[];
   footer?: React.ReactNode;
   className?: string;
-  onItemClick?: (id: string) => void;
 };
 
 export function DsSidebar({
@@ -23,7 +22,6 @@ export function DsSidebar({
   items,
   footer,
   className,
-  onItemClick,
 }: DsSidebarProps) {
   return (
     <aside
@@ -49,7 +47,15 @@ export function DsSidebar({
             item.disabled && "pointer-events-none opacity-40",
           );
 
-          if (item.href && !item.disabled) {
+          if (item.disabled) {
+            return (
+              <span key={item.id} className={classNames} title="Em breve">
+                {item.label}
+              </span>
+            );
+          }
+
+          if (item.href) {
             return (
               <a key={item.id} href={item.href} className={classNames}>
                 {item.label}
@@ -58,15 +64,9 @@ export function DsSidebar({
           }
 
           return (
-            <button
-              key={item.id}
-              type="button"
-              disabled={item.disabled}
-              onClick={() => onItemClick?.(item.id)}
-              className={cn(classNames, "text-left")}
-            >
+            <span key={item.id} className={classNames}>
               {item.label}
-            </button>
+            </span>
           );
         })}
       </nav>
