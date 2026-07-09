@@ -1,5 +1,13 @@
 import type { AgencyClient, AgencyContext, AgencyDashboard, AgencyHealth, AgencyMetrics } from "@/core/agency-core";
 import type { NewClientFormInput } from "./new-client.types";
+
+export type ClientLifecycleLabel = "Saudável" | "Novo Cliente" | "Em Onboarding";
+
+export type ClientDisplayMeta = {
+  segment: string;
+  city: string;
+  lifecycleLabel: ClientLifecycleLabel;
+};
 import type { BusinessHealthReport, BusinessDayState, BusinessPriority, BusinessReview, BusinessRoutine } from "@/core/business-operating";
 import type { AssessmentResult } from "@/core/enterprise-assessment";
 import type { ProcessCouncilResult } from "@/core/executive-council";
@@ -41,6 +49,7 @@ export type AgencyWorkspaceData = {
   agencyMetrics: ReturnType<AgencyMetrics["toJSON"]> | null;
   clients: ReturnType<AgencyClient["toJSON"]>[];
   clientProfiles: Record<string, NewClientFormInput>;
+  clientDisplay: Record<string, ClientDisplayMeta>;
   businessDay: BusinessDayState | null;
   routines: ReturnType<BusinessRoutine["toJSON"]>[];
   priorities: ReturnType<BusinessPriority["toJSON"]>[];

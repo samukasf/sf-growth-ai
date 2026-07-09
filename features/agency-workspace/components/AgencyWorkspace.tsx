@@ -13,6 +13,7 @@ import { mergeClientIntoWorkspace } from "../services/save-client.service";
 import type { AgencyWorkspaceData } from "../types/agency-workspace.types";
 import type { ClientOnboardingResult } from "../types/client-onboarding.types";
 import type { SaveClientResult } from "../types/new-client.types";
+import { AgencyClientDetail } from "./AgencyClientDetail";
 import { AgencyClientList } from "./AgencyClientList";
 import { AgencyExecutivePanel } from "./AgencyExecutivePanel";
 import { AgencyMissionPanel } from "./AgencyMissionPanel";
@@ -33,12 +34,14 @@ export function AgencyWorkspace({ data: initialData }: AgencyWorkspaceProps) {
     initialData.selectedClientId,
   );
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [detailClientId, setDetailClientId] = useState<string | null>(null);
   const latestOnboarding: ClientOnboardingResult | null = null;
 
   const handleSaveClient = (result: SaveClientResult) => {
     setWorkspaceData((current) => mergeClientIntoWorkspace(current, result));
     setSelectedClientId(result.companyId);
     setShowOnboarding(false);
+    setDetailClientId(null);
     setActiveSection("client-portfolio");
   };
 
@@ -103,11 +106,17 @@ export function AgencyWorkspace({ data: initialData }: AgencyWorkspaceProps) {
           {!showOnboarding && activeSection === "agency-overview" ? (
             <AgencyOverview data={workspaceData} latestOnboarding={latestOnboarding} />
           ) : null}
-          {!showOnboarding && activeSection === "client-portfolio" ? (
+          {!showOnboarding && activeSection === "client-portfolio" && detailClientId ? (
+            <AgencyClientDetail
+              data={workspaceData}
+              companyId={detailClientId}
+              onBack={() => setDetailClientId(null)}
+            />
+          ) : null}
+          {!showOnboarding && activeSection === "client-portfolio" && !detailClientId ? (
             <AgencyClientList
               data={workspaceData}
-              selectedClientId={selectedClientId}
-              onSelectClient={setSelectedClientId}
+              onSelectClient={setDetailClientId}
               onNewClient={() => setShowOnboarding(true)}
             />
           ) : null}

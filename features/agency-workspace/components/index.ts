@@ -1,6 +1,7 @@
 export { AgencyWorkspace } from "./AgencyWorkspace";
 export { AgencyOverview } from "./AgencyOverview";
 export { AgencyClientList } from "./AgencyClientList";
+export { AgencyClientDetail } from "./AgencyClientDetail";
 export { AgencyClientCard } from "./AgencyClientCard";
 export { AgencyExecutivePanel } from "./AgencyExecutivePanel";
 export { AgencyOpportunityPanel } from "./AgencyOpportunityPanel";

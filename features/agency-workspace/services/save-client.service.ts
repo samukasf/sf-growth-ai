@@ -80,5 +80,13 @@ export function mergeClientIntoWorkspace(
       ...data.clientProfiles,
       [result.companyId]: result.profile,
     },
+    clientDisplay: {
+      ...data.clientDisplay,
+      [result.companyId]: {
+        segment: result.profile.segment.trim() || result.client.industry || "—",
+        city: result.profile.city.trim() || "—",
+        lifecycleLabel: "Novo Cliente",
+      },
+    },
   };
 }

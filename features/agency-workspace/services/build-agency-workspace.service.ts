@@ -8,15 +8,21 @@ import { createExecutiveOpportunity } from "@/core/executive-opportunity";
 import { createExecutiveProjectEngine } from "@/core/executive-projects";
 import { createSoftwareFactory } from "@/core/software-factory";
 
-import type { AgencyWorkspaceData, CompanyBrainSnapshot } from "../types/agency-workspace.types";
+import type { AgencyWorkspaceData, ClientDisplayMeta, CompanyBrainSnapshot } from "../types/agency-workspace.types";
 
 const INFLUENCE_ORG_ID = "org-influence";
 
 const DEMO_CLIENTS = [
-  { companyId: "company-grafgil", name: "Grafgil", industry: "Comunicação Visual" },
-  { companyId: "company-retail-plus", name: "Retail Plus", industry: "Retalho" },
-  { companyId: "company-servicos-norte", name: "Serviços Norte", industry: "Serviços" },
+  { companyId: "company-grafgil", name: "Grafgil", industry: "Gráfica" },
+  { companyId: "company-prime-house", name: "Prime House", industry: "Imobiliária" },
+  { companyId: "company-praia-do-sol", name: "Praia do Sol", industry: "Mudanças" },
 ];
+
+const DEMO_CLIENT_DISPLAY: Record<string, ClientDisplayMeta> = {
+  "company-grafgil": { segment: "Gráfica", city: "Lisboa", lifecycleLabel: "Saudável" },
+  "company-prime-house": { segment: "Imobiliária", city: "Flórida", lifecycleLabel: "Novo Cliente" },
+  "company-praia-do-sol": { segment: "Mudanças", city: "Lisboa", lifecycleLabel: "Em Onboarding" },
+};
 
 export async function buildAgencyWorkspace(): Promise<AgencyWorkspaceData> {
   const agencyCore = createAgencyCore();
@@ -189,6 +195,7 @@ export async function buildAgencyWorkspace(): Promise<AgencyWorkspaceData> {
     agencyMetrics: agencyMetrics.toJSON(),
     clients: clientRecords,
     clientProfiles: {},
+    clientDisplay: DEMO_CLIENT_DISPLAY,
     businessDay,
     routines: routines.map((r) => r.toJSON()),
     priorities: priorities.map((p) => p.toJSON()),
