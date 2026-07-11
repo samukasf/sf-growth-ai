@@ -4,7 +4,11 @@ import path from "node:path";
 export default defineConfig({
   test: {
     environment: "node",
-    include: ["apps/web/src/**/*.test.ts"],
+    include: ["apps/web/src/**/*.test.ts", "features/**/*.test.ts"],
+    env: {
+      NEXT_PUBLIC_SUPABASE_URL: "http://localhost:54321",
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "test-anon-key",
+    },
   },
   resolve: {
     alias: {

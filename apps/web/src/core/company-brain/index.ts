@@ -7,3 +7,4 @@ export * from "./company-brain.presenter";
 export * from "./company-brain.repository";
 export * from "./company-brain.service";
 export * from "./company-brain.fixture";
+export * from "./timeline";
