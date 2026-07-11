@@ -1,10 +1,13 @@
 import {
+  CompanyHealthService,
   createSampleDiscoveryResult,
   getCompanyBrainService,
+  InMemoryHealthRepository,
   InMemoryKnowledgeRepository,
   InMemoryTimelineRepository,
   KnowledgeService,
   presentCompanyBrain,
+  presentCompanyHealthForViewer,
   presentKnowledgeGraphForViewer,
   presentTimelineGroupsForViewer,
   TimelineService,
@@ -51,25 +54,52 @@ function ImportanceBadge({ importance }: { importance: string }) {
   );
 }
 
+function StatusBadge({ status }: { status: string }) {
+  const styles: Record<string, string> = {
+    Critical: "bg-red-500/10 text-red-400 ring-red-500/20",
+    Weak: "bg-orange-500/10 text-orange-400 ring-orange-500/20",
+    Stable: "bg-blue-500/10 text-blue-400 ring-blue-500/20",
+    Healthy: "bg-emerald-500/10 text-emerald-400 ring-emerald-500/20",
+    Excellent: "bg-violet-500/10 text-violet-400 ring-violet-500/20",
+  };
+
+  return (
+    <span
+      className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider ring-1 ring-inset ${styles[status] ?? styles.Stable}`}
+    >
+      {status}
+    </span>
+  );
+}
+
 export default async function CompanyBrainDebugPage() {
   const discovery = createSampleDiscoveryResult();
   const service = getCompanyBrainService();
   const timelineService = new TimelineService(new InMemoryTimelineRepository());
   const knowledgeService = new KnowledgeService(new InMemoryKnowledgeRepository());
+  const healthService = new CompanyHealthService(new InMemoryHealthRepository());
   const brain = await service.build({ discovery });
   await timelineService.seedFromCompanyBrain(brain, discovery);
-  await knowledgeService.seedFromCompanyBrain(brain, discovery);
+  const knowledgeGraph = await knowledgeService.seedFromCompanyBrain(brain, discovery);
+  const timelineEvents = await timelineService.list({
+    tenantId: brain.organizationId,
+    companyId: brain.companyId,
+  });
 
+  await healthService.recalculate({
+    brain,
+    discovery,
+    timelineEvents,
+    knowledgeGraph,
+  });
+
+  const healthView = await presentCompanyHealthForViewer(healthService, brain.companyId);
   const knowledgeView = await presentKnowledgeGraphForViewer(
     knowledgeService,
     brain.organizationId,
     brain.companyId,
   );
-  const presentation = presentCompanyBrain(brain, discovery, knowledgeView);
-  const timelineEvents = await timelineService.list({
-    tenantId: brain.organizationId,
-    companyId: brain.companyId,
-  });
+  const presentation = presentCompanyBrain(brain, discovery, knowledgeView, healthView ?? undefined);
   const timelineSummary = await timelineService.summarize({
     tenantId: brain.organizationId,
     companyId: brain.companyId,
@@ -129,6 +159,91 @@ export default async function CompanyBrainDebugPage() {
             <ScoreCard label="Confidence Score" value={presentation.scores.confidenceScore} />
           </div>
         </section>
+
+        {presentation.health && (
+          <section className="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-semibold">Company Health Score</h2>
+                <p className="mt-2 text-zinc-400">{presentation.health.overall.label}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-4xl font-bold text-white">{presentation.health.overall.value}</p>
+                <div className="mt-2 flex items-center justify-end gap-2">
+                  <StatusBadge status={presentation.health.overall.status} />
+                  <span className="text-xs text-zinc-500">
+                    confiança {presentation.health.overall.confidence}%
+                  </span>
+                </div>
+                {presentation.health.overall.variation !== null && (
+                  <p className="mt-1 text-xs text-zinc-400">
+                    variação {presentation.health.overall.variation > 0 ? "+" : ""}
+                    {presentation.health.overall.variation}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {presentation.health.topFactors.length > 0 && (
+              <div className="mt-6">
+                <h3 className="font-medium text-zinc-200">Principais fatores</h3>
+                <ul className="mt-3 space-y-1 text-sm text-zinc-400">
+                  {presentation.health.topFactors.map((item) => (
+                    <li key={item}>• {item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {presentation.health.criticalDimensions.length > 0 && (
+              <div className="mt-6">
+                <h3 className="font-medium text-zinc-200">Dimensões críticas</h3>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {presentation.health.criticalDimensions.map((item) => (
+                    <span
+                      key={item.dimension}
+                      className="rounded-full bg-red-500/10 px-3 py-1 text-xs text-red-300 ring-1 ring-red-500/20"
+                    >
+                      {item.label} · {item.value}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {presentation.health.dimensions.map((dimension) => (
+                <div
+                  key={dimension.dimension}
+                  className="rounded-lg border border-zinc-800 bg-black/20 p-4"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-sm font-medium text-zinc-200">{dimension.label}</p>
+                    <StatusBadge status={dimension.status} />
+                  </div>
+                  <p className="mt-2 text-2xl font-semibold text-white">{dimension.value}</p>
+                  <p className="mt-1 text-xs text-zinc-500">
+                    confiança {dimension.confidence}%
+                    {dimension.incomplete ? " · incomplete" : ""}
+                  </p>
+                  {dimension.variation !== null && (
+                    <p className="mt-1 text-xs text-zinc-400">
+                      variação {dimension.variation > 0 ? "+" : ""}
+                      {dimension.variation}
+                    </p>
+                  )}
+                  {dimension.topEvidence.length > 0 && (
+                    <ul className="mt-3 space-y-1 text-xs text-zinc-500">
+                      {dimension.topEvidence.map((item) => (
+                        <li key={item}>• {item}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         <section className="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">

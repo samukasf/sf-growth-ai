@@ -94,6 +94,7 @@ export type CompanyBrainPresentation = {
   timeline: TimelineEntry[];
   recommendations: string[];
   knowledge?: import("./knowledge/knowledge.types").KnowledgeGraphPresentation;
+  health?: import("./health/health.types").HealthPresentation;
 };
 
 export type BuildCompanyBrainInput = {

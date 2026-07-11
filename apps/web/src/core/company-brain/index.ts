@@ -9,3 +9,4 @@ export * from "./company-brain.service";
 export * from "./company-brain.fixture";
 export * from "./timeline";
 export * from "./knowledge";
+export * from "./health";
