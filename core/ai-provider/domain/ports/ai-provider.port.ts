@@ -22,6 +22,26 @@ export type AITranslateInput = AIProviderInput & {
   sourceLanguage?: string;
 };
 
+/**
+ * Metadados estruturados de toda resposta do AI Gateway. Consumidores futuros
+ * (Samuel, Executive Council, Analytics, Cost Dashboard, Auditoria, otimização
+ * automática de modelos) devem ler estes campos em vez de inferir a partir do
+ * conteúdo textual.
+ */
+export type AIProviderResponseMetadata = {
+  provider: { id: string; type: AIProviderType; name: string };
+  model: string;
+  latencyMs: number;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  /** Estimativa em USD a partir de uma tabela de preços aproximada por provider — não é fatura real. */
+  estimatedCostUsd: number;
+  /** ISO 8601, momento em que a resposta foi produzida. */
+  timestamp: string;
+  organizationId?: string;
+};
+
 export type AIProviderResult<T = string> = {
   content: T;
   structuredOutput?: Record<string, unknown>;
@@ -29,6 +49,7 @@ export type AIProviderResult<T = string> = {
   completionTokens: number;
   latencyMs: number;
   finishReason: string;
+  metadata: AIProviderResponseMetadata;
 };
 
 export interface AIProvider {

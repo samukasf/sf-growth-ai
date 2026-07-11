@@ -2,38 +2,29 @@ import type { AIProviderFactory } from "../../domain/ports/ai-provider-factory.p
 import type { AIProvider } from "../../domain/ports/ai-provider.port";
 import type { AIProviderType } from "../../shared";
 import {
-  AnthropicProvider,
-  AwsBedrockProvider,
-  AzureOpenAIProvider,
-  CustomProvider,
-  GeminiProvider,
-  LocalModelProvider,
-  OpenAIProvider,
-} from "../../providers";
+  createAllCatalogedAIProviders,
+  createCatalogedAIProvider,
+  isAIProviderTypeCataloged,
+} from "../../providers/provider-catalog";
+// Garante que todos os providers "de fábrica" se registrem no catálogo antes
+// de qualquer criação — ver `core/ai-provider/providers/index.ts`.
+import "../../providers";
 
+/**
+ * Fábrica de providers do AI Gateway. Não conhece nenhum provider por nome:
+ * delega inteiramente ao Provider Catalog (`core/ai-provider/providers/`).
+ * Novos providers não exigem alterar esta classe.
+ */
 export class DefaultAIProviderFactory implements AIProviderFactory {
-  private readonly creators: Record<AIProviderType, () => AIProvider> = {
-    openai: () => new OpenAIProvider(),
-    anthropic: () => new AnthropicProvider(),
-    gemini: () => new GeminiProvider(),
-    local: () => new LocalModelProvider(),
-    azure_openai: () => new AzureOpenAIProvider(),
-    aws_bedrock: () => new AwsBedrockProvider(),
-    custom: () => new CustomProvider(),
-  };
-
   create(type: AIProviderType, config?: Record<string, string>): AIProvider {
-    if (type === "custom" && config?.id) {
-      return new CustomProvider(config.id, config.name ?? "Provider Personalizado");
-    }
-    return this.creators[type]();
+    return createCatalogedAIProvider(type, config);
   }
 
   createAll(): AIProvider[] {
-    return (Object.keys(this.creators) as AIProviderType[]).map((type) => this.create(type));
+    return createAllCatalogedAIProviders();
   }
 
   supports(type: AIProviderType): boolean {
-    return type in this.creators;
+    return isAIProviderTypeCataloged(type);
   }
 }

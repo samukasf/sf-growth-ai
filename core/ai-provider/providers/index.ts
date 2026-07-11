@@ -1,50 +1,32 @@
-import type { AIProviderType } from "../shared";
-import { BaseAIProvider } from "./base-ai-provider";
+export { BaseAIProvider } from "./base-ai-provider";
+export { OpenAICompatibleProvider } from "./openai-compatible-provider";
 
-export class OpenAIProvider extends BaseAIProvider {
-  readonly id = "openai";
-  readonly type: AIProviderType = "openai";
-  readonly name = "OpenAI";
-}
+export type { AIProviderBlueprint } from "./provider-catalog";
+export {
+  createAllCatalogedAIProviders,
+  createCatalogedAIProvider,
+  isAIProviderTypeCataloged,
+  listCatalogedAIProviderBlueprints,
+  listCatalogedAIProviderTypes,
+  registerAIProviderBlueprint,
+} from "./provider-catalog";
 
-export class AnthropicProvider extends BaseAIProvider {
-  readonly id = "anthropic";
-  readonly type: AIProviderType = "anthropic";
-  readonly name = "Anthropic Claude";
-}
-
-export class GeminiProvider extends BaseAIProvider {
-  readonly id = "gemini";
-  readonly type: AIProviderType = "gemini";
-  readonly name = "Google Gemini";
-}
-
-export class LocalModelProvider extends BaseAIProvider {
-  readonly id = "local";
-  readonly type: AIProviderType = "local";
-  readonly name = "Modelo Local";
-}
-
-export class AzureOpenAIProvider extends BaseAIProvider {
-  readonly id = "azure_openai";
-  readonly type: AIProviderType = "azure_openai";
-  readonly name = "Azure OpenAI";
-}
-
-export class AwsBedrockProvider extends BaseAIProvider {
-  readonly id = "aws_bedrock";
-  readonly type: AIProviderType = "aws_bedrock";
-  readonly name = "AWS Bedrock";
-}
-
-export class CustomProvider extends BaseAIProvider {
-  readonly id: string;
-  readonly type: AIProviderType = "custom";
-  readonly name: string;
-
-  constructor(id = "custom", name = "Provider Personalizado") {
-    super();
-    this.id = id;
-    this.name = name;
-  }
-}
+/**
+ * Providers reais (chamam a API pública correspondente) e simulados. Importar
+ * estes módulos aqui é o único lugar que precisa "conhecer" cada provider —
+ * cada arquivo se auto-registra no Provider Catalog ao ser importado. Para
+ * adicionar um novo provider no futuro, basta criar o arquivo e adicionar uma
+ * linha de import/export abaixo; nenhum outro arquivo do Gateway muda.
+ */
+export { OpenAIProvider } from "./openai-provider";
+export { AnthropicProvider } from "./anthropic-provider";
+export { GeminiProvider } from "./gemini-provider";
+export { DeepSeekProvider } from "./deepseek-provider";
+export { GrokProvider } from "./grok-provider";
+export { OllamaProvider } from "./ollama-provider";
+export {
+  AwsBedrockProvider,
+  AzureOpenAIProvider,
+  CustomProvider,
+  LocalModelProvider,
+} from "./simulated-providers";

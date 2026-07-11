@@ -32,3 +32,18 @@ export class AIProviderValidationError extends AIProviderDomainError {
     this.name = "AIProviderValidationError";
   }
 }
+
+/** Falha ao chamar a API real de um provider (rede, HTTP não-2xx, resposta inesperada). */
+export class AIProviderRequestError extends AIProviderDomainError {
+  readonly providerId: string;
+  readonly statusCode: number;
+
+  constructor(providerId: string, statusCode: number, details: string) {
+    super(
+      `AI provider request failed: ${providerId} (status ${statusCode})${details ? ` — ${details}` : ""}`,
+    );
+    this.name = "AIProviderRequestError";
+    this.providerId = providerId;
+    this.statusCode = statusCode;
+  }
+}
