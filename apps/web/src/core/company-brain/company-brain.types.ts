@@ -93,6 +93,7 @@ export type CompanyBrainPresentation = {
   scores: CompanyBrainScores;
   timeline: TimelineEntry[];
   recommendations: string[];
+  knowledge?: import("./knowledge/knowledge.types").KnowledgeGraphPresentation;
 };
 
 export type BuildCompanyBrainInput = {

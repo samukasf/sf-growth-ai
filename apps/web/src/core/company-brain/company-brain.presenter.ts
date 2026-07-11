@@ -3,11 +3,13 @@ import type {
   CompanyBrainPresentation,
   DiscoveryResult,
 } from "./company-brain.types";
+import type { KnowledgeGraphPresentation } from "./knowledge/knowledge.types";
 import { summarizeCompanyBrain } from "./company-brain.summary";
 
 export function presentCompanyBrain(
   brain: CompanyBrain,
   discovery?: DiscoveryResult,
+  knowledge?: KnowledgeGraphPresentation,
 ): CompanyBrainPresentation {
   return {
     executiveSummary: summarizeCompanyBrain(brain, discovery),
@@ -23,5 +25,6 @@ export function presentCompanyBrain(
       ...brain.growthOpportunities.slice(0, 3),
       ...brain.openRisks.slice(0, 2).map((risk) => `Endereçar risco: ${risk}`),
     ].slice(0, 8),
+    knowledge,
   };
 }

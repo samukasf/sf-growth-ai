@@ -1,8 +1,11 @@
 import {
   createSampleDiscoveryResult,
   getCompanyBrainService,
+  InMemoryKnowledgeRepository,
   InMemoryTimelineRepository,
+  KnowledgeService,
   presentCompanyBrain,
+  presentKnowledgeGraphForViewer,
   presentTimelineGroupsForViewer,
   TimelineService,
 } from "@/apps/web/src/core/company-brain";
@@ -52,10 +55,17 @@ export default async function CompanyBrainDebugPage() {
   const discovery = createSampleDiscoveryResult();
   const service = getCompanyBrainService();
   const timelineService = new TimelineService(new InMemoryTimelineRepository());
+  const knowledgeService = new KnowledgeService(new InMemoryKnowledgeRepository());
   const brain = await service.build({ discovery });
   await timelineService.seedFromCompanyBrain(brain, discovery);
+  await knowledgeService.seedFromCompanyBrain(brain, discovery);
 
-  const presentation = presentCompanyBrain(brain, discovery);
+  const knowledgeView = await presentKnowledgeGraphForViewer(
+    knowledgeService,
+    brain.organizationId,
+    brain.companyId,
+  );
+  const presentation = presentCompanyBrain(brain, discovery, knowledgeView);
   const timelineEvents = await timelineService.list({
     tenantId: brain.organizationId,
     companyId: brain.companyId,
@@ -170,6 +180,66 @@ export default async function CompanyBrainDebugPage() {
             ))}
           </div>
         </section>
+
+        {presentation.knowledge && (
+          <section className="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-semibold">Knowledge Graph</h2>
+                <p className="mt-2 text-zinc-400">{presentation.knowledge.summary.headline}</p>
+              </div>
+              <p className="text-sm text-zinc-500">
+                {presentation.knowledge.summary.nodeCount} nós ·{" "}
+                {presentation.knowledge.summary.relationCount} relações
+              </p>
+            </div>
+
+            {presentation.knowledge.summary.highlights.length > 0 && (
+              <ul className="mt-4 space-y-1 text-sm text-zinc-400">
+                {presentation.knowledge.summary.highlights.map((item) => (
+                  <li key={item}>• {item}</li>
+                ))}
+              </ul>
+            )}
+
+            <div className="mt-8 grid gap-6 lg:grid-cols-2">
+              {presentation.knowledge.nodesByType.map((group) => (
+                <div key={group.type} className="rounded-lg border border-zinc-800 bg-black/20 p-4">
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
+                    {group.label}
+                  </h3>
+                  <ul className="mt-3 space-y-2">
+                    {group.nodes.map((node) => (
+                      <li key={node.id}>
+                        <p className="font-medium text-zinc-200">{node.name}</p>
+                        <p className="text-xs text-zinc-500">{node.description}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-8">
+              <h3 className="text-lg font-semibold text-zinc-200">Relações</h3>
+              <div className="mt-4 space-y-2">
+                {presentation.knowledge.relations.slice(0, 12).map((rel) => (
+                  <div
+                    key={rel.id}
+                    className="rounded-lg border border-zinc-800 bg-black/20 px-4 py-2 text-sm"
+                  >
+                    <span className="text-zinc-300">{rel.fromName}</span>
+                    <span className="mx-2 text-blue-400">{rel.relation}</span>
+                    <span className="text-zinc-300">{rel.toName}</span>
+                    <span className="ml-3 text-xs text-zinc-500">
+                      peso {rel.weight.toFixed(2)} · confiança {rel.confidence}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
 
         <ListSection title="Recomendações" items={presentation.recommendations} />
       </div>
