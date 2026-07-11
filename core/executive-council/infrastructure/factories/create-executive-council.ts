@@ -14,11 +14,23 @@ import { DefaultCouncilSessionManager } from "../services/default-council-sessio
 import { DefaultDecisionBuilder } from "../services/default-decision-builder";
 import { DefaultOpinionCollector } from "../services/default-opinion-collector";
 import { DefaultRecommendationAggregator } from "../services/default-recommendation-aggregator";
+import { createAISpecialists, isCouncilAIEnabled } from "../specialists/ai-council-specialist.adapter";
 import { DEFAULT_COUNCIL_SPECIALISTS } from "../specialists/default-council-specialists";
 
 export type CreateExecutiveCouncilOptions = {
   dependencies?: Partial<ExecutiveCouncilDependencies>;
 };
+
+/**
+ * Especialistas padrão do Council (Sprint 78): IA real via AI Gateway
+ * quando habilitada (`EXECUTIVE_COUNCIL_AI_ENABLED !== "false"`), com
+ * fallback heurístico instantâneo via kill-switch — sem deploy de código.
+ * Qualquer chamador que injete `dependencies.specialists` explicitamente
+ * continua tendo prioridade (comportamento de DI inalterado).
+ */
+function resolveDefaultSpecialists() {
+  return isCouncilAIEnabled() ? createAISpecialists() : DEFAULT_COUNCIL_SPECIALISTS;
+}
 
 export function createExecutiveCouncil(
   options: CreateExecutiveCouncilOptions = {},
@@ -39,7 +51,7 @@ export function createExecutiveCouncil(
     recommendationAggregator:
       options.dependencies?.recommendationAggregator ??
       new DefaultRecommendationAggregator(),
-    specialists: options.dependencies?.specialists ?? DEFAULT_COUNCIL_SPECIALISTS,
+    specialists: options.dependencies?.specialists ?? resolveDefaultSpecialists(),
     eventDispatcher: options.dependencies?.eventDispatcher ?? new InMemoryEventBus(),
     executiveCeo: options.dependencies?.executiveCeo ?? new NoopExecutiveCEOAdapter(),
     executiveOrchestrator:

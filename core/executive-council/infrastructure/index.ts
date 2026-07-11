@@ -7,6 +7,7 @@ export { DefaultConflictResolver } from "./services/default-conflict-resolver";
 export { DefaultDecisionBuilder } from "./services/default-decision-builder";
 export { DefaultRecommendationAggregator } from "./services/default-recommendation-aggregator";
 export { DEFAULT_COUNCIL_SPECIALISTS } from "./specialists/default-council-specialists";
+export { createAISpecialists, isCouncilAIEnabled } from "./specialists/ai-council-specialist.adapter";
 export { InMemoryEventBus } from "./events/in-memory-event-bus";
 export {
   NoopEnterpriseBrainAdapter,

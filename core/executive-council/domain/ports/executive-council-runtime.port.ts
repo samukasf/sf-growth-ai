@@ -7,6 +7,7 @@ import type {
   CouncilRecommendation,
   CouncilSession,
 } from "../entities";
+import type { OpinionFailure } from "./opinion-collector.port";
 
 export type ProcessCouncilInput = {
   organizationId: string;
@@ -30,6 +31,12 @@ export type ProcessCouncilResult = {
   decision: CouncilDecision;
   recommendations: CouncilRecommendation[];
   response: string;
+  /**
+   * Campo aditivo (Sprint 78 — Executive Council Intelligence): falhas
+   * isoladas de conselheiros individuais (ex.: provider de IA indisponível)
+   * que não interromperam a sessão. Lista vazia quando não houve falhas.
+   */
+  opinionFailures: OpinionFailure[];
 };
 
 export interface ExecutiveCouncilRuntime {

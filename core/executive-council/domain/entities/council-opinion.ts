@@ -19,6 +19,16 @@ export type CouncilOpinionProps = {
   risks: string[];
   opportunities: string[];
   submittedAt: string;
+  /**
+   * Campos aditivos (Sprint 78 — Executive Council Intelligence).
+   * Preenchidos quando o parecer é gerado por um especialista de IA
+   * (ver `ai-council-specialist.adapter.ts`); permanecem `undefined` para
+   * pareceres heurísticos, sem afetar nenhum consumidor existente.
+   */
+  conclusion?: string;
+  justification?: string;
+  providerId?: string;
+  model?: string;
 };
 
 export class CouncilOpinion {
@@ -33,6 +43,10 @@ export class CouncilOpinion {
   readonly risks: string[];
   readonly opportunities: string[];
   readonly submittedAt: string;
+  readonly conclusion?: string;
+  readonly justification?: string;
+  readonly providerId?: string;
+  readonly model?: string;
 
   private constructor(props: CouncilOpinionProps) {
     this.id = props.id;
@@ -46,6 +60,10 @@ export class CouncilOpinion {
     this.risks = [...props.risks];
     this.opportunities = [...props.opportunities];
     this.submittedAt = props.submittedAt;
+    this.conclusion = props.conclusion;
+    this.justification = props.justification;
+    this.providerId = props.providerId;
+    this.model = props.model;
   }
 
   static create(
@@ -66,6 +84,10 @@ export class CouncilOpinion {
       risks: props.risks,
       opportunities: props.opportunities,
       submittedAt: props.submittedAt ?? new Date().toISOString(),
+      conclusion: props.conclusion?.trim() || undefined,
+      justification: props.justification?.trim() || undefined,
+      providerId: props.providerId,
+      model: props.model,
     });
   }
 
@@ -82,6 +104,10 @@ export class CouncilOpinion {
       risks: [...this.risks],
       opportunities: [...this.opportunities],
       submittedAt: this.submittedAt,
+      conclusion: this.conclusion,
+      justification: this.justification,
+      providerId: this.providerId,
+      model: this.model,
     };
   }
 }

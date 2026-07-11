@@ -71,11 +71,28 @@ export class ProcessCouncilSessionUseCase {
       );
     }
 
-    const opinions = await this.deps.opinionCollector.collect(
+    /**
+     * Contexto enriquecido (Sprint 78): organizationId/companyId/risks/
+     * opportunities/priorities já existiam no DTO — aqui passam a ser
+     * também lidos pelo coletor/especialistas de IA (ex.: para compor o
+     * prompt de cada conselheiro). Nenhum valor é recalculado; apenas
+     * repassado. `dto.context` continua tendo precedência para qualquer
+     * outra chave que já viesse sendo enviada.
+     */
+    const specialistContext: Record<string, unknown> = {
+      ...(dto.context ?? {}),
+      organizationId: dto.organizationId,
+      companyId: dto.companyId,
+      risks: dto.risks ?? [],
+      opportunities: dto.opportunities ?? [],
+      priorities: dto.priorities ?? [],
+    };
+
+    const { opinions, failures: opinionFailures } = await this.deps.opinionCollector.collect(
       session.id,
       members,
       dto.query,
-      dto.context ?? {},
+      specialistContext,
       this.deps.specialists,
     );
 
@@ -145,6 +162,7 @@ export class ProcessCouncilSessionUseCase {
       decision,
       recommendations,
       response,
+      opinionFailures,
     };
   }
 }

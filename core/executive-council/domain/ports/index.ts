@@ -3,6 +3,8 @@ export type { CouncilMemberSelector, CouncilRoutingContext } from "./council-mem
 export type { CouncilSessionManager, StartSessionInput } from "./council-session-manager.port";
 export type {
   OpinionCollector,
+  OpinionCollectionResult,
+  OpinionFailure,
   SpecialistPort,
   SpecialistOpinionInput,
   SpecialistOpinionResult,
