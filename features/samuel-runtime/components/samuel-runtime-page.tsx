@@ -136,6 +136,7 @@ export function SamuelRuntimePage({
             actions: [],
             confidence: { score: 0, level: "baixa", rationale: "Erro de runtime" },
           },
+          aiGateway: { used: false },
           generatedAt: new Date().toISOString(),
         };
 

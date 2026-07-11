@@ -1,6 +1,7 @@
 export { runSamuelRuntime } from "./samuel-runtime.service";
 export type {
   RuntimeActionView,
+  RuntimeAIGatewayMetadata,
   RuntimeCompanyBrainView,
   RuntimeCouncilView,
   RuntimeDecisionView,

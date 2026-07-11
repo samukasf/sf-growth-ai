@@ -7,6 +7,8 @@ import {
   runExecutiveOrchestration,
 } from "@/features/samuel-ai/services/executive-orchestrator.service";
 
+import { generateNarrativeViaAIGateway } from "./ai-gateway-narrative.adapter";
+
 import type {
   RunSamuelRuntimeInput,
   RuntimeCompanyBrainView,
@@ -210,9 +212,23 @@ export async function runSamuelRuntime(
 
   await advancePhase("response");
   const brain = orchestratorResultToBrain(query, orchestratorResult);
-  const narrative =
+  const heuristicNarrative =
     councilResult.response ||
     generateOrchestratorResponse(brain, input.companyContext ?? undefined);
+  const gatewayResult = await generateNarrativeViaAIGateway({
+    organizationId,
+    companyId,
+    companyName,
+    query,
+    priorities: snapshot.priorities,
+    risks: snapshot.risks,
+    opportunities: snapshot.opportunities,
+    councilConsensus: councilResult.consensus.consolidatedSummary,
+    decisionRationale: councilResult.decision.rationale,
+    operation: input.aiGatewayOperation,
+  });
+  const narrative = gatewayResult?.narrative ?? heuristicNarrative;
+  const aiGateway = gatewayResult?.metadata ?? { used: false };
 
   const headline =
     query.toLowerCase().includes("empresa") || query.toLowerCase().includes("analise")
@@ -247,6 +263,7 @@ export async function runSamuelRuntime(
         rationale: orchestratorResult.confidence.rationale,
       },
     },
+    aiGateway,
     generatedAt: new Date().toISOString(),
   };
 }

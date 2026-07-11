@@ -73,6 +73,25 @@ export type RuntimeResponseView = {
   };
 };
 
+/**
+ * Metadata de observabilidade da chamada ao AI Gateway feita na fase
+ * `response`. `used: false` quando o Gateway não respondeu (sem provider
+ * configurado, timeout, erro) e a narrativa veio do fallback heurístico —
+ * nesse caso os demais campos não são preenchidos.
+ */
+export type RuntimeAIGatewayMetadata = {
+  used: boolean;
+  providerId?: string;
+  providerType?: string;
+  model?: string;
+  operation?: string;
+  promptTokens?: number;
+  completionTokens?: number;
+  estimatedCostUsd?: number;
+  latencyMs?: number;
+  fallbackUsed?: boolean;
+};
+
 /** Resposta estruturada produzida pelo Samuel Runtime (Orchestrator → Response). */
 export type RuntimeResponse = {
   query: string;
@@ -83,6 +102,7 @@ export type RuntimeResponse = {
   executiveCouncil: RuntimeCouncilView;
   decision: RuntimeDecisionView;
   response: RuntimeResponseView;
+  aiGateway: RuntimeAIGatewayMetadata;
   generatedAt: string;
 };
 
@@ -94,4 +114,11 @@ export type RunSamuelRuntimeInput = {
   companyContext?: import("@/services/executive-context.service").ExecutiveContext | null;
   animate?: boolean;
   onPhase?: (phase: RuntimePhase, pipeline: RuntimePipelineStep[]) => void;
+  /**
+   * Modo de execução do AI Gateway para a narrativa desta chamada
+   * (default: "reason"). Permite que o contexto do chamador (ex.: tipo de
+   * pergunta, organização) escolha um modo diferente sem alterar o núcleo
+   * do Gateway — ver `features/samuel-runtime/ai-gateway-operations.ts`.
+   */
+  aiGatewayOperation?: import("./ai-gateway-operations").SamuelAIOperation;
 };
