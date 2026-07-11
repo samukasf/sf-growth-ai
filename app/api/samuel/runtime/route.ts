@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { runSamuelRuntime } from "@/features/samuel-runtime";
+import { runSamuelRuntimeWithExecutionMemory } from "@/features/samuel-execution-memory";
 import {
   buildExecutiveContext,
   getFirstCompany,
@@ -13,6 +13,8 @@ export async function POST(request: Request) {
       companyId?: string;
       organizationId?: string;
       companyName?: string;
+      /** Aceito apenas como fallback de desenvolvimento — ver resolve-execution-user.ts */
+      userId?: string;
     };
 
     const query = body.query?.trim();
@@ -44,13 +46,15 @@ export async function POST(request: Request) {
       }
     }
 
-    const result = await runSamuelRuntime({
+    const result = await runSamuelRuntimeWithExecutionMemory({
       query,
       companyId,
       organizationId: body.organizationId ?? "default-org",
       companyName,
       companyContext,
       animate: false,
+      userId: body.userId,
+      authorizationHeader: request.headers.get("authorization"),
     });
 
     return NextResponse.json(result);
