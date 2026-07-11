@@ -6,39 +6,109 @@ import {
   orchestratorResultToBrain,
   runExecutiveOrchestration,
 } from "@/features/samuel-ai/services/executive-orchestrator.service";
+import {
+  emptyConversationMemorySummary,
+  getConversationMemoryStore,
+  renderConversationContext,
+  toConversationMemorySummary,
+} from "@/features/samuel-conversation-memory";
+import { classifyIntent } from "@/features/samuel-intent-router";
+import { createToolOrchestrator } from "@/features/samuel-tool-orchestrator";
 
 import { generateNarrativeViaAIGateway } from "./ai-gateway-narrative.adapter";
+import { createToolPlanner } from "./tool-planner";
+
+import type { ConversationState } from "@/features/samuel-conversation-memory";
 
 import type {
   RunSamuelRuntimeInput,
   RuntimeCompanyBrainView,
+  RuntimeConversationMemoryView,
   RuntimeCouncilView,
   RuntimeDecisionView,
   RuntimeMemoryView,
   RuntimePhase,
   RuntimePipelineStep,
   RuntimeResponse,
+  RuntimeToolExecutionView,
 } from "./types";
 
 const PIPELINE_DEFINITION: Array<{ id: RuntimePhase; label: string }> = [
+  { id: "intent", label: "Intent Router" },
+  { id: "conversation_memory", label: "Conversation Memory" },
   { id: "orchestrator", label: "Samuel Orchestrator" },
   { id: "memory", label: "Memory" },
   { id: "context", label: "Context" },
   { id: "company_brain", label: "Company Brain" },
   { id: "executive_council", label: "Executive Council" },
   { id: "decision", label: "Decision" },
+  { id: "tooling", label: "Tool Planning" },
   { id: "response", label: "Response" },
 ];
 
 const PHASE_DELAYS: Partial<Record<RuntimePhase, number>> = {
+  intent: 150,
+  conversation_memory: 100,
   orchestrator: 400,
   memory: 300,
   context: 300,
   company_brain: 500,
   executive_council: 600,
   decision: 400,
+  tooling: 150,
   response: 300,
 };
+
+/**
+ * Kill-switch da Sprint 80: permite desligar a fase de Tool Planning sem
+ * deploy (ex.: `SAMUEL_TOOL_CALLING_ENABLED=false`), revertendo o Samuel ao
+ * comportamento anterior a esta sprint — a fase ainda ocorre no pipeline
+ * (observabilidade), mas nenhuma ferramenta é planejada/executada.
+ */
+function isToolCallingEnabled(): boolean {
+  return process.env.SAMUEL_TOOL_CALLING_ENABLED !== "false";
+}
+
+/**
+ * Kill-switch da Sprint 81: desliga a leitura/escrita da Conversation
+ * Memory sem deploy. A fase `conversation_memory` continua no pipeline
+ * (observabilidade), mas nenhuma consulta/gravação ocorre — equivalente ao
+ * comportamento anterior a esta sprint.
+ */
+function isConversationMemoryEnabled(): boolean {
+  return process.env.SAMUEL_CONVERSATION_MEMORY_ENABLED !== "false";
+}
+
+/**
+ * Resumo determinístico e curto do resultado de uma ferramenta bem-sucedida,
+ * prefixado à narrativa final. Nunca é chamado em caso de erro/`attempted:
+ * false` — nesses casos a narrativa permanece idêntica à de antes desta
+ * sprint.
+ */
+function buildToolResultSummary(tooling: RuntimeToolExecutionView): string | null {
+  if (!tooling.attempted || tooling.status !== "success") return null;
+
+  switch (tooling.toolName) {
+    case "calculator": {
+      const output = tooling.output as { result?: number } | undefined;
+      return output?.result != null ? `🧮 Resultado do cálculo: ${output.result}.` : null;
+    }
+    case "date-time": {
+      const output = tooling.output as { value?: string } | undefined;
+      return output?.value ? `🕒 Data/hora atual: ${output.value}.` : null;
+    }
+    case "uuid": {
+      const output = tooling.output as { uuids?: string[] } | undefined;
+      return output?.uuids?.length ? `🆔 UUID gerado: ${output.uuids.join(", ")}.` : null;
+    }
+    case "json-formatter": {
+      const output = tooling.output as { formatted?: string } | undefined;
+      return output?.formatted ? `🧾 JSON formatado:\n${output.formatted}` : null;
+    }
+    default:
+      return null;
+  }
+}
 
 const ROLE_LABELS: Record<string, string> = {
   ceo: "CEO",
@@ -146,23 +216,62 @@ export async function runSamuelRuntime(
   const organizationId = input.organizationId ?? "default-org";
   const companyId = input.companyId ?? "default-company";
   const companyName = input.companyName ?? "sua empresa";
+  const conversationId = input.conversationId ?? `${organizationId}:${companyId}`;
   const query = input.query.trim();
   const pipeline = createPipeline();
   const shouldAnimate = input.animate !== false;
+  const conversationMemoryEnabled = isConversationMemoryEnabled();
+
+  /**
+   * Observabilidade (Sprint 76): rastreia a fase atualmente "em execução"
+   * para medir sua duração real. `advancePhase` finaliza a fase anterior
+   * (registrando `completedAt`/`durationMs` com o tempo decorrido desde seu
+   * início) antes de iniciar a próxima — assim a duração cobre o trabalho
+   * real da fase (não só o delay de animação), sem alterar a ordem, o
+   * conteúdo ou o resultado de nenhuma fase.
+   */
+  let activePhase: { id: RuntimePhase; startedAt: number } | null = null;
+
+  function finalizeActivePhase() {
+    if (!activePhase) return;
+    const step = pipeline.find((item) => item.id === activePhase!.id);
+    if (step) {
+      const completedAt = Date.now();
+      step.completedAt = new Date(completedAt).toISOString();
+      step.durationMs = completedAt - activePhase.startedAt;
+      step.status = "complete";
+    }
+    activePhase = null;
+  }
 
   async function advancePhase(phaseId: RuntimePhase) {
+    finalizeActivePhase();
+
     const step = pipeline.find((item) => item.id === phaseId);
     if (!step) return;
 
+    const startedAt = Date.now();
     step.status = "running";
+    step.startedAt = new Date(startedAt).toISOString();
+    activePhase = { id: phaseId, startedAt };
+
     input.onPhase?.(phaseId, pipeline.map((item) => ({ ...item })));
 
     if (shouldAnimate && PHASE_DELAYS[phaseId]) {
       await delay(PHASE_DELAYS[phaseId]!);
     }
-
-    step.status = "complete";
   }
+
+  await advancePhase("intent");
+  const intent = classifyIntent(query);
+
+  await advancePhase("conversation_memory");
+  const priorConversationState: ConversationState | null = conversationMemoryEnabled
+    ? getConversationMemoryStore().get(conversationId)
+    : null;
+  const conversationContext = priorConversationState
+    ? renderConversationContext(priorConversationState) ?? undefined
+    : undefined;
 
   await advancePhase("orchestrator");
   const orchestratorResult = runExecutiveOrchestration(query, input.companyContext);
@@ -210,6 +319,28 @@ export async function runSamuelRuntime(
   const decision = buildDecisionView(councilResult);
   const executiveCouncil = buildCouncilView(councilResult);
 
+  await advancePhase("tooling");
+  let tooling: RuntimeToolExecutionView = { attempted: false };
+  if (isToolCallingEnabled()) {
+    const toolPlan = createToolPlanner().plan(query);
+    if (toolPlan.selected) {
+      const toolResult = await createToolOrchestrator().execute(toolPlan.toolName, toolPlan.input, {
+        organizationId,
+        companyId,
+      });
+      tooling = {
+        attempted: true,
+        toolName: toolPlan.toolName,
+        reason: toolPlan.reason,
+        input: toolPlan.input,
+        output: toolResult.output,
+        status: toolResult.status,
+        error: toolResult.error,
+        durationMs: toolResult.durationMs,
+      };
+    }
+  }
+
   await advancePhase("response");
   const brain = orchestratorResultToBrain(query, orchestratorResult);
   const heuristicNarrative =
@@ -226,8 +357,11 @@ export async function runSamuelRuntime(
     councilConsensus: councilResult.consensus.consolidatedSummary,
     decisionRationale: councilResult.decision.rationale,
     operation: input.aiGatewayOperation,
+    conversationContext,
   });
-  const narrative = gatewayResult?.narrative ?? heuristicNarrative;
+  const baseNarrative = gatewayResult?.narrative ?? heuristicNarrative;
+  const toolResultSummary = buildToolResultSummary(tooling);
+  const narrative = toolResultSummary ? `${toolResultSummary}\n\n${baseNarrative}` : baseNarrative;
   const aiGateway = gatewayResult?.metadata ?? { used: false };
 
   const headline =
@@ -235,9 +369,37 @@ export async function runSamuelRuntime(
       ? `Análise de ${companyName} concluída`
       : "Análise executiva concluída";
 
+  let conversationMemory: RuntimeConversationMemoryView = emptyConversationMemorySummary(conversationId);
+  if (conversationMemoryEnabled) {
+    const updatedConversationState = getConversationMemoryStore().recordTurn({
+      conversationId,
+      organizationId,
+      companyId,
+      userMessage: query,
+      assistantMessage: narrative,
+      activeContextObjective: orchestratorResult.context.detectedObjective,
+      intent: { category: intent.category, confidence: intent.confidence, justification: intent.justification },
+      tool: tooling.attempted
+        ? {
+            toolName: tooling.toolName!,
+            status: tooling.status!,
+            output: tooling.output,
+            error: tooling.error,
+          }
+        : null,
+    });
+    conversationMemory = toConversationMemorySummary(updatedConversationState);
+  }
+
+  // Fecha a medição da última fase ("response"), que só termina aqui —
+  // depois da geração da narrativa, da chamada ao AI Gateway e da
+  // gravação da Conversation Memory.
+  finalizeActivePhase();
+
   return {
     query,
     pipeline: pipeline.map((item) => ({ ...item })),
+    intent,
     memory,
     context: {
       objective: orchestratorResult.context.detectedObjective,
@@ -246,6 +408,8 @@ export async function runSamuelRuntime(
     companyBrain,
     executiveCouncil,
     decision,
+    tooling,
+    conversationMemory,
     response: {
       headline,
       narrative,

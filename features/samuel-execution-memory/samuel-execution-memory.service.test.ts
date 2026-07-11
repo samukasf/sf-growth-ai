@@ -27,6 +27,7 @@ function buildRuntimeResponse(overrides: Record<string, unknown> = {}) {
     companyBrain: { status: "active", headline: "ok", facts: [], confidence: 80 },
     executiveCouncil: { status: "ready", memberCount: 3, consensus: "consenso", specialists: [] },
     decision: { title: "Decisão", rationale: "racional", priority: "alta", nextAction: "agir", confidence: 80 },
+    tooling: { attempted: false },
     response: {
       headline: "Análise concluída",
       narrative: "Narrativa final.",
@@ -100,12 +101,36 @@ describe("runSamuelRuntimeWithExecutionMemory", () => {
         outputTokens: 50,
         estimatedCost: 0.005,
         finalResponse: "Narrativa final.",
-        toolsExecuted: response.pipeline,
+        toolsExecuted: response.tooling,
         memoriesUsed: response.memory,
         decision: response.decision,
         status: "success",
         error: null,
       }),
+    );
+  });
+
+  it("persiste o resultado real do Tool Orchestrator em toolsExecuted quando uma ferramenta é usada (Sprint 80)", async () => {
+    const toolingResult = {
+      attempted: true,
+      toolName: "calculator",
+      reason: "expressão aritmética reconhecida",
+      input: { a: 856, operator: "*", b: 347 },
+      output: { result: 297032 },
+      status: "success",
+      durationMs: 3,
+    };
+    const response = buildRuntimeResponse({ tooling: toolingResult });
+    runSamuelRuntimeMock.mockResolvedValue(response);
+
+    await runSamuelRuntimeWithExecutionMemory({
+      query: "Quanto é 856 × 347?",
+      organizationId: "org-1",
+      companyId: "company-1",
+    });
+
+    expect(saveExecutionMemoryMock).toHaveBeenCalledWith(
+      expect.objectContaining({ toolsExecuted: toolingResult }),
     );
   });
 

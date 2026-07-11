@@ -51,7 +51,7 @@ export async function runSamuelRuntimeWithExecutionMemory(
         summary: result.response.actionPlanSummary,
         actions: result.response.actions,
       },
-      toolsExecuted: result.pipeline,
+      toolsExecuted: result.tooling,
       finalResponse: result.response.narrative,
       inputTokens: result.aiGateway.promptTokens ?? null,
       outputTokens: result.aiGateway.completionTokens ?? null,

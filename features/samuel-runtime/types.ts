@@ -1,10 +1,13 @@
 export type RuntimePhase =
+  | "intent"
+  | "conversation_memory"
   | "orchestrator"
   | "memory"
   | "context"
   | "company_brain"
   | "executive_council"
   | "decision"
+  | "tooling"
   | "response";
 
 export type RuntimePhaseStatus = "pending" | "running" | "complete";
@@ -13,6 +16,21 @@ export type RuntimePipelineStep = {
   id: RuntimePhase;
   label: string;
   status: RuntimePhaseStatus;
+  /**
+   * Observabilidade (Sprint 76) — timestamp ISO de início real da fase
+   * (não é um valor animado/simulado; reflete `Date.now()` no momento em
+   * que a fase começou a ser executada).
+   */
+  startedAt?: string;
+  /** Observabilidade (Sprint 76) — timestamp ISO de conclusão real da fase. */
+  completedAt?: string;
+  /**
+   * Observabilidade (Sprint 76) — duração real em ms (`completedAt -
+   * startedAt`). Campo aditivo, não afeta nenhuma decisão do Samuel; serve
+   * de base para futuros Performance Dashboard, Bottleneck Analysis, AI
+   * Cost Analytics, Runtime Optimization e Executive Analytics.
+   */
+  durationMs?: number;
 };
 
 export type RuntimeMemoryView = {
@@ -92,15 +110,58 @@ export type RuntimeAIGatewayMetadata = {
   fallbackUsed?: boolean;
 };
 
-/** Resposta estruturada produzida pelo Samuel Runtime (Orchestrator → Response). */
+/**
+ * Resultado do Intent Router (`@/features/samuel-intent-router`), a
+ * primeira fase do pipeline. Apenas classificação — nenhuma fase
+ * subsequente altera seu comportamento com base neste campo nesta sprint;
+ * ele existe para observabilidade e para servir de base a decisões futuras.
+ */
+export type RuntimeIntentView =
+  import("@/features/samuel-intent-router").IntentClassificationResult;
+
+/**
+ * Visão pública da memória da conversa ATIVA (Sprint 81) — apenas leitura,
+ * derivada do `ConversationState` estruturado guardado em
+ * `@/features/samuel-conversation-memory`. Não é memória permanente do
+ * usuário; reflete só a conversa em curso.
+ */
+export type RuntimeConversationMemoryView =
+  import("@/features/samuel-conversation-memory").ConversationMemorySummary;
+
+/**
+ * Resultado da fase opcional de Tool Planning (Sprint 80), executada entre
+ * `decision` e `response`. `attempted: false` quando o `ToolPlanner` não
+ * reconheceu nenhuma ferramenta necessária para a pergunta — nesse caso o
+ * restante do pipeline segue exatamente como antes desta sprint. Quando uma
+ * ferramenta é selecionada, sua execução passa exclusivamente pelo
+ * `ToolOrchestrator` já existente (`@/features/samuel-tool-orchestrator`);
+ * este tipo apenas espelha, para observabilidade, o que o Orchestrator
+ * devolveu (nunca lança — falhas aparecem em `status`/`error`).
+ */
+export type RuntimeToolExecutionView = {
+  attempted: boolean;
+  toolName?: string;
+  /** Justificativa determinística de por que o ToolPlanner escolheu esta ferramenta. */
+  reason?: string;
+  input?: Record<string, unknown>;
+  output?: unknown;
+  status?: "success" | "error";
+  error?: string;
+  durationMs?: number;
+};
+
+/** Resposta estruturada produzida pelo Samuel Runtime (Intent → Response). */
 export type RuntimeResponse = {
   query: string;
   pipeline: RuntimePipelineStep[];
+  intent: RuntimeIntentView;
   memory: RuntimeMemoryView;
   context: RuntimeContextView;
   companyBrain: RuntimeCompanyBrainView;
   executiveCouncil: RuntimeCouncilView;
   decision: RuntimeDecisionView;
+  tooling: RuntimeToolExecutionView;
+  conversationMemory: RuntimeConversationMemoryView;
   response: RuntimeResponseView;
   aiGateway: RuntimeAIGatewayMetadata;
   generatedAt: string;
@@ -111,6 +172,13 @@ export type RunSamuelRuntimeInput = {
   organizationId?: string;
   companyId?: string;
   companyName?: string;
+  /**
+   * Identifica a conversa ativa para a memória conversacional (Sprint 81).
+   * Sem ele, cai no fallback `${organizationId}:${companyId}` — cada
+   * chamador (UI, Playground) deve gerar e reutilizar um id estável por
+   * sessão de chat para ter memória real entre turnos.
+   */
+  conversationId?: string;
   companyContext?: import("@/services/executive-context.service").ExecutiveContext | null;
   animate?: boolean;
   onPhase?: (phase: RuntimePhase, pipeline: RuntimePipelineStep[]) => void;

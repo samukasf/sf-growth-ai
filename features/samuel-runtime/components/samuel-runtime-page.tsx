@@ -41,6 +41,12 @@ export function SamuelRuntimePage({
   const [input, setInput] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(() => new Date().toISOString());
+  /**
+   * Identifica esta sessão de chat como uma única "conversa ativa" para a
+   * Conversation Memory (Sprint 81) — gerado uma vez por carregamento da
+   * página, reutilizado em toda mensagem enviada nesta sessão.
+   */
+  const [conversationId] = useState(() => crypto.randomUUID());
 
   const hasConversation = entries.length > 0;
 
@@ -86,6 +92,7 @@ export function SamuelRuntimePage({
             companyId,
             companyName,
             organizationId,
+            conversationId,
           }),
         });
 
@@ -107,6 +114,11 @@ export function SamuelRuntimePage({
         const fallbackRuntime: RuntimeResponse = {
           query: trimmed,
           pipeline: [],
+          intent: {
+            category: "GENERAL_KNOWLEDGE",
+            confidence: 0,
+            justification: "Intent Router indisponível.",
+          },
           memory: { summary: "Memória indisponível.", insights: [] },
           context: { objective: "Análise estratégica", fields: [] },
           companyBrain: {
@@ -127,6 +139,17 @@ export function SamuelRuntimePage({
             priority: "—",
             nextAction: "Tente enviar novamente em instantes.",
             confidence: 0,
+          },
+          tooling: { attempted: false },
+          conversationMemory: {
+            conversationId,
+            turnCount: 0,
+            activeContext: null,
+            entities: [],
+            lastIntent: null,
+            lastTool: null,
+            lastResult: null,
+            autoSummary: null,
           },
           response: {
             headline: "Análise indisponível",
@@ -153,7 +176,7 @@ export function SamuelRuntimePage({
         setIsAnalyzing(false);
       }
     },
-    [companyId, companyName, isAnalyzing, organizationId],
+    [companyId, companyName, conversationId, isAnalyzing, organizationId],
   );
 
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {

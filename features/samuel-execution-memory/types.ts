@@ -16,6 +16,13 @@ export type ExecutionMemoryRecord = {
   memoriesUsed: unknown;
   decision: unknown;
   plan: unknown;
+  /**
+   * Ferramenta planejada/executada pelo Tool Orchestrator nesta execução
+   * (Sprint 80) — espelha `RuntimeResponse["tooling"]`. Antes da Sprint 80
+   * este campo guardava o `pipeline` de fases como placeholder; passou a
+   * refletir o nome real da coluna (`tools_executed`) agora que o Tool
+   * Orchestrator está integrado ao Samuel Runtime.
+   */
   toolsExecuted: unknown;
   finalResponse: string | null;
   inputTokens: number | null;

@@ -37,6 +37,13 @@ export type GenerateNarrativeViaGatewayInput = {
   decisionRationale: string;
   /** Modo de execução do Gateway para esta chamada. Default: "reason". */
   operation?: SamuelAIOperation;
+  /**
+   * Memória da conversa ativa (Sprint 81), já renderizada como texto por
+   * `renderConversationContext`. `undefined` quando não há memória
+   * relevante (conversa nova) — é assim que o Samuel "consulta" a memória
+   * antes de responder, sem acoplar este adapter ao módulo de memória.
+   */
+  conversationContext?: string;
 };
 
 export type AIGatewayNarrativeResult = {
@@ -58,6 +65,7 @@ function buildExecutivePrompt(input: GenerateNarrativeViaGatewayInput): string {
     `Você é Samuel, o orquestrador executivo do SF Growth AI, respondendo em português para "${input.companyName}".`,
     "",
     `Pergunta do usuário: ${input.query}`,
+    input.conversationContext ? `Memória da conversa ativa:\n${input.conversationContext}` : "",
     input.priorities.length > 0 ? `Prioridades identificadas pelo Company Brain: ${input.priorities.join("; ")}` : "",
     input.risks.length > 0 ? `Riscos identificados pelo Company Brain: ${input.risks.join("; ")}` : "",
     input.opportunities.length > 0

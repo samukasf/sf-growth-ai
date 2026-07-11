@@ -15,6 +15,8 @@ export async function POST(request: Request) {
       companyName?: string;
       /** Aceito apenas como fallback de desenvolvimento — ver resolve-execution-user.ts */
       userId?: string;
+      /** Identifica a conversa ativa para a Conversation Memory (Sprint 81). */
+      conversationId?: string;
     };
 
     const query = body.query?.trim();
@@ -55,6 +57,7 @@ export async function POST(request: Request) {
       animate: false,
       userId: body.userId,
       authorizationHeader: request.headers.get("authorization"),
+      conversationId: body.conversationId,
     });
 
     return NextResponse.json(result);
