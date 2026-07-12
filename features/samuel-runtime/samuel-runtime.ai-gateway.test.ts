@@ -118,7 +118,7 @@ describe("runSamuelRuntime — integração com AI Gateway", () => {
       animate: false,
     });
 
-    expect(result.pipeline).toHaveLength(10);
+    expect(result.pipeline).toHaveLength(11);
     expect(result.pipeline.every((step) => step.status === "complete")).toBe(true);
     expect(result.companyBrain.status).toBe("active");
     expect(result.executiveCouncil.status).toBe("ready");

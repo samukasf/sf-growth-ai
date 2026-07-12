@@ -6,6 +6,7 @@ export type {
   RuntimeConversationMemoryView,
   RuntimeCouncilView,
   RuntimeDecisionView,
+  RuntimeGoalPlanView,
   RuntimeIntentView,
   RuntimeMemoryView,
   RuntimePhase,

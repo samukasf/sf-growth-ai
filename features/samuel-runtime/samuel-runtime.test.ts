@@ -13,7 +13,7 @@ describe("runSamuelRuntime", () => {
     });
 
     expect(result.query).toBe("Analise minha empresa");
-    expect(result.pipeline).toHaveLength(10);
+    expect(result.pipeline).toHaveLength(11);
     expect(result.pipeline.every((step) => step.status === "complete")).toBe(true);
     expect(result.intent.category).toBeTruthy();
     expect(result.intent.confidence).toBeGreaterThan(0);
@@ -40,6 +40,7 @@ describe("runSamuelRuntime", () => {
 
     expect(phases).toEqual([
       "intent",
+      "goal_planning",
       "conversation_memory",
       "orchestrator",
       "memory",

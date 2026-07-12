@@ -13,6 +13,7 @@ import {
   toConversationMemorySummary,
 } from "@/features/samuel-conversation-memory";
 import { classifyIntent } from "@/features/samuel-intent-router";
+import { createGoalPlanner } from "@/features/samuel-goal-planner";
 import { createToolOrchestrator } from "@/features/samuel-tool-orchestrator";
 
 import { generateNarrativeViaAIGateway } from "./ai-gateway-narrative.adapter";
@@ -26,6 +27,7 @@ import type {
   RuntimeConversationMemoryView,
   RuntimeCouncilView,
   RuntimeDecisionView,
+  RuntimeGoalPlanView,
   RuntimeMemoryView,
   RuntimePhase,
   RuntimePipelineStep,
@@ -35,6 +37,7 @@ import type {
 
 const PIPELINE_DEFINITION: Array<{ id: RuntimePhase; label: string }> = [
   { id: "intent", label: "Intent Router" },
+  { id: "goal_planning", label: "Goal Planner" },
   { id: "conversation_memory", label: "Conversation Memory" },
   { id: "orchestrator", label: "Samuel Orchestrator" },
   { id: "memory", label: "Memory" },
@@ -48,6 +51,7 @@ const PIPELINE_DEFINITION: Array<{ id: RuntimePhase; label: string }> = [
 
 const PHASE_DELAYS: Partial<Record<RuntimePhase, number>> = {
   intent: 150,
+  goal_planning: 100,
   conversation_memory: 100,
   orchestrator: 400,
   memory: 300,
@@ -77,6 +81,20 @@ function isToolCallingEnabled(): boolean {
  */
 function isConversationMemoryEnabled(): boolean {
   return process.env.SAMUEL_CONVERSATION_MEMORY_ENABLED !== "false";
+}
+
+/**
+ * Kill-switch da Sprint 82: desliga o planejamento de objetivo sem deploy. A
+ * fase `goal_planning` continua no pipeline (observabilidade), mas devolve
+ * um plano vazio — nenhuma fase downstream depende do Goal Plan nesta
+ * sprint, então desligá-lo não altera o comportamento de mais nada.
+ */
+function isGoalPlannerEnabled(): boolean {
+  return process.env.SAMUEL_GOAL_PLANNER_ENABLED !== "false";
+}
+
+function emptyGoalPlan(finalObjective: string): RuntimeGoalPlanView {
+  return { finalObjective, steps: [], priority: "low" };
 }
 
 /**
@@ -265,6 +283,15 @@ export async function runSamuelRuntime(
   await advancePhase("intent");
   const intent = classifyIntent(query);
 
+  await advancePhase("goal_planning");
+  const goalPlan: RuntimeGoalPlanView = isGoalPlannerEnabled()
+    ? createGoalPlanner().plan({
+        query,
+        intentCategory: intent.category,
+        intentConfidence: intent.confidence,
+      })
+    : emptyGoalPlan(query);
+
   await advancePhase("conversation_memory");
   const priorConversationState: ConversationState | null = conversationMemoryEnabled
     ? getConversationMemoryStore().get(conversationId)
@@ -400,6 +427,7 @@ export async function runSamuelRuntime(
     query,
     pipeline: pipeline.map((item) => ({ ...item })),
     intent,
+    goalPlan,
     memory,
     context: {
       objective: orchestratorResult.context.detectedObjective,

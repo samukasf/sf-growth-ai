@@ -1,5 +1,6 @@
 export type RuntimePhase =
   | "intent"
+  | "goal_planning"
   | "conversation_memory"
   | "orchestrator"
   | "memory"
@@ -129,6 +130,15 @@ export type RuntimeConversationMemoryView =
   import("@/features/samuel-conversation-memory").ConversationMemorySummary;
 
 /**
+ * Resultado do Goal Planner (`@/features/samuel-goal-planner`, Sprint 82),
+ * executado imediatamente após o Intent Router e antes de qualquer fase de
+ * decisão. Apenas planejamento — nenhuma etapa aqui é executada; o plano
+ * existe para observabilidade e para servir de base a decisões futuras.
+ */
+export type RuntimeGoalPlanView =
+  import("@/features/samuel-goal-planner").GoalPlan;
+
+/**
  * Resultado da fase opcional de Tool Planning (Sprint 80), executada entre
  * `decision` e `response`. `attempted: false` quando o `ToolPlanner` não
  * reconheceu nenhuma ferramenta necessária para a pergunta — nesse caso o
@@ -155,6 +165,7 @@ export type RuntimeResponse = {
   query: string;
   pipeline: RuntimePipelineStep[];
   intent: RuntimeIntentView;
+  goalPlan: RuntimeGoalPlanView;
   memory: RuntimeMemoryView;
   context: RuntimeContextView;
   companyBrain: RuntimeCompanyBrainView;

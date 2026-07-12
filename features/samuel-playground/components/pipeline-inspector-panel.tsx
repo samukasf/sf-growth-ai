@@ -24,6 +24,23 @@ const INTENT_BADGE_VARIANT: Record<RuntimeResponse["intent"]["category"], BadgeV
   CREATION: "success",
 };
 
+const GOAL_PLAN_PRIORITY_BADGE_VARIANT: Record<
+  RuntimeResponse["goalPlan"]["priority"],
+  BadgeVariant
+> = {
+  critical: "warning",
+  high: "accent",
+  medium: "default",
+  low: "muted",
+};
+
+const GOAL_PLAN_PRIORITY_LABEL: Record<RuntimeResponse["goalPlan"]["priority"], string> = {
+  critical: "crítica",
+  high: "alta",
+  medium: "média",
+  low: "baixa",
+};
+
 function formatMs(ms?: number): string {
   if (ms == null) return "—";
   return ms < 1000 ? `${Math.round(ms)} ms` : `${(ms / 1000).toFixed(2)} s`;
@@ -103,6 +120,51 @@ export function PipelineInspectorPanel({ runtime, clientLatencyMs }: PipelineIns
       >
         <KeyValue label="Confiança" value={formatFraction(runtime.intent.confidence)} />
         <p className="mt-2 text-sm text-foreground/80">{runtime.intent.justification}</p>
+      </InspectorSection>
+
+      <InspectorSection
+        title="Goal Planner"
+        badge={
+          <StatusBadge
+            label={`Prioridade ${GOAL_PLAN_PRIORITY_LABEL[runtime.goalPlan.priority]}`}
+            variant={GOAL_PLAN_PRIORITY_BADGE_VARIANT[runtime.goalPlan.priority] ?? "default"}
+          />
+        }
+      >
+        <KeyValue label="Objetivo final" value={runtime.goalPlan.finalObjective} />
+        {runtime.goalPlan.steps.length > 0 ? (
+          <ul className="mt-2 space-y-2">
+            {runtime.goalPlan.steps.map((step, index) => (
+              <li key={step.id} className="rounded-md border border-border/60 p-2 text-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium text-foreground">
+                    {index + 1}. {step.title}
+                  </span>
+                  <span className="text-xs text-muted">
+                    {GOAL_PLAN_PRIORITY_LABEL[step.priority]}
+                  </span>
+                </div>
+                <p className="mt-1 text-foreground/80">{step.description}</p>
+                <p className="mt-1 text-xs text-muted">
+                  Depende de:{" "}
+                  {step.dependsOn.length > 0
+                    ? step.dependsOn
+                        .map(
+                          (dependencyId) =>
+                            runtime.goalPlan.steps.find((s) => s.id === dependencyId)?.title ??
+                            dependencyId,
+                        )
+                        .join(", ")
+                    : "nenhuma etapa (pode começar imediatamente)"}
+                </p>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-2 text-sm text-muted">
+            Nenhuma etapa planejada (Goal Planner desativado via kill-switch).
+          </p>
+        )}
       </InspectorSection>
 
       <InspectorSection title="Contexto utilizado">

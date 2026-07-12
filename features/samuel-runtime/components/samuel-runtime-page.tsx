@@ -119,6 +119,7 @@ export function SamuelRuntimePage({
             confidence: 0,
             justification: "Intent Router indisponível.",
           },
+          goalPlan: { finalObjective: trimmed, steps: [], priority: "low" },
           memory: { summary: "Memória indisponível.", insights: [] },
           context: { objective: "Análise estratégica", fields: [] },
           companyBrain: {
