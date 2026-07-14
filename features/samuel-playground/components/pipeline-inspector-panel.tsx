@@ -311,6 +311,89 @@ export function PipelineInspectorPanel({ runtime, clientLatencyMs }: PipelineIns
       </InspectorSection>
 
       <InspectorSection
+        title="Multi-Tool Task"
+        badge={
+          <StatusBadge
+            label={
+              !runtime.multiToolTask.enabled
+                ? "Desligado"
+                : !runtime.multiToolTask.attempted
+                  ? "Nenhuma tarefa multi-tool"
+                  : runtime.multiToolTask.overallStatus === "success"
+                    ? "Sucesso"
+                    : runtime.multiToolTask.overallStatus === "partial"
+                      ? "Parcial"
+                      : "Falhou"
+            }
+            variant={
+              !runtime.multiToolTask.enabled || !runtime.multiToolTask.attempted
+                ? "muted"
+                : runtime.multiToolTask.overallStatus === "success"
+                  ? "success"
+                  : runtime.multiToolTask.overallStatus === "partial"
+                    ? "warning"
+                    : "warning"
+            }
+          />
+        }
+      >
+        {!runtime.multiToolTask.enabled ? (
+          <p className="text-sm text-muted">
+            Multi-Tool Task Orchestrator desligado (`SAMUEL_MULTI_TOOL_TASK_ORCHESTRATOR_ENABLED=false`).
+          </p>
+        ) : !runtime.multiToolTask.attempted ? (
+          <p className="text-sm text-muted">
+            Nenhuma tarefa multi-ferramenta foi planejada para esta pergunta.
+          </p>
+        ) : (
+          <>
+            <KeyValue label="Resumo do plano" value={runtime.multiToolTask.summary ?? "—"} />
+            <KeyValue label="Status geral" value={runtime.multiToolTask.overallStatus ?? "—"} />
+            <KeyValue label="Duração total" value={formatMs(runtime.multiToolTask.totalDurationMs)} />
+            <p className="mt-3 text-xs text-muted">Sequência de execução:</p>
+            <ol className="mt-2 space-y-2">
+              {(runtime.multiToolTask.steps ?? []).map((step, index) => (
+                <li
+                  key={step.id}
+                  className="rounded-md border border-border/60 bg-white/[0.02] px-3 py-2 text-sm"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium text-foreground">
+                      {index + 1}. {step.toolName}
+                      {step.actionId ? ` (${step.actionId})` : ""}
+                    </span>
+                    <StatusBadge
+                      label={
+                        step.status === "success"
+                          ? "Sucesso"
+                          : step.status === "skipped"
+                            ? "Ignorada"
+                            : step.status === "error"
+                              ? "Erro"
+                              : "Pendente"
+                      }
+                      variant={
+                        step.status === "success"
+                          ? "success"
+                          : step.status === "skipped"
+                            ? "muted"
+                            : step.status === "error"
+                              ? "warning"
+                              : "default"
+                      }
+                    />
+                  </div>
+                  <p className="mt-1 text-xs text-muted">{step.reason}</p>
+                  <p className="mt-1 text-xs text-foreground/70">Duração: {formatMs(step.durationMs)}</p>
+                  {step.error ? <p className="mt-1 text-xs text-amber-400">{step.error}</p> : null}
+                </li>
+              ))}
+            </ol>
+          </>
+        )}
+      </InspectorSection>
+
+      <InspectorSection
         title="Tool Execution"
         badge={
           <StatusBadge
@@ -336,6 +419,60 @@ export function PipelineInspectorPanel({ runtime, clientLatencyMs }: PipelineIns
             <KeyValue label="Ferramenta selecionada" value={runtime.tooling.toolName ?? "—"} />
             <KeyValue label="Duração" value={formatMs(runtime.tooling.durationMs)} />
             <KeyValue label="Status" value={runtime.tooling.status === "success" ? "Sucesso" : "Erro"} />
+            {runtime.tooling.toolName === "google-calendar" && runtime.tooling.status === "success" ? (
+              <>
+                <KeyValue
+                  label="Ação Calendar"
+                  value={String((runtime.tooling.input as { actionId?: string } | undefined)?.actionId ?? "—")}
+                />
+                <KeyValue
+                  label="Eventos retornados"
+                  value={String(
+                    (runtime.tooling.output as { data?: { eventCount?: number } } | undefined)?.data
+                      ?.eventCount ?? "—",
+                  )}
+                />
+              </>
+            ) : null}
+            {runtime.tooling.toolName === "google-contacts" && runtime.tooling.status === "success" ? (
+              <>
+                <KeyValue
+                  label="Ação Contacts"
+                  value={String((runtime.tooling.input as { actionId?: string } | undefined)?.actionId ?? "—")}
+                />
+                <KeyValue
+                  label="Contatos retornados"
+                  value={String(
+                    (runtime.tooling.output as { data?: { contactCount?: number } } | undefined)?.data
+                      ?.contactCount ?? "—",
+                  )}
+                />
+              </>
+            ) : null}
+            {runtime.tooling.toolName === "google-drive" && runtime.tooling.status === "success" ? (
+              <>
+                <KeyValue
+                  label="Ação Drive"
+                  value={String((runtime.tooling.input as { actionId?: string } | undefined)?.actionId ?? "—")}
+                />
+                <KeyValue
+                  label="Arquivos retornados"
+                  value={String(
+                    (runtime.tooling.output as { data?: { fileCount?: number } } | undefined)?.data
+                      ?.fileCount ?? "—",
+                  )}
+                />
+                <KeyValue
+                  label="Conteúdo lido"
+                  value={
+                    (runtime.tooling.output as { data?: { hasContent?: boolean } } | undefined)?.data
+                      ?.hasContent
+                      ? "Sim"
+                      : "Não"
+                  }
+                />
+              </>
+            ) : null}
             <p className="mt-2 text-sm text-foreground/80">
               <span className="text-muted">Motivo da seleção: </span>
               {runtime.tooling.reason}

@@ -142,6 +142,7 @@ export function SamuelRuntimePage({
             confidence: 0,
           },
           tooling: { attempted: false },
+          multiToolTask: { enabled: false, attempted: false },
           conversationMemory: {
             conversationId,
             turnCount: 0,

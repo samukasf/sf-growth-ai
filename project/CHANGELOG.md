@@ -9,7 +9,7 @@ Registrar mudanças relevantes do projeto por versão e data: features, correç�
 | Campo | Valor |
 |-------|-------|
 | **Status** | Ativo |
-| **Última atualização** | 2026-07-11 |
+| **Última atualização** | 2026-07-14 |
 | **Responsável** | Engenharia |
 
 ---
@@ -17,6 +17,28 @@ Registrar mudanças relevantes do projeto por versão e data: features, correç�
 ## [Unreleased]
 
 ### Added
+
+- **Relatório técnico completo**: `docs/RELATORIO_TECNICO_SF_GROWTH_AI.md`
+- **Google OAuth unificado** (Sprint 86): Gmail, Calendar, Contacts, Drive
+- Migration `009_google_oauth_connections` + `lib/supabase/service-client.ts`
+- Samuel tools: Gmail, Google Calendar, Contacts, Drive, Supabase Query
+- Multi-Tool Task Orchestrator (fluxo reunião + e-mail)
+- Tool Interpreter para contexto LLM a partir de resultados de tools
+- Adapters Supabase para Company Brain (`supabase-data-source-adapters`)
+- Rotas debug: `/debug/gmail-connect`; APIs `/api/integrations/gmail/*`
+- Testes: 59 arquivos Vitest cobrindo runtime, tools e integrações Google
+
+### Changed
+
+- `PROJECT_STATE.md` atualizado com situação real (build/lint/test)
+- Samuel Runtime: pipeline expandido com tooling Google e multi-tool
+- `.env.example`: variáveis OAuth Google e kill-switches Samuel
+
+### Known issues
+
+- 2 testes PDF timeout em `features/google-drive/`
+- Chat `/samuel-ai` ainda simulado (não usa `/api/samuel/runtime`)
+- Branch local divergiu de `origin/main` (15 ahead / 34 behind) — merge pendente
 
 - Estrutura **Project Operating System**: `docs/`, `specs/`, `project/`
 - Documentos oficiais: VISION, PRODUCT, ARCHITECTURE, DESIGN_SYSTEM, ROADMAP

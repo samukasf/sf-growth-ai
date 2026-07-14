@@ -9,6 +9,8 @@ export type {
   RuntimeGoalPlanView,
   RuntimeIntentView,
   RuntimeMemoryView,
+  RuntimeMultiToolStepView,
+  RuntimeMultiToolTaskView,
   RuntimePhase,
   RuntimePhaseStatus,
   RuntimePipelineStep,

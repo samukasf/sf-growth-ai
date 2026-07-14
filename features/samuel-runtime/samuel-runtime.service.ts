@@ -14,7 +14,14 @@ import {
 } from "@/features/samuel-conversation-memory";
 import { classifyIntent } from "@/features/samuel-intent-router";
 import { createGoalPlanner } from "@/features/samuel-goal-planner";
+import {
+  createMultiToolTaskOrchestrator,
+  isMultiToolTaskOrchestratorEnabled,
+  planMultiToolTask,
+} from "@/features/samuel-multi-tool-task-orchestrator";
+import type { MultiToolTaskExecutionResult } from "@/features/samuel-multi-tool-task-orchestrator";
 import { createToolOrchestrator } from "@/features/samuel-tool-orchestrator";
+import { interpretMultiToolTaskResults, interpretToolResult } from "@/features/samuel-tool-interpreter";
 
 import { generateNarrativeViaAIGateway } from "./ai-gateway-narrative.adapter";
 import { createToolPlanner } from "./tool-planner";
@@ -29,6 +36,7 @@ import type {
   RuntimeDecisionView,
   RuntimeGoalPlanView,
   RuntimeMemoryView,
+  RuntimeMultiToolTaskView,
   RuntimePhase,
   RuntimePipelineStep,
   RuntimeResponse,
@@ -97,11 +105,33 @@ function emptyGoalPlan(finalObjective: string): RuntimeGoalPlanView {
   return { finalObjective, steps: [], priority: "low" };
 }
 
+function buildMultiToolResultSummary(multiToolTask: RuntimeMultiToolTaskView): string | null {
+  if (!multiToolTask.attempted || !multiToolTask.steps?.length) return null;
+
+  const lines = multiToolTask.steps
+    .filter((step) => step.status === "success")
+    .map((step) => {
+      switch (step.toolName) {
+        case "google-contacts":
+          return "👤 Contato consultado com sucesso.";
+        case "google-calendar":
+          return "📅 Evento criado no calendário.";
+        case "gmail":
+          return "📧 Convite enviado por e-mail.";
+        default:
+          return `✓ ${step.toolName}: concluído.`;
+      }
+    });
+
+  if (lines.length === 0) return null;
+  return lines.join("\n");
+}
+
 /**
  * Resumo determinístico e curto do resultado de uma ferramenta bem-sucedida,
- * prefixado à narrativa final. Nunca é chamado em caso de erro/`attempted:
- * false` — nesses casos a narrativa permanece idêntica à de antes desta
- * sprint.
+ * prefixado à narrativa final quando o Tool Interpreter está desligado.
+ * Nunca é chamado em caso de erro/`attempted: false` — nesses casos a
+ * narrativa permanece idêntica à de antes desta sprint.
  */
 function buildToolResultSummary(tooling: RuntimeToolExecutionView): string | null {
   if (!tooling.attempted || tooling.status !== "success") return null;
@@ -122,6 +152,41 @@ function buildToolResultSummary(tooling: RuntimeToolExecutionView): string | nul
     case "json-formatter": {
       const output = tooling.output as { formatted?: string } | undefined;
       return output?.formatted ? `🧾 JSON formatado:\n${output.formatted}` : null;
+    }
+    case "supabase-query": {
+      const output = tooling.output as { summary?: string } | undefined;
+      return output?.summary ? `📊 ${output.summary}` : null;
+    }
+    case "gmail": {
+      const output = tooling.output as { summary?: string; data?: { preview?: string } } | undefined;
+      if (!output?.summary) return null;
+      return output.data?.preview
+        ? `📧 ${output.summary}\n${output.data.preview}`
+        : `📧 ${output.summary}`;
+    }
+    case "google-calendar": {
+      const output = tooling.output as { summary?: string; data?: { preview?: string } } | undefined;
+      if (!output?.summary) return null;
+      return output.data?.preview
+        ? `📅 ${output.summary}\n${output.data.preview}`
+        : `📅 ${output.summary}`;
+    }
+    case "google-contacts": {
+      const output = tooling.output as { summary?: string; data?: { preview?: string } } | undefined;
+      if (!output?.summary) return null;
+      return output.data?.preview
+        ? `👤 ${output.summary}\n${output.data.preview}`
+        : `👤 ${output.summary}`;
+    }
+    case "google-drive": {
+      const output = tooling.output as {
+        summary?: string;
+        data?: { preview?: string; hasContent?: boolean };
+      } | undefined;
+      if (!output?.summary) return null;
+      return output.data?.preview
+        ? `📁 ${output.summary}\n${output.data.preview}`
+        : `📁 ${output.summary}`;
     }
     default:
       return null;
@@ -348,23 +413,58 @@ export async function runSamuelRuntime(
 
   await advancePhase("tooling");
   let tooling: RuntimeToolExecutionView = { attempted: false };
+  let multiToolTask: RuntimeMultiToolTaskView = {
+    enabled: isMultiToolTaskOrchestratorEnabled(),
+    attempted: false,
+  };
+  let multiToolExecution: MultiToolTaskExecutionResult | null = null;
+
   if (isToolCallingEnabled()) {
-    const toolPlan = createToolPlanner().plan(query);
-    if (toolPlan.selected) {
-      const toolResult = await createToolOrchestrator().execute(toolPlan.toolName, toolPlan.input, {
-        organizationId,
-        companyId,
-      });
-      tooling = {
-        attempted: true,
-        toolName: toolPlan.toolName,
-        reason: toolPlan.reason,
-        input: toolPlan.input,
-        output: toolResult.output,
-        status: toolResult.status,
-        error: toolResult.error,
-        durationMs: toolResult.durationMs,
-      };
+    const multiToolEnabled = isMultiToolTaskOrchestratorEnabled();
+    if (multiToolEnabled) {
+      const multiPlan = planMultiToolTask(query);
+      if (multiPlan.selected) {
+        multiToolExecution = await createMultiToolTaskOrchestrator().execute(multiPlan, {
+          organizationId,
+          companyId,
+        });
+        multiToolTask = {
+          enabled: true,
+          attempted: true,
+          overallStatus: multiToolExecution.overallStatus,
+          summary: multiToolExecution.summary,
+          steps: multiToolExecution.steps.map((step) => ({
+            id: step.id,
+            toolName: step.toolName,
+            actionId: step.actionId,
+            reason: step.reason,
+            status: step.status,
+            durationMs: step.durationMs,
+            error: step.error,
+          })),
+          totalDurationMs: multiToolExecution.totalDurationMs,
+        };
+      }
+    }
+
+    if (!multiToolTask.attempted) {
+      const toolPlan = createToolPlanner().plan(query);
+      if (toolPlan.selected) {
+        const toolResult = await createToolOrchestrator().execute(toolPlan.toolName, toolPlan.input, {
+          organizationId,
+          companyId,
+        });
+        tooling = {
+          attempted: true,
+          toolName: toolPlan.toolName,
+          reason: toolPlan.reason,
+          input: toolPlan.input,
+          output: toolResult.output,
+          status: toolResult.status,
+          error: toolResult.error,
+          durationMs: toolResult.durationMs,
+        };
+      }
     }
   }
 
@@ -373,6 +473,38 @@ export async function runSamuelRuntime(
   const heuristicNarrative =
     councilResult.response ||
     generateOrchestratorResponse(brain, input.companyContext ?? undefined);
+
+  const toolInterpretation = multiToolExecution?.attempted
+    ? interpretMultiToolTaskResults({
+        steps: multiToolExecution.steps.map((step) => ({
+          toolName: step.toolName,
+          actionId: step.actionId,
+          toolInput: step.input,
+          toolOutput: step.output,
+          status: step.status === "pending" ? "skipped" : step.status,
+        })),
+        intent,
+        conversationContext,
+        userQuery: query,
+      })
+    : tooling.attempted && tooling.status === "success" && tooling.toolName
+      ? interpretToolResult({
+          toolName: tooling.toolName,
+          toolInput: tooling.input,
+          toolOutput: tooling.output,
+          intent,
+          conversationContext,
+          userQuery: query,
+        })
+      : interpretToolResult(null);
+
+  const gatewayConversationContext = [
+    conversationContext,
+    toolInterpretation.used ? toolInterpretation.contextForAi : undefined,
+  ]
+    .filter((block): block is string => Boolean(block))
+    .join("\n\n");
+
   const gatewayResult = await generateNarrativeViaAIGateway({
     organizationId,
     companyId,
@@ -384,11 +516,22 @@ export async function runSamuelRuntime(
     councilConsensus: councilResult.consensus.consolidatedSummary,
     decisionRationale: councilResult.decision.rationale,
     operation: input.aiGatewayOperation,
-    conversationContext,
+    conversationContext: gatewayConversationContext || undefined,
   });
   const baseNarrative = gatewayResult?.narrative ?? heuristicNarrative;
-  const toolResultSummary = buildToolResultSummary(tooling);
-  const narrative = toolResultSummary ? `${toolResultSummary}\n\n${baseNarrative}` : baseNarrative;
+
+  let narrative = baseNarrative;
+  if (toolInterpretation.enabled && toolInterpretation.used) {
+    if (!gatewayResult?.narrative && toolInterpretation.humanFallback) {
+      narrative = `${toolInterpretation.humanFallback}\n\n${baseNarrative}`;
+    }
+  } else {
+    const toolResultSummary = multiToolTask.attempted
+      ? buildMultiToolResultSummary(multiToolTask)
+      : buildToolResultSummary(tooling);
+    narrative = toolResultSummary ? `${toolResultSummary}\n\n${baseNarrative}` : baseNarrative;
+  }
+
   const aiGateway = gatewayResult?.metadata ?? { used: false };
 
   const headline =
@@ -437,6 +580,7 @@ export async function runSamuelRuntime(
     executiveCouncil,
     decision,
     tooling,
+    multiToolTask,
     conversationMemory,
     response: {
       headline,

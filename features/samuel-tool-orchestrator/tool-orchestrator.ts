@@ -8,7 +8,7 @@
  * consumi-lo numa sprint futura, não precisará conhecer nenhuma Tool
  * concreta, apenas esta classe (via `createToolOrchestrator`).
  */
-import { MOCK_TOOLS } from "./tools";
+import { DEFAULT_TOOLS } from "./tools";
 import { createToolRegistry } from "./tool-registry";
 import type { Tool, ToolExecutionContext, ToolRegistry, ToolResult } from "./types";
 
@@ -81,7 +81,7 @@ export class ToolOrchestrator {
 }
 
 export type CreateToolOrchestratorOptions = {
-  /** Tools a injetar. Default: as 4 Tools MOCK desta sprint. Plugável — passe qualquer lista. */
+  /** Tools a injetar. Default: `DEFAULT_TOOLS` (mocks da Sprint 79 + Supabase Query Tool da Sprint 85). Plugável — passe qualquer lista. */
   tools?: ReadonlyArray<Tool>;
   /** Alternativa a `tools`: injetar um `ToolRegistry` já construído. */
   registry?: ToolRegistry;
@@ -91,6 +91,6 @@ export type CreateToolOrchestratorOptions = {
 export function createToolOrchestrator(
   options: CreateToolOrchestratorOptions = {},
 ): ToolOrchestrator {
-  const registry = options.registry ?? createToolRegistry(options.tools ?? MOCK_TOOLS);
+  const registry = options.registry ?? createToolRegistry(options.tools ?? DEFAULT_TOOLS);
   return new ToolOrchestrator(registry);
 }

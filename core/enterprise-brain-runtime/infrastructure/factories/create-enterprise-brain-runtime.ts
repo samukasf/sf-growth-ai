@@ -1,7 +1,9 @@
 import type { EnterpriseBrainRuntimeDependencies } from "../../application";
 import { EnterpriseBrainRuntimeService } from "../../application";
+import type { DataSourceAdapter } from "../data-sources/aggregated-brain-data-sources";
 import { AggregatedBrainDataSources } from "../data-sources/aggregated-brain-data-sources";
 import { DEFAULT_DATA_SOURCE_ADAPTERS } from "../data-sources/default-data-source-adapters";
+import { SUPABASE_DATA_SOURCE_ADAPTERS } from "../data-sources/supabase-data-source-adapters";
 import { InMemoryEventBus } from "../events/in-memory-event-bus";
 import {
   NoopAIProviderAdapter,
@@ -24,6 +26,34 @@ export type CreateEnterpriseBrainRuntimeOptions = {
   dependencies?: Partial<EnterpriseBrainRuntimeDependencies>;
 };
 
+/**
+ * Kill-switch da Sprint 84 (Company Brain Data Providers): desliga os
+ * adapters reais do Supabase sem deploy, revertendo instantaneamente para os
+ * 14 adapters simulados originais.
+ */
+function isRealDataSourcesEnabled(): boolean {
+  return process.env.COMPANY_BRAIN_REAL_DATA_SOURCES_ENABLED !== "false";
+}
+
+/**
+ * Combina os adapters reais (company, enterprise_memory, crm) com os
+ * simulados que ainda não têm uma tabela real correspondente. Os adapters
+ * reais substituem os simulados de mesma `key` — nenhum domínio é
+ * duplicado ou perdido.
+ */
+function buildDefaultDataSourceAdapters(): DataSourceAdapter[] {
+  if (!isRealDataSourcesEnabled()) {
+    return DEFAULT_DATA_SOURCE_ADAPTERS;
+  }
+
+  const realKeys = new Set(SUPABASE_DATA_SOURCE_ADAPTERS.map((adapter) => adapter.key));
+  const remainingSimulatedAdapters = DEFAULT_DATA_SOURCE_ADAPTERS.filter(
+    (adapter) => !realKeys.has(adapter.key),
+  );
+
+  return [...SUPABASE_DATA_SOURCE_ADAPTERS, ...remainingSimulatedAdapters];
+}
+
 export function createEnterpriseBrainRuntime(
   options: CreateEnterpriseBrainRuntimeOptions = {},
 ): EnterpriseBrainRuntimeService {
@@ -33,7 +63,7 @@ export function createEnterpriseBrainRuntime(
     repository,
     dataSources:
       options.dependencies?.dataSources ??
-      new AggregatedBrainDataSources(DEFAULT_DATA_SOURCE_ADAPTERS),
+      new AggregatedBrainDataSources(buildDefaultDataSourceAdapters()),
     contextBuilder:
       options.dependencies?.contextBuilder ?? new DefaultEnterpriseBrainContextBuilder(),
     snapshotBuilder:

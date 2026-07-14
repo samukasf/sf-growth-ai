@@ -160,6 +160,34 @@ export type RuntimeToolExecutionView = {
   durationMs?: number;
 };
 
+/**
+ * Etapa individual do Multi-Tool Task Orchestrator (Sprint 90) — observabilidade
+ * da sequência de ferramentas, duração e status por etapa no Playground.
+ */
+export type RuntimeMultiToolStepView = {
+  id: string;
+  toolName: string;
+  actionId?: string;
+  reason: string;
+  status: "pending" | "success" | "error" | "skipped";
+  durationMs?: number;
+  error?: string;
+};
+
+/**
+ * Resultado do Multi-Tool Task Orchestrator (Sprint 90). `attempted: false`
+ * quando o Task Planner não reconheceu uma tarefa multi-ferramenta — nesse
+ * caso o runtime segue pelo Tool Planner de ferramenta única (Sprint 80).
+ */
+export type RuntimeMultiToolTaskView = {
+  enabled: boolean;
+  attempted: boolean;
+  overallStatus?: "none" | "success" | "partial" | "error";
+  summary?: string;
+  steps?: RuntimeMultiToolStepView[];
+  totalDurationMs?: number;
+};
+
 /** Resposta estruturada produzida pelo Samuel Runtime (Intent → Response). */
 export type RuntimeResponse = {
   query: string;
@@ -172,6 +200,7 @@ export type RuntimeResponse = {
   executiveCouncil: RuntimeCouncilView;
   decision: RuntimeDecisionView;
   tooling: RuntimeToolExecutionView;
+  multiToolTask: RuntimeMultiToolTaskView;
   conversationMemory: RuntimeConversationMemoryView;
   response: RuntimeResponseView;
   aiGateway: RuntimeAIGatewayMetadata;

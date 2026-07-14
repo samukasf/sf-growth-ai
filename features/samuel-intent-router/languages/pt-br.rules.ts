@@ -31,6 +31,12 @@ const ROUTINE_VERB = /\b(responda|responder|agende|agendar|envie|enviar|automati
 
 const ROUTINE_NOUN = /\b(e-?mails?|mensagens?|agenda|tarefas?|whatsapp|calend[aá]rio)\b/;
 
+const CALENDAR_QUERY =
+  /\b(agenda|compromissos?|reuni[oõ]es?|calend[aá]rio|hor[aá]rio livre|pr[oó]ximo compromisso|tenho hoje)\b/;
+
+const CONTACTS_QUERY =
+  /\b(contatos?|telefone|e-?mail|anivers[aá]rio|quem trabalha)\b/;
+
 const ANALYSIS_VERB = /\b(analise|analisar|avalie|avaliar|diagnostique|diagnosticar|examine|examinar)\b/;
 
 const METRIC_NOUN = /\b(faturamento|vendas|desempenho|m[eé]tricas?|resultados?|receita|lucro|kpis?)\b/;
@@ -105,6 +111,20 @@ const RULES: ReadonlyArray<IntentLanguageRule> = Object.freeze([
     (text) => ROUTINE_VERB.test(text) && ROUTINE_NOUN.test(text),
     0.9,
     "Verbo de execução recorrente combinado com tarefa rotineira (e-mails, mensagens, agenda).",
+  ),
+  rule(
+    "pt.automation.calendar_query",
+    "AUTOMATION",
+    (text) => CALENDAR_QUERY.test(text),
+    0.8,
+    "Consulta sobre agenda, compromissos ou calendário.",
+  ),
+  rule(
+    "pt.automation.contacts_query",
+    "AUTOMATION",
+    (text) => CONTACTS_QUERY.test(text),
+    0.8,
+    "Consulta sobre contatos, telefone, e-mail ou aniversários.",
   ),
   rule(
     "pt.analysis.business_metric",
