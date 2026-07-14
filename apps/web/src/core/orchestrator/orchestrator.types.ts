@@ -95,7 +95,13 @@ export interface LLMPayload {
   userQuery: string;
   fragments: string[];
   metadata: Record<string, unknown>;
+  conversationHistory?: LLMConversationMessage[];
 }
+
+export type LLMConversationMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
 
 export interface LLMCompletionInput {
   payload: LLMPayload;

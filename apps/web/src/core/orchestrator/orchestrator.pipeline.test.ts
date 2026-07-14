@@ -114,6 +114,24 @@ describe("classifyQueryIntent", () => {
     expect(result.intent).toBe("analysis");
     expect(result.requiresCouncil).toBe(true);
   });
+
+  it("classifies greetings as conversation without consulting the council", () => {
+    const result = classifyQueryIntent("Olá, tudo bem?");
+
+    expect(result).toEqual({
+      intent: "conversation",
+      confidence: 98,
+      requiresCouncil: false,
+    });
+    expect(shouldConsultCouncil(result)).toBe(false);
+  });
+
+  it("classifies writing requests as creative conversation", () => {
+    const result = classifyQueryIntent("Escreve um poema sobre o mar");
+
+    expect(result.intent).toBe("creative");
+    expect(result.requiresCouncil).toBe(false);
+  });
 });
 
 describe("shouldConsultCouncil", () => {

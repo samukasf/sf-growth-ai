@@ -176,8 +176,8 @@ function SamuelAiWorkspace({
       <CommandPanel className="flex min-h-[min(380px,50dvh)] flex-col overflow-hidden p-0">
         <div className="shrink-0 border-b border-border px-5 py-4">
           <SectionHeader
-            title="Samuel AI Conversation"
-            description="Canal ligado ao Samuel Runtime com resposta em tempo real"
+            title="Conversa com Samuel AI"
+            description="Conversa contínua com contexto, memória e resposta em tempo real"
           />
         </div>
         <div className="min-h-0 flex-1 overflow-hidden">

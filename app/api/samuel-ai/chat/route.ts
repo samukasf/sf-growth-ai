@@ -10,6 +10,10 @@ import {
   encodeChatEvent,
   parseSamuelChatRequest,
 } from "@/features/samuel-ai/chat/samuel-chat.protocol";
+import {
+  buildSamuelFallbackAnswer,
+  selectConversationHistory,
+} from "@/features/samuel-ai/chat/samuel-chat.conversation";
 import type {
   SamuelChatCompanyContext,
   SamuelChatRequest,
@@ -83,33 +87,16 @@ function toRuntimeSummary(
   };
 }
 
-function buildFallbackAnswer(runtimeSummary: SamuelChatRuntimeSummary) {
-  return [
-    `Diagnóstico\n${runtimeSummary.diagnosis}`,
-    `Recomendação\n${runtimeSummary.recommendation}`,
-    `Próximo passo\n${runtimeSummary.nextStep}`,
-  ].join("\n\n");
-}
-
 function buildCompletionInput(
   runtimeResult: Awaited<ReturnType<typeof runSamuelRuntime>>,
   history: ChatMessage[],
 ): LLMCompletionInput {
   const response = runtimeResult.response;
-  const historyText = history
-    .slice(-12)
-    .map((message) => `${message.role === "user" ? "Utilizador" : "Samuel"}: ${message.content}`)
-    .join("\n");
-
   return {
     payload: {
       ...response.runtime.llmPayload,
-      userQuery: [
-        historyText ? `HISTÓRICO RECENTE\n${historyText}` : "",
-        `NOVA DIRETRIZ\n${response.runtime.query}`,
-      ]
-        .filter(Boolean)
-        .join("\n\n"),
+      userQuery: response.runtime.query,
+      conversationHistory: selectConversationHistory(history),
       fragments: [
         ...response.runtime.llmPayload.fragments,
         `[RUNTIME] Diagnóstico: ${response.diagnosis}`,
@@ -268,16 +255,22 @@ export async function POST(request: Request) {
             send({
               type: "warning",
               code: "AI_PROVIDER_FALLBACK",
-              message: "O provider de IA não respondeu; o Samuel Runtime concluiu a análise.",
+              message: "A IA generativa não respondeu; o Samuel Runtime assumiu esta resposta.",
             });
             content = "";
             providerId = "samuel-runtime";
             model = null;
           }
+        } else {
+          send({
+            type: "warning",
+            code: "AI_PROVIDER_NOT_CONFIGURED",
+            message: "A IA generativa não está configurada; esta resposta vem apenas do Samuel Runtime.",
+          });
         }
 
         if (!content) {
-          content = buildFallbackAnswer(runtimeSummary);
+          content = buildSamuelFallbackAnswer(chatRequest.query, runtimeSummary);
           send({ type: "provider", provider: providerId, model });
           send({ type: "delta", delta: content });
         }
@@ -322,7 +315,7 @@ export async function POST(request: Request) {
           send({
             type: "cancelled",
             conversationId,
-            message: "Análise cancelada.",
+            message: "Resposta cancelada.",
           });
         } else {
           send({
@@ -331,7 +324,7 @@ export async function POST(request: Request) {
             message:
               error instanceof Error
                 ? error.message
-                : "Não foi possível concluir a análise.",
+                : "Não foi possível concluir a resposta.",
             retryable: true,
           });
         }

@@ -69,7 +69,7 @@ function ExecutiveMessage({ message }: { message: ChatMessage }) {
       <div className="flex flex-col items-end gap-1">
         <div className="max-w-[90%] border-r-2 border-accent/40 pr-4">
           <p className="text-[10px] font-medium uppercase tracking-wider text-muted">
-            Diretriz
+            Você
           </p>
           <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">
             {message.content}
@@ -96,12 +96,12 @@ function ExecutiveMessage({ message }: { message: ChatMessage }) {
             <p className="text-xs font-semibold text-foreground">Samuel AI™</p>
             <p className="text-[10px] text-muted">
               {message.status === "streaming"
-                ? "Samuel Runtime a responder…"
+                ? "Samuel AI a responder…"
                 : message.status === "cancelled"
-                  ? "Análise cancelada"
+                  ? "Resposta cancelada"
                   : message.status === "error"
-                    ? "Falha na análise"
-                    : "Executive Intelligence"}
+                    ? "Falha na resposta"
+                    : "Inteligência conversacional"}
             </p>
           </div>
           {message.status === "streaming" && (
@@ -290,7 +290,7 @@ export function ChatPanel({
               message.id === assistantId
                 ? {
                     ...message,
-                    content: message.content || "Análise cancelada.",
+                    content: message.content || "Resposta cancelada.",
                     status: "cancelled",
                   }
                 : message,
@@ -300,7 +300,7 @@ export function ChatPanel({
           const message =
             sendError instanceof Error
               ? sendError.message
-              : "Não foi possível concluir a análise.";
+              : "Não foi possível concluir a resposta.";
           setError(message);
           setLastFailedQuery(trimmed);
           setMessages((current) =>
@@ -335,13 +335,14 @@ export function ChatPanel({
       <div
         role="log"
         aria-live="polite"
-        aria-label="Canal executivo de comunicação"
+        aria-label="Conversa com Samuel AI"
         className="min-h-0 flex-1 space-y-6 overflow-y-auto p-5 sm:p-6"
       >
         {!hasEngaged && (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <p className="text-sm text-muted">
-              Emita uma diretriz estratégica para iniciar o Samuel Runtime.
+              Converse com o Samuel AI sobre estratégia, tecnologia, ideias,
+              escrita ou qualquer outro tema.
             </p>
           </div>
         )}
@@ -379,7 +380,7 @@ export function ChatPanel({
       <div className="shrink-0 border-t border-border bg-black/20 p-4 sm:p-5">
         <div className="mb-2 flex items-center justify-between gap-3">
           <p className="text-[10px] font-medium uppercase tracking-wider text-muted">
-            Canal executivo
+            Conversa
           </p>
           {providerLabel && (
             <p className="truncate text-[10px] text-muted">{providerLabel}</p>
@@ -390,8 +391,8 @@ export function ChatPanel({
             value={input}
             onChange={(event) => setInput(event.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Emita uma diretriz estratégica…"
-            aria-label="Diretriz estratégica para o Samuel AI"
+            placeholder="Escreva uma mensagem para o Samuel AI…"
+            aria-label="Mensagem para o Samuel AI"
             disabled={busy || !hydrated}
             rows={2}
             className={cn(
@@ -419,12 +420,12 @@ export function ChatPanel({
               disabled={!hydrated || !input.trim() || !onSendMessage}
               className="shrink-0 sm:w-auto"
             >
-              Executar
+              Enviar
             </Button>
           )}
         </div>
         <p className="mt-2 text-[11px] text-muted">
-          Enter para executar · Shift+Enter para nova linha
+          Enter para enviar · Shift+Enter para nova linha
         </p>
       </div>
     </div>

@@ -1,6 +1,6 @@
 # SF Growth AI
 
-Workspace executivo em Next.js 16 com Samuel Runtime, contexto empresarial, memória, módulos especializados e chat com streaming pela Responses API.
+Workspace executivo em Next.js 16 com Samuel Runtime, contexto empresarial, memória, módulos especializados e conversa contínua com streaming pela Responses API.
 
 ## Arranque local
 
@@ -18,11 +18,11 @@ A aplicação fica disponível em [http://localhost:3000/samuel-ai](http://local
 
 Preencha em `.env.local`:
 
-- `OPENAI_API_KEY` para respostas geradas por IA. `OPENAI_MODEL` é configurável.
+- `OPENAI_API_KEY` para conversas geradas por IA. `OPENAI_MODEL` é configurável (`gpt-5.4-mini` por padrão para equilibrar latência e custo).
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` e `SUPABASE_SERVICE_ROLE_KEY` para dados e histórico persistente.
 - `AI_GATEWAY_API_KEY`, `AI_GATEWAY_BASE_URL` e `AI_GATEWAY_MODEL` apenas quando utilizar um gateway compatível com a Responses API. Estes valores têm precedência sobre os equivalentes OpenAI.
 
-Sem uma chave de IA, o chat continua funcional com a resposta determinística do Samuel Runtime. Sem a configuração administrativa do Supabase, o histórico fica isolado no navegador. Nenhuma destas degradações impede o build.
+Sem uma chave de IA, o chat informa claramente a limitação e continua funcional para análises empresariais com a resposta determinística do Samuel Runtime. Sem a configuração administrativa do Supabase, o histórico fica isolado no navegador. Nenhuma destas degradações impede o build.
 
 ## Base de dados
 
@@ -40,13 +40,13 @@ A `SUPABASE_SERVICE_ROLE_KEY` é usada apenas no servidor para associar a sessã
 
 O endpoint `POST /api/samuel-ai/chat`:
 
-1. valida a diretriz e limita o histórico;
+1. valida a mensagem e limita o histórico por quantidade e tamanho;
 2. carrega memória, contexto, Company Brain e conselho disponível;
 3. executa as sete etapas do pipeline real;
-4. envia eventos NDJSON e deltas de texto progressivos;
+4. envia o histórico como mensagens estruturadas e transmite deltas de texto progressivos;
 5. persiste utilizador, resposta, provedor, modelo e resumo do runtime.
 
-O cliente suporta restauro de histórico, fallback local, cancelamento, erro e retry.
+O prompt do Samuel AI mantém a continuidade da conversa, responde no idioma do utilizador e usa o contexto empresarial somente quando for relevante. O cliente suporta restauro de histórico, fallback local, cancelamento, erro e retry.
 
 ## Qualidade
 
