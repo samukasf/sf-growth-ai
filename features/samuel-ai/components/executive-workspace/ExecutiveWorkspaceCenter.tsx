@@ -20,26 +20,16 @@ import { ExecutiveAlertCenter } from "@/features/watchers/components/executive-a
 import { ExecutiveInbox } from "@/features/executive-inbox";
 
 import { ExecutiveExperience } from "../executive-experience";
-import { MOCK_CHAT_MESSAGES } from "../../mock-data";
 import { ChatPanel } from "../chat-panel";
 import { ExecutiveTimeline } from "../executive-timeline";
 import { CommandPanel } from "../shared/command-panel";
 import { SectionHeader } from "../section-header";
 import {
-  ExecutiveBriefingSection,
-  ExecutiveCeoSection,
-  ExecutiveContextSection,
-  ExecutiveCouncilSection,
   ExecutiveDashboard,
   ExecutiveDecisionsSection,
   ExecutiveExecutionPlanSection,
-  ExecutiveForecastSection,
-  ExecutiveIntelligenceSection,
-  ExecutiveLearningSection,
   ExecutiveMonitoringSection,
-  ExecutiveStrategySection,
 } from "../executive-dashboard";
-import { ExecutiveLiveBoard } from "../executive-live-board";
 import { SupercerebroToday } from "../supercerebro-today";
 import type { ExecutiveWorkspaceData, ExecutiveWorkspaceHandlers } from "./executive-workspace.types";
 import { getWorkspaceSectionLabel, type WorkspaceSection } from "./workspace-navigation";
@@ -48,6 +38,8 @@ type ExecutiveWorkspaceCenterProps = ExecutiveWorkspaceData &
   ExecutiveWorkspaceHandlers & {
     activeSection: WorkspaceSection;
   };
+
+const EMPTY_CHAT_MESSAGES: [] = [];
 
 function ExecutiveConsensusPanel({
   orchestratorSnapshot,
@@ -185,12 +177,14 @@ function SamuelAiWorkspace({
         <div className="shrink-0 border-b border-border px-5 py-4">
           <SectionHeader
             title="Samuel AI Conversation"
-            description="Canal executivo de diretrizes e análises"
+            description="Canal ligado ao Samuel Runtime com resposta em tempo real"
           />
         </div>
         <div className="min-h-0 flex-1 overflow-hidden">
           <ChatPanel
-            initialMessages={MOCK_CHAT_MESSAGES}
+            key={data.executiveContext?.company.id ?? "default-company"}
+            initialMessages={EMPTY_CHAT_MESSAGES}
+            companyId={data.executiveContext?.company.id ?? "default-company"}
             isProcessing={handlers.isProcessing}
             onSendMessage={handlers.onSendMessage}
             onFirstMessage={handlers.onFirstMessage}
@@ -308,7 +302,7 @@ export function ExecutiveWorkspaceCenter({
                 companyId={data.executiveContext?.company.id}
                 organizationId="default-org"
                 onQuickAction={(prompt) => {
-                  void handlers.onSendMessage(prompt);
+                  void handlers.onSendMessage(prompt, { history: [] });
                 }}
               />
             </CommandPanel>

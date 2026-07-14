@@ -5,3 +5,6 @@ export * from "./orchestrator.pipeline";
 export * from "./orchestrator.response";
 export * from "./orchestrator.service";
 export * from "./orchestrator.types";
+export * from "./openai-responses.provider";
+export * from "./samuel-runtime";
+export * from "./samuel-runtime.types";

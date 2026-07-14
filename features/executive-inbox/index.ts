@@ -24,6 +24,7 @@ export {
 export type { BuildExecutiveInboxInput } from "./services/executive-inbox.service";
 
 export {
+  hydrateExecutiveInboxActions,
   loadExecutiveInboxActions,
   persistExecutiveInboxAction,
   mapInboxActionToStatus,

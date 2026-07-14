@@ -1,5 +1,3 @@
-import { addMemory } from "@/services/executive-memory.service";
-
 import type {
   ExecutiveInboxActionRecord,
   ExecutiveInboxActionsState,
@@ -9,8 +7,6 @@ import type {
 } from "../executive-inbox.types";
 
 const STORAGE_PREFIX = "sf-executive-inbox-actions";
-const MEMORY_CATEGORY = "executive-inbox";
-const MEMORY_SOURCE = "executive-inbox";
 
 const ACTION_STATUS: Record<InboxActionType, InboxStatus> = {
   approve: "executing",
@@ -67,27 +63,72 @@ function saveExecutiveInboxActionsLocal(
   };
 
   if (isBrowser()) {
-    window.localStorage.setItem(storageKey(companyId), JSON.stringify(state));
+    try {
+      window.localStorage.setItem(storageKey(companyId), JSON.stringify(state));
+    } catch {
+      // Private browsing or storage quotas may disable the local fallback.
+    }
   }
 
   return state;
 }
 
-async function persistExecutiveInboxActionToMemory(
+async function persistExecutiveInboxActionRemote(
   companyId: string,
   record: ExecutiveInboxActionRecord,
 ) {
+  const response = await fetch("/api/executive-inbox/actions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ companyId, record }),
+  });
+  if (!response.ok) throw new Error("A Executive Inbox remota não respondeu.");
+}
+
+function mergeActions(
+  remote: ExecutiveInboxActionRecord[],
+  local: ExecutiveInboxActionRecord[],
+) {
+  const actions = new Map<string, ExecutiveInboxActionRecord>();
+  for (const action of [...remote, ...local]) actions.set(action.id, action);
+  return [...actions.values()].sort(
+    (left, right) =>
+      new Date(left.timestamp).getTime() - new Date(right.timestamp).getTime(),
+  );
+}
+
+export async function hydrateExecutiveInboxActions(
+  companyId: string,
+  signal?: AbortSignal,
+): Promise<ExecutiveInboxActionRecord[]> {
+  const local = loadExecutiveInboxActions(companyId);
+
   try {
-    await addMemory({
-      company_id: companyId,
-      category: MEMORY_CATEGORY,
-      title: `${INBOX_ACTION_LABELS[record.action]} — ${record.itemTitle}`,
-      content: JSON.stringify(record),
-      importance: record.action === "complete" ? 8 : 7,
-      source: MEMORY_SOURCE,
-    });
+    const response = await fetch(
+      `/api/executive-inbox/actions?companyId=${encodeURIComponent(companyId)}`,
+      { cache: "no-store", signal },
+    );
+    if (!response.ok) return local;
+    const payload = await response.json() as {
+      actions?: ExecutiveInboxActionRecord[];
+      persistence?: "supabase" | "client";
+    };
+    const remote = Array.isArray(payload.actions) ? payload.actions : [];
+    const merged = mergeActions(remote, local);
+    saveExecutiveInboxActionsLocal(companyId, merged);
+
+    if (payload.persistence === "supabase") {
+      const remoteIds = new Set(remote.map((action) => action.id));
+      await Promise.allSettled(
+        local
+          .filter((action) => !remoteIds.has(action.id))
+          .map((action) => persistExecutiveInboxActionRemote(companyId, action)),
+      );
+    }
+
+    return merged;
   } catch {
-    // Persistência local já garante continuidade da sessão.
+    return local;
   }
 }
 
@@ -118,7 +159,11 @@ export async function persistExecutiveInboxAction(
   const nextActions = [...existingActions, record];
 
   saveExecutiveInboxActionsLocal(companyId, nextActions);
-  await persistExecutiveInboxActionToMemory(companyId, record);
+  try {
+    await persistExecutiveInboxActionRemote(companyId, record);
+  } catch {
+    // The local record will be synchronized during the next hydration.
+  }
 
   return nextActions;
 }

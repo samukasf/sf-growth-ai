@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { cn } from "@/utils/cn";
 
@@ -9,6 +9,7 @@ import {
   applyInboxActionsToMonitoring,
 } from "@/features/executive-inbox";
 import {
+  hydrateExecutiveInboxActions,
   loadExecutiveInboxActions,
   persistExecutiveInboxAction,
 } from "@/features/executive-inbox/services/executive-inbox-persistence.service";
@@ -41,12 +42,16 @@ export function ExecutiveWorkspace({
   const [inboxActions, setInboxActions] = useState<ExecutiveInboxActionRecord[]>(() =>
     loadExecutiveInboxActions(companyId),
   );
-  const [loadedCompanyId, setLoadedCompanyId] = useState(companyId);
 
-  if (loadedCompanyId !== companyId) {
-    setLoadedCompanyId(companyId);
-    setInboxActions(loadExecutiveInboxActions(companyId));
-  }
+  useEffect(() => {
+    const controller = new AbortController();
+    void hydrateExecutiveInboxActions(companyId, controller.signal).then((remote) => {
+      if (controller.signal.aborted) return;
+      setInboxActions(remote);
+    });
+
+    return () => controller.abort();
+  }, [companyId]);
 
   const handleInboxAction = useCallback(
     async (item: ExecutiveInboxItem, action: InboxActionType) => {
@@ -131,7 +136,7 @@ export function ExecutiveWorkspace({
             </div>
             <div className="flex items-center gap-2 rounded-full border border-border bg-white/[0.03] px-3 py-1.5">
               <span aria-hidden="true" className="size-1.5 rounded-full bg-accent" />
-              <span className="text-[11px] text-muted">Demonstração</span>
+              <span className="text-[11px] text-muted">Samuel Runtime</span>
             </div>
           </div>
         </div>
