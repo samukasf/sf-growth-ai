@@ -26,7 +26,11 @@ import type {
   ExecutiveWorkspaceHandlers,
 } from "./executive-workspace.types";
 
-import { getWorkspaceSectionLabel, type WorkspaceSection } from "./workspace-navigation";
+import {
+  getWorkspaceSectionLabel,
+  WORKSPACE_NAV_ITEMS,
+  type WorkspaceSection,
+} from "./workspace-navigation";
 
 export type ExecutiveWorkspaceProps = ExecutiveWorkspaceData & ExecutiveWorkspaceHandlers;
 
@@ -36,7 +40,7 @@ export function ExecutiveWorkspace({
   isProcessing,
   ...data
 }: ExecutiveWorkspaceProps) {
-  const [activeSection, setActiveSection] = useState<WorkspaceSection>("executive-inbox");
+  const [activeSection, setActiveSection] = useState<WorkspaceSection>("dashboard");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const companyId = data.executiveContext?.company.id ?? "default-company";
   const [inboxActions, setInboxActions] = useState<ExecutiveInboxActionRecord[]>(() =>
@@ -93,17 +97,17 @@ export function ExecutiveWorkspace({
   };
 
   return (
-    <div className="relative flex min-h-dvh flex-col xl:h-dvh xl:overflow-hidden">
+    <div className="relative flex min-h-dvh flex-col overflow-hidden bg-[#020617] xl:h-dvh">
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_40%_at_50%_-10%,rgba(59,130,246,0.12),transparent_55%)]"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_45%_at_55%_-10%,rgba(34,211,238,0.20),transparent_58%),radial-gradient(ellipse_60%_45%_at_95%_20%,rgba(168,85,247,0.15),transparent_55%),linear-gradient(135deg,#020617_0%,#02030a_52%,#07031a_100%)]"
       />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.02)_0%,transparent_30%)]"
+        className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(34,211,238,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(168,85,247,0.025)_1px,transparent_1px)] bg-[size:44px_44px]"
       />
 
-      <header className="relative z-30 shrink-0 border-b border-white/[0.06] bg-black/40 backdrop-blur-xl">
+      <header className="relative z-30 shrink-0 border-b border-cyan-300/[0.08] bg-[#020617]/70 backdrop-blur-xl">
         <div className="flex items-center justify-between gap-4 px-4 py-4 sm:px-6">
           <div className="flex items-center gap-3">
             <button
@@ -114,15 +118,15 @@ export function ExecutiveWorkspace({
             >
               <MenuIcon />
             </button>
-            <div className="hidden size-10 items-center justify-center rounded-lg border border-accent/30 bg-accent/10 sm:flex">
-              <span className="text-xs font-bold tracking-wider text-accent">ECC</span>
+            <div className="hidden size-10 items-center justify-center rounded-xl border border-cyan-300/30 bg-cyan-400/10 shadow-[0_0_28px_rgba(34,211,238,0.16)] sm:flex">
+              <span className="text-xs font-bold tracking-wider text-cyan-200">SA</span>
             </div>
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-accent">
                 SF Growth AI
               </p>
               <h1 className="text-lg font-semibold tracking-tight text-foreground sm:text-xl">
-                Executive Workspace
+                Samuel AI Command Center
               </h1>
               <p className="mt-0.5 text-xs text-muted">
                 {getWorkspaceSectionLabel(activeSection)} · Executive Command Center
@@ -132,13 +136,44 @@ export function ExecutiveWorkspace({
           <div className="flex items-center gap-3">
             <div className="hidden items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-3 py-1.5 sm:flex">
               <span aria-hidden="true" className="size-2 rounded-full bg-emerald-400" />
-              <span className="text-[11px] text-emerald-400">Sistema operacional</span>
+              <span className="text-[11px] text-emerald-400">Samuel Online</span>
             </div>
             <div className="flex items-center gap-2 rounded-full border border-border bg-white/[0.03] px-3 py-1.5">
               <span aria-hidden="true" className="size-1.5 rounded-full bg-accent" />
-              <span className="text-[11px] text-muted">Samuel Runtime</span>
+              <span className="text-[11px] text-muted">Memória sincronizada</span>
             </div>
           </div>
+        </div>
+        <div className="flex gap-2 overflow-x-auto border-t border-cyan-300/[0.06] px-4 py-3 lg:hidden">
+          {WORKSPACE_NAV_ITEMS.filter((item) =>
+            [
+              "dashboard",
+              "samuel-ai",
+              "crm",
+              "funnels",
+              "campaigns",
+              "automation",
+              "whatsapp",
+              "analytics",
+            ].includes(item.id),
+          ).map((item) => {
+            const isActive = activeSection === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setActiveSection(item.id)}
+                className={cn(
+                  "shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-medium transition",
+                  isActive
+                    ? "border-cyan-300/30 bg-cyan-300/10 text-cyan-100"
+                    : "border-white/10 bg-white/[0.03] text-muted",
+                )}
+              >
+                {item.label}
+              </button>
+            );
+          })}
         </div>
       </header>
 
@@ -152,7 +187,7 @@ export function ExecutiveWorkspace({
 
         <main
           className={cn(
-            "flex min-h-0 flex-1 flex-col gap-4 overflow-hidden p-4 sm:p-5 lg:p-6",
+            "flex min-h-0 flex-1 flex-col gap-4 overflow-hidden p-3 sm:p-5 lg:p-6",
             "xl:flex-row",
           )}
         >
