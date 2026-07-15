@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/cn";
 
 import { loadSamuelChatHistory } from "../chat/samuel-chat.client";
+import { useSamuelRealtimeVoice } from "../realtime/use-samuel-realtime-voice";
 import type {
   SamuelChatSendOptions,
   SamuelChatSendResult,
@@ -34,6 +35,39 @@ type LocalHistory = {
   messages: ChatMessage[];
 };
 
+type BrowserSpeechRecognitionEvent = Event & {
+  resultIndex: number;
+  results: SpeechRecognitionResultList;
+};
+
+type BrowserSpeechRecognition = EventTarget & {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  maxAlternatives: number;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+  onresult: ((event: BrowserSpeechRecognitionEvent) => void) | null;
+  onerror: ((event: Event) => void) | null;
+  onend: (() => void) | null;
+};
+
+type BrowserSpeechRecognitionConstructor = new () => BrowserSpeechRecognition;
+
+function getSpeechRecognitionConstructor():
+  | BrowserSpeechRecognitionConstructor
+  | null {
+  if (typeof window === "undefined") return null;
+  const speechWindow = window as Window &
+    typeof globalThis & {
+      SpeechRecognition?: BrowserSpeechRecognitionConstructor;
+      webkitSpeechRecognition?: BrowserSpeechRecognitionConstructor;
+    };
+
+  return speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition ?? null;
+}
+
 function formatTime(timestamp: string) {
   return new Intl.DateTimeFormat("pt-PT", {
     hour: "2-digit",
@@ -47,6 +81,25 @@ function createMessageId(role: ChatMessage["role"]) {
 
 function storageKey(companyId: string) {
   return `sf-growth-ai:samuel-chat:${companyId}`;
+}
+
+function realtimeStateLabel(state: ReturnType<typeof useSamuelRealtimeVoice>["session"]["state"]) {
+  switch (state) {
+    case "requesting_permission":
+      return "Solicitando microfone";
+    case "listening":
+      return "Ouvindo";
+    case "processing":
+      return "Processando";
+    case "speaking":
+      return "Samuel falando";
+    case "paused":
+      return "Pausado";
+    case "error":
+      return "Erro na voz";
+    default:
+      return "Inativo";
+  }
 }
 
 function readLocalHistory(companyId: string): LocalHistory | null {
@@ -133,11 +186,16 @@ export function ChatPanel({
   const [error, setError] = useState<string | null>(null);
   const [lastFailedQuery, setLastFailedQuery] = useState<string | null>(null);
   const [providerLabel, setProviderLabel] = useState<string | null>(null);
+  const [listening, setListening] = useState(false);
+  const [voiceNotice, setVoiceNotice] = useState<string | null>(null);
+  const [voiceAutoSend, setVoiceAutoSend] = useState(true);
+  const [voiceReplyEnabled, setVoiceReplyEnabled] = useState(true);
   const abortRef = useRef<AbortController | null>(null);
+  const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const spokenAssistantRef = useRef<string | null>(null);
   const hasEngaged = messages.length > 0;
   const busy = sending || isProcessing;
-
   useEffect(() => {
     const controller = new AbortController();
     const local = readLocalHistory(companyId);
@@ -184,7 +242,64 @@ export function ChatPanel({
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages]);
 
-  useEffect(() => () => abortRef.current?.abort(), []);
+  useEffect(
+    () => () => {
+      abortRef.current?.abort();
+      recognitionRef.current?.abort();
+      window.speechSynthesis?.cancel();
+    },
+    [],
+  );
+
+  const speakSamuel = useCallback((content: string) => {
+    if (!voiceReplyEnabled || typeof window === "undefined") return;
+    if (!("speechSynthesis" in window)) return;
+    const trimmed = content.trim();
+    if (!trimmed) return;
+    if (spokenAssistantRef.current === trimmed) return;
+
+    spokenAssistantRef.current = trimmed;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(trimmed);
+    utterance.lang = "pt-BR";
+    utterance.rate = 1;
+    utterance.pitch = 0.92;
+    window.speechSynthesis.speak(utterance);
+  }, [voiceReplyEnabled]);
+
+  const appendVoiceTranscript = useCallback(
+    ({
+      role,
+      content,
+      final,
+    }: {
+      role: ChatMessage["role"];
+      content: string;
+      final: boolean;
+    }) => {
+      if (!final || !content.trim()) return;
+      setMessages((current) => [
+        ...current,
+        {
+          id: createMessageId(role),
+          role,
+          content: content.trim(),
+          timestamp: new Date().toISOString(),
+          status: "complete",
+        },
+      ]);
+      if (role === "assistant") speakSamuel(content);
+    },
+    [speakSamuel],
+  );
+  const realtimeVoice = useSamuelRealtimeVoice({
+    companyId,
+    conversationId,
+    contextSummary:
+      "Samuel AI deve usar o contexto empresarial do workspace, a memória sincronizada e a identidade executiva preservada pelo SF Growth AI.",
+    onTranscript: appendVoiceTranscript,
+  });
+  const realtimeActive = !["idle", "error"].includes(realtimeVoice.session.state);
 
   const performSend = useCallback(
     async (rawContent: string, retry = false) => {
@@ -265,6 +380,7 @@ export function ChatPanel({
                 ),
               );
               setConversationId(event.conversationId);
+              speakSamuel(event.message.content);
             }
           },
         });
@@ -280,6 +396,7 @@ export function ChatPanel({
               : message,
           ),
         );
+        speakSamuel(result.content);
       } catch (sendError) {
         const cancelled =
           controller.signal.aborted ||
@@ -320,8 +437,83 @@ export function ChatPanel({
         setSending(false);
       }
     },
-    [busy, conversationId, hasEngaged, messages, onFirstMessage, onSendMessage],
+    [
+      busy,
+      conversationId,
+      hasEngaged,
+      messages,
+      onFirstMessage,
+      onSendMessage,
+      speakSamuel,
+    ],
   );
+
+  const stopVoiceInput = useCallback(() => {
+    recognitionRef.current?.stop();
+    setListening(false);
+  }, []);
+
+  const startVoiceInput = useCallback(() => {
+    if (busy || !hydrated) return;
+
+    const Recognition = getSpeechRecognitionConstructor();
+    if (!Recognition) {
+      setVoiceNotice(
+        "Este navegador ainda não suporta captura de voz. Use Chrome, Edge ou Safari atualizado.",
+      );
+      return;
+    }
+
+    recognitionRef.current?.abort();
+    window.speechSynthesis?.cancel();
+
+    const recognition = new Recognition();
+    recognition.lang = "pt-BR";
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+
+    let finalTranscript = "";
+
+    recognition.onresult = (event) => {
+      let interimTranscript = "";
+
+      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+        const transcript = event.results[index][0]?.transcript ?? "";
+        if (event.results[index].isFinal) {
+          finalTranscript += transcript;
+        } else {
+          interimTranscript += transcript;
+        }
+      }
+
+      const nextInput = `${finalTranscript}${interimTranscript}`.trimStart();
+      setInput(nextInput);
+      setVoiceNotice(interimTranscript ? "Samuel está ouvindo…" : null);
+    };
+
+    recognition.onerror = () => {
+      setVoiceNotice("Não consegui captar o áudio. Verifique a permissão do microfone.");
+      setListening(false);
+    };
+
+    recognition.onend = () => {
+      setListening(false);
+      recognitionRef.current = null;
+
+      const transcript = finalTranscript.trim();
+      if (voiceAutoSend && transcript) {
+        void performSend(transcript);
+      } else if (transcript) {
+        setVoiceNotice("Mensagem de voz transcrita. Revise e envie quando quiser.");
+      }
+    };
+
+    recognitionRef.current = recognition;
+    setListening(true);
+    setVoiceNotice("Samuel está ouvindo… fale naturalmente.");
+    recognition.start();
+  }, [busy, hydrated, performSend, voiceAutoSend]);
 
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === "Enter" && !event.shiftKey) {
@@ -336,13 +528,16 @@ export function ChatPanel({
         role="log"
         aria-live="polite"
         aria-label="Conversa com Samuel AI"
-        className="min-h-0 flex-1 space-y-6 overflow-y-auto p-5 sm:p-6"
+        className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4 sm:space-y-6 sm:p-6"
       >
         {!hasEngaged && (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <p className="text-sm text-muted">
+          <div className="flex min-h-[220px] flex-col items-center justify-center rounded-2xl border border-cyan-300/10 bg-cyan-300/[0.03] px-4 py-10 text-center">
+            <div className="mb-4 flex size-16 items-center justify-center rounded-full border border-cyan-300/20 bg-cyan-300/10 text-cyan-100 shadow-[0_0_36px_rgba(34,211,238,0.18)]">
+              SA
+            </div>
+            <p className="max-w-md text-sm text-muted">
               Converse com o Samuel AI sobre estratégia, tecnologia, ideias,
-              escrita ou qualquer outro tema.
+              escrita ou qualquer outro tema. Toque no microfone para conversar por voz.
             </p>
           </div>
         )}
@@ -354,6 +549,12 @@ export function ChatPanel({
         {warning && (
           <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-xs text-amber-200/90">
             {warning}
+          </div>
+        )}
+
+        {(voiceNotice || realtimeVoice.session.error) && (
+          <div className="rounded-lg border border-cyan-400/20 bg-cyan-400/5 px-4 py-3 text-xs text-cyan-100/90">
+            {voiceNotice || realtimeVoice.session.error}
           </div>
         )}
 
@@ -377,14 +578,129 @@ export function ChatPanel({
         <div ref={bottomRef} />
       </div>
 
-      <div className="shrink-0 border-t border-border bg-black/20 p-4 sm:p-5">
-        <div className="mb-2 flex items-center justify-between gap-3">
+      <div className="shrink-0 border-t border-border bg-black/30 p-3 backdrop-blur-xl sm:p-5">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <p className="text-[10px] font-medium uppercase tracking-wider text-muted">
             Conversa
           </p>
           {providerLabel && (
             <p className="truncate text-[10px] text-muted">{providerLabel}</p>
           )}
+        </div>
+        <div className="mb-3 rounded-xl border border-white/10 bg-white/[0.025] p-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-medium uppercase tracking-wider text-muted">
+                Voz Realtime
+              </p>
+              <p className="mt-1 text-xs text-cyan-100">
+                {realtimeStateLabel(realtimeVoice.session.state)}
+              </p>
+            </div>
+            <div
+              aria-hidden="true"
+              className="flex h-8 items-end gap-1"
+              title="Visualizador de áudio"
+            >
+              {[0.28, 0.5, 0.8, 0.44, 0.64].map((weight, index) => (
+                <span
+                  key={weight}
+                  className="w-1.5 rounded-full bg-cyan-300/70 transition-all"
+                  style={{
+                    height: `${8 + Math.round(realtimeVoice.session.audioLevel * weight * 28)}px`,
+                    opacity: realtimeActive ? 1 : 0.35 + index * 0.08,
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-muted">
+            <button
+              type="button"
+              onClick={() => {
+                if (realtimeActive) realtimeVoice.end();
+                else void realtimeVoice.start();
+              }}
+              disabled={busy || !hydrated}
+              className={cn(
+                "min-h-11 rounded-full border px-4 py-2 font-medium transition",
+                realtimeActive
+                  ? "border-red-300/30 bg-red-400/10 text-red-100"
+                  : "border-cyan-300/30 bg-cyan-300/10 text-cyan-100",
+              )}
+              aria-pressed={realtimeActive}
+            >
+              {realtimeActive ? "Encerrar voz" : "Tocar para falar"}
+            </button>
+            <button
+              type="button"
+              onClick={realtimeVoice.interrupt}
+              disabled={!realtimeActive || realtimeVoice.session.state !== "speaking"}
+              className="min-h-11 rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 transition disabled:opacity-45"
+            >
+              Interromper Samuel
+            </button>
+            <button
+              type="button"
+              onClick={() => realtimeVoice.setMuted(!realtimeVoice.session.muted)}
+              disabled={!realtimeActive}
+              className={cn(
+                "min-h-11 rounded-full border px-4 py-2 transition disabled:opacity-45",
+                realtimeVoice.session.muted
+                  ? "border-amber-300/30 bg-amber-300/10 text-amber-100"
+                  : "border-white/10 bg-white/[0.03]",
+              )}
+            >
+              {realtimeVoice.session.muted ? "Ativar mic" : "Mute"}
+            </button>
+            <button
+              type="button"
+              onClick={() => realtimeVoice.setTextMode(!realtimeVoice.session.textMode)}
+              disabled={!realtimeActive}
+              className={cn(
+                "min-h-11 rounded-full border px-4 py-2 transition disabled:opacity-45",
+                realtimeVoice.session.textMode
+                  ? "border-violet-300/30 bg-violet-300/10 text-violet-100"
+                  : "border-white/10 bg-white/[0.03]",
+              )}
+            >
+              {realtimeVoice.session.textMode ? "Voltar voz" : "Texto/voz"}
+            </button>
+          </div>
+          <p className="mt-2 text-[11px] text-muted">
+            Padrão tocar para falar para controlar custos. Se Realtime estiver indisponível,
+            use o chat textual ou o ditado.
+          </p>
+        </div>
+
+        <div className="mb-3 flex flex-wrap items-center gap-2 text-[11px] text-muted">
+          <button
+            type="button"
+            onClick={() => setVoiceAutoSend((current) => !current)}
+            className={cn(
+              "rounded-full border px-3 py-1 transition",
+              voiceAutoSend
+                ? "border-cyan-300/30 bg-cyan-300/10 text-cyan-100"
+                : "border-border bg-white/[0.03]",
+            )}
+          >
+            Voz envia automático
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setVoiceReplyEnabled((current) => !current);
+              window.speechSynthesis?.cancel();
+            }}
+            className={cn(
+              "rounded-full border px-3 py-1 transition",
+              voiceReplyEnabled
+                ? "border-violet-300/30 bg-violet-300/10 text-violet-100"
+                : "border-border bg-white/[0.03]",
+            )}
+          >
+            Samuel responde em voz
+          </button>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <textarea
@@ -396,7 +712,7 @@ export function ChatPanel({
             disabled={busy || !hydrated}
             rows={2}
             className={cn(
-              "min-h-[4.5rem] flex-1 resize-none rounded-lg border border-border bg-white/[0.03] px-3.5 py-3 text-sm text-foreground",
+              "min-h-[5rem] flex-1 resize-none rounded-xl border border-border bg-white/[0.03] px-3.5 py-3 text-sm text-foreground",
               "placeholder:text-zinc-600",
               "transition-colors duration-200",
               "hover:border-white/[0.12] hover:bg-white/[0.05]",
@@ -404,6 +720,19 @@ export function ChatPanel({
               "disabled:cursor-not-allowed disabled:opacity-50",
             )}
           />
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={listening ? stopVoiceInput : startVoiceInput}
+            disabled={!hydrated || busy}
+            className={cn(
+              "shrink-0 sm:w-auto",
+              listening &&
+                "border-cyan-300/30 bg-cyan-300/10 text-cyan-100 shadow-[0_0_24px_rgba(34,211,238,0.18)]",
+            )}
+          >
+            {listening ? "Parar ditado" : "Ditado texto"}
+          </Button>
           {busy ? (
             <Button
               type="button"
@@ -425,7 +754,7 @@ export function ChatPanel({
           )}
         </div>
         <p className="mt-2 text-[11px] text-muted">
-          Enter para enviar · Shift+Enter para nova linha
+          Enter para enviar · Shift+Enter para nova linha · Voz com Web Speech API do navegador
         </p>
       </div>
     </div>

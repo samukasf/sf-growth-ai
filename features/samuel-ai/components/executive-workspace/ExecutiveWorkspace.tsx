@@ -26,7 +26,11 @@ import type {
   ExecutiveWorkspaceHandlers,
 } from "./executive-workspace.types";
 
-import { getWorkspaceSectionLabel, type WorkspaceSection } from "./workspace-navigation";
+import {
+  getWorkspaceSectionLabel,
+  WORKSPACE_NAV_ITEMS,
+  type WorkspaceSection,
+} from "./workspace-navigation";
 
 export type ExecutiveWorkspaceProps = ExecutiveWorkspaceData & ExecutiveWorkspaceHandlers;
 
@@ -140,6 +144,37 @@ export function ExecutiveWorkspace({
             </div>
           </div>
         </div>
+        <div className="flex gap-2 overflow-x-auto border-t border-cyan-300/[0.06] px-4 py-3 lg:hidden">
+          {WORKSPACE_NAV_ITEMS.filter((item) =>
+            [
+              "dashboard",
+              "samuel-ai",
+              "crm",
+              "funnels",
+              "campaigns",
+              "automation",
+              "whatsapp",
+              "analytics",
+            ].includes(item.id),
+          ).map((item) => {
+            const isActive = activeSection === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setActiveSection(item.id)}
+                className={cn(
+                  "shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-medium transition",
+                  isActive
+                    ? "border-cyan-300/30 bg-cyan-300/10 text-cyan-100"
+                    : "border-white/10 bg-white/[0.03] text-muted",
+                )}
+              >
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
       </header>
 
       <div className="relative z-10 flex min-h-0 flex-1 flex-col lg:flex-row xl:overflow-hidden">
@@ -152,7 +187,7 @@ export function ExecutiveWorkspace({
 
         <main
           className={cn(
-            "flex min-h-0 flex-1 flex-col gap-4 overflow-hidden p-4 sm:p-5 lg:p-6",
+            "flex min-h-0 flex-1 flex-col gap-4 overflow-hidden p-3 sm:p-5 lg:p-6",
             "xl:flex-row",
           )}
         >

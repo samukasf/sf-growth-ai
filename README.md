@@ -52,6 +52,26 @@ O endpoint `POST /api/samuel-ai/chat`:
 
 O prompt do Samuel AI mantém a continuidade da conversa, responde no idioma do utilizador e usa o contexto empresarial somente quando for relevante. O cliente suporta restauro de histórico, fallback local, cancelamento, erro e retry.
 
+## Voz Realtime do Samuel AI
+
+A conversa por voz usa WebRTC no navegador e a OpenAI Realtime API pelo endpoint server-side `POST /api/samuel-ai/realtime/offer`. O navegador envia apenas a oferta SDP para o servidor; o servidor combina essa oferta com a configuração da sessão e chama `https://api.openai.com/v1/realtime/calls` usando `OPENAI_API_KEY`. A chave nunca é exposta ao cliente.
+
+Variáveis opcionais:
+
+- `OPENAI_REALTIME_MODEL` define o modelo de voz Realtime. Padrão: `gpt-realtime-2.1`.
+- `OPENAI_REALTIME_VOICE` define a voz do Samuel. Padrão: `marin`.
+
+Características e limites:
+
+- O modo padrão é tocar para falar, para reduzir custo e evitar captura contínua acidental.
+- A sessão é encerrada automaticamente após 8 minutos e os tracks de áudio são finalizados no cleanup.
+- Há rate limiting básico por sessão/empresa no endpoint de negociação SDP.
+- O servidor envia `OpenAI-Safety-Identifier` com hash anonimizado da sessão e da empresa.
+- O app não registra chaves, áudio ou conteúdo sensível em logs.
+- Se WebRTC, microfone ou a Realtime API estiverem indisponíveis, o chat textual e o fallback local continuam disponíveis.
+- A validação final de voz exige navegador com microfone permitido; o build local não comprova áudio real, conexão Realtime nem permissão do dispositivo.
+
+
 ## Qualidade
 
 ```bash
