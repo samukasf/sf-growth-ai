@@ -119,7 +119,7 @@ export function ExecutiveWorkspace({
         className="pointer-events-none absolute inset-0 opacity-50 [background-image:linear-gradient(rgba(37,99,235,.035)_1px,transparent_1px),linear-gradient(90deg,rgba(37,99,235,.035)_1px,transparent_1px)] [background-size:48px_48px]"
       />
 
-      <header className="relative z-30 shrink-0 border-b border-blue-950/[0.07] bg-white/85 shadow-[0_1px_24px_rgba(15,45,100,.04)] backdrop-blur-2xl">
+      <header className="samuel-topbar relative z-30 shrink-0 border-b border-blue-950/[0.07] bg-white/85 shadow-[0_1px_24px_rgba(15,45,100,.04)] backdrop-blur-2xl">
         <div className="flex min-h-[74px] items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
             <button
@@ -233,7 +233,7 @@ function MobileCommandBar({
   ];
 
   return (
-    <nav className="fixed inset-x-3 bottom-3 z-40 grid grid-cols-5 rounded-[22px] border border-blue-950/10 bg-white/92 px-2 py-2 shadow-[0_18px_55px_rgba(15,45,100,.2)] backdrop-blur-2xl lg:hidden">
+    <nav className="samuel-mobile-bar fixed inset-x-3 z-40 grid grid-cols-5 rounded-[22px] border border-blue-950/10 bg-white/92 px-2 py-2 shadow-[0_18px_55px_rgba(15,45,100,.2)] backdrop-blur-2xl lg:hidden">
       {items.map((item) => {
         const active = activeSection === item.section;
         return (

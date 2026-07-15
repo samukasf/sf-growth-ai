@@ -1,6 +1,7 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import {
   Activity,
@@ -9,14 +10,18 @@ import {
   Bot,
   BrainCircuit,
   BriefcaseBusiness,
+  Camera,
   CircleDollarSign,
   Clock3,
   Gauge,
-  Lightbulb,
   Megaphone,
   MessageSquareText,
+  Music2,
+  Send,
   ShieldCheck,
   Sparkles,
+  Target,
+  ThumbsUp,
   TrendingUp,
   UsersRound,
   Workflow,
@@ -159,7 +164,7 @@ function ScoreRing({ score }: { score: number }) {
   const offset = circumference - (normalized / 100) * circumference;
 
   return (
-    <div className="relative mx-auto size-36">
+    <div className="score-ring relative mx-auto size-36">
       <svg className="size-full -rotate-90" viewBox="0 0 120 120" aria-hidden="true">
         <circle cx="60" cy="60" r={radius} fill="none" stroke="rgba(148,163,184,.12)" strokeWidth="8" />
         <circle
@@ -195,121 +200,37 @@ function SamuelHologram({ active }: { active: boolean }) {
     <div className={cn("samuel-hologram", active && "samuel-hologram--active")} aria-hidden="true">
       <div className="samuel-hologram__aura" />
       <div className="samuel-hologram__energy" />
+      <div className="samuel-hologram__ring samuel-hologram__ring--outer" />
+      <div className="samuel-hologram__ring samuel-hologram__ring--middle" />
+      <div className="samuel-hologram__ring samuel-hologram__ring--inner" />
+      <div className="samuel-hologram__radar" />
       <div className="samuel-hologram__particles">
-        {Array.from({ length: 16 }, (_, index) => (
+        {Array.from({ length: 24 }, (_, index) => (
           <i
             key={index}
             style={{
-              left: `${8 + ((index * 31) % 84)}%`,
-              top: `${14 + ((index * 47) % 76)}%`,
-              animationDelay: `${-(index * 0.37)}s`,
-              animationDuration: `${3.2 + (index % 5) * 0.55}s`,
+              left: `${5 + ((index * 37) % 91)}%`,
+              top: `${8 + ((index * 43) % 82)}%`,
+              animationDelay: `${-(index * 0.29)}s`,
+              animationDuration: `${3 + (index % 6) * 0.48}s`,
             }}
           />
         ))}
       </div>
-      <svg viewBox="0 0 520 440" role="presentation" className="samuel-hologram__svg">
-        <defs>
-          <radialGradient id="samuel-core" cx="50%" cy="44%" r="58%">
-            <stop offset="0%" stopColor="#7dd3fc" stopOpacity=".88" />
-            <stop offset="36%" stopColor="#2563eb" stopOpacity=".46" />
-            <stop offset="72%" stopColor="#172554" stopOpacity=".16" />
-            <stop offset="100%" stopColor="#020617" stopOpacity="0" />
-          </radialGradient>
-          <linearGradient id="samuel-body" x1="50%" y1="0" x2="50%" y2="100%">
-            <stop offset="0%" stopColor="#60a5fa" stopOpacity=".8" />
-            <stop offset="55%" stopColor="#2563eb" stopOpacity=".32" />
-            <stop offset="100%" stopColor="#020617" stopOpacity="0" />
-          </linearGradient>
-          <linearGradient id="samuel-line" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#a5f3fc" />
-            <stop offset="50%" stopColor="#38bdf8" />
-            <stop offset="100%" stopColor="#8b5cf6" />
-          </linearGradient>
-          <filter id="samuel-glow" x="-100%" y="-100%" width="300%" height="300%">
-            <feGaussianBlur stdDeviation="5" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-          <pattern id="samuel-grid" width="18" height="18" patternUnits="userSpaceOnUse">
-            <path d="M18 0H0V18" fill="none" stroke="#38bdf8" strokeOpacity=".13" strokeWidth=".6" />
-          </pattern>
-          <clipPath id="samuel-bust-clip">
-            <path d="M121 438c9-86 42-122 101-139l10-38h56l10 38c59 17 92 53 101 139Z" />
-            <ellipse cx="260" cy="190" rx="82" ry="112" />
-          </clipPath>
-        </defs>
-
-        <circle cx="260" cy="202" r="171" fill="url(#samuel-core)" />
-        <g className="samuel-hologram__rings" fill="none" stroke="#38bdf8">
-          <circle cx="260" cy="202" r="162" strokeOpacity=".18" strokeWidth="1" strokeDasharray="2 10" />
-          <circle cx="260" cy="202" r="137" strokeOpacity=".28" strokeWidth="1" strokeDasharray="28 8 4 8" />
-          <circle cx="260" cy="202" r="113" strokeOpacity=".24" strokeWidth=".8" strokeDasharray="3 7" />
-        </g>
-        <g className="samuel-hologram__orbit" fill="#67e8f9">
-          <circle cx="260" cy="40" r="3" />
-          <circle cx="397" cy="286" r="2.5" />
-          <circle cx="117" cy="130" r="2" />
-        </g>
-        <g className="samuel-hologram__data-arcs" fill="none" stroke="#38bdf8" strokeLinecap="round">
-          <path d="M82 250c-18-92 22-178 91-224" strokeOpacity=".5" strokeWidth="2" strokeDasharray="22 12" />
-          <path d="M438 250c18-92-22-178-91-224" strokeOpacity=".4" strokeWidth="1.5" strokeDasharray="8 14" />
-          <path d="M139 360c-38-34-61-78-65-126" strokeOpacity=".3" strokeDasharray="2 9" />
-          <path d="M381 360c38-34 61-78 65-126" strokeOpacity=".3" strokeDasharray="2 9" />
-        </g>
-
-        <path
-          d="M121 438c9-86 42-122 101-139l10-38h56l10 38c59 17 92 53 101 139Z"
-          fill="url(#samuel-body)"
-          stroke="url(#samuel-line)"
-          strokeOpacity=".72"
-          strokeWidth="1.5"
-        />
-        <ellipse
-          cx="260"
-          cy="190"
-          rx="82"
-          ry="112"
-          fill="#0b1d48"
-          fillOpacity=".72"
-          stroke="url(#samuel-line)"
-          strokeWidth="2"
-          filter="url(#samuel-glow)"
-        />
-        <g clipPath="url(#samuel-bust-clip)">
-          <rect x="100" y="70" width="320" height="368" fill="url(#samuel-grid)" />
-          <g stroke="#7dd3fc" strokeOpacity=".48" strokeWidth=".8">
-            <path d="M178 181h45l18 15h38l18-15h45" />
-            <path d="M260 78v65l-15 38 15 28 16-28" />
-            <path d="M205 260l55 20 55-20" />
-            <path d="M151 364l109 36 109-36" />
-            <path d="M194 317l66 34 66-34" />
-          </g>
-        </g>
-
-        <g fill="none" stroke="url(#samuel-line)" strokeLinecap="round" filter="url(#samuel-glow)">
-          <path d="M211 177c15-10 31-9 43 0" strokeWidth="3" />
-          <path d="M266 177c12-9 29-10 43 0" strokeWidth="3" />
-          <path d="M229 232c20 13 42 13 62 0" strokeWidth="2" strokeOpacity=".82" />
-          <path d="M260 185v30" strokeWidth="1.4" strokeOpacity=".72" />
-        </g>
-        <g fill="#a5f3fc" filter="url(#samuel-glow)">
-          <circle cx="232" cy="178" r="3.5" />
-          <circle cx="288" cy="178" r="3.5" />
-          <circle cx="260" cy="143" r="3" />
-          <circle cx="260" cy="280" r="3" />
-          <circle cx="194" cy="317" r="2" />
-          <circle cx="326" cy="317" r="2" />
-        </g>
-        <path d="M100 420h320" stroke="#38bdf8" strokeOpacity=".35" strokeDasharray="2 8" />
-        <path className="samuel-hologram__scan" d="M126 192h268" stroke="#a5f3fc" strokeWidth="1.5" filter="url(#samuel-glow)" />
-      </svg>
+      <Image
+        src="/samuel-hologram-v2.webp"
+        alt=""
+        width={1122}
+        height={1402}
+        priority
+        sizes="(max-width: 640px) 310px, (max-width: 1024px) 430px, 520px"
+        className="samuel-hologram__portrait"
+      />
+      <div className="samuel-hologram__scan" />
+      <div className="samuel-hologram__base" />
     </div>
   );
 }
-
 function SectionTitle({
   eyebrow,
   title,
@@ -358,10 +279,9 @@ export function SamuelExecutiveHome({
   const pendingTasks = data.executiveMonitoring?.progress.pendingTasks ?? inbox.summary.pendingCount;
   const urgentActions = inbox.summary.urgentCount;
   const onlineExecutives = data.council.members.filter((member) => member.status === "online").length;
-  const priorities =
-    data.executiveCeo?.topPriorities.length
-      ? data.executiveCeo.topPriorities.slice(0, 4)
-      : inbox.items.slice(0, 4).map((item) => item.title);
+  const priorities = data.executiveCeo?.topPriorities.length
+    ? data.executiveCeo.topPriorities.slice(0, 4)
+    : inbox.items.slice(0, 4).map((item) => item.title);
   const timeline = data.executiveMonitoring?.timeline.slice(0, 4) ?? [];
   const insight =
     data.executiveCeo?.executiveRecommendation ||
@@ -370,14 +290,21 @@ export function SamuelExecutiveHome({
 
   const performance = [
     {
-      label: "Receita",
+      label: "Faturamento",
       value: data.briefing.metrics.revenue.value,
       detail: data.briefing.metrics.revenue.change,
       icon: CircleDollarSign,
       tone: "emerald" as const,
     },
     {
-      label: "Leads",
+      label: "Crescimento",
+      value: data.briefing.metrics.growth.value,
+      detail: data.briefing.metrics.growth.change,
+      icon: TrendingUp,
+      tone: "blue" as const,
+    },
+    {
+      label: "Leads gerados",
       value: data.briefing.metrics.leads.value,
       detail: data.briefing.metrics.leads.change,
       icon: UsersRound,
@@ -387,286 +314,300 @@ export function SamuelExecutiveHome({
       label: "Conversões",
       value: data.briefing.metrics.conversions.value,
       detail: data.briefing.metrics.conversions.change,
-      icon: TrendingUp,
-      tone: "violet" as const,
-    },
-    {
-      label: "Execução",
-      value: `${data.executiveMonitoring?.progress.overall ?? 0}%`,
-      detail: `${data.executiveMonitoring?.progress.activePlans ?? 0} planos ativos`,
       icon: Activity,
-      tone: "blue" as const,
+      tone: "violet" as const,
     },
   ];
 
+  const fallbackCampaigns = [
+    { id: "google", name: "Google Ads", platform: "Google", roi: 0, status: data.googleAnalyticsExecutive ? "Monitorado" : "Aguardando dados" },
+    { id: "meta", name: "Meta Ads", platform: "Meta", roi: data.metaExecutive?.roas ?? 0, status: data.metaExecutive ? "Monitorado" : "Aguardando dados" },
+    { id: "linkedin", name: "LinkedIn Ads", platform: "LinkedIn", roi: 0, status: data.linkedInExecutive ? "Monitorado" : "Aguardando dados" },
+  ];
+  const campaigns = data.marketingExecutive?.campaignPerformance.length
+    ? data.marketingExecutive.campaignPerformance.slice(0, 3)
+    : fallbackCampaigns;
+
+  const socialChannels = [
+    { label: "Instagram", value: data.metaExecutive?.bestPerformingPosts.length ?? 0, icon: Camera, color: "text-fuchsia-600 bg-fuchsia-50" },
+    { label: "Facebook", value: data.metaExecutive?.weakPerformingPosts.length ?? 0, icon: ThumbsUp, color: "text-blue-600 bg-blue-50" },
+    { label: "LinkedIn", value: data.linkedInExecutive?.bestPosts.length ?? 0, icon: BriefcaseBusiness, color: "text-sky-700 bg-sky-50" },
+    { label: "Conteúdo", value: data.marketingExecutive?.topChannels.length ?? 0, icon: Music2, color: "text-slate-900 bg-slate-100" },
+  ];
+
+  const calendarItems = timeline.length > 0
+    ? timeline
+    : (data.executiveCeo?.nextActions ?? []).slice(0, 4).map((action, index) => ({
+        id: `calendar-action-${index}`,
+        label: action,
+        deadline: index === 0 ? "Hoje" : "Próximo ciclo",
+        status: "pending" as const,
+      }));
+
   return (
-    <div className="samuel-home flex flex-col gap-5 pb-20 lg:pb-4">
+    <div className="samuel-home flex flex-col gap-4 pb-20 lg:pb-4">
       <section className="samuel-hero overflow-hidden rounded-[28px] border border-blue-300/15">
         <div className="samuel-hero__noise" aria-hidden="true" />
         <div className="samuel-hero__grid">
-          <aside className="samuel-hero__score order-2 lg:order-1">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-200/80">
-              Pontuação executiva
-            </p>
+          <aside className="samuel-hero__score">
+            <p className="samuel-hero__card-title">Pontuação executiva</p>
             <ScoreRing score={healthScore} />
             <div className="text-center">
-              <p className="text-sm font-semibold text-emerald-300">{HEALTH_LABELS[healthStatus]}</p>
-              <p className="mx-auto mt-1 max-w-[210px] text-[11px] leading-relaxed text-slate-400">
+              <p className="samuel-hero__health-label">{HEALTH_LABELS[healthStatus]}</p>
+              <p className="samuel-hero__health-copy">
                 {companyHealth?.summary || HEALTH_COPY[healthStatus]}
               </p>
             </div>
             <button
               type="button"
               onClick={() => onNavigate("dashboard")}
-              className="mx-auto mt-4 flex items-center gap-1.5 text-[11px] font-medium text-blue-300 hover:text-cyan-200"
+              className="samuel-hero__detail-link"
             >
-              Ver diagnóstico <ArrowRight className="size-3.5" />
+              Ver detalhes <ArrowRight className="size-3" />
             </button>
           </aside>
 
-          <div className="samuel-hero__center order-1 lg:order-2">
-            <div className="relative z-10 flex flex-col items-center text-center">
-              <div className="mb-1 flex items-center gap-2 rounded-full border border-emerald-300/15 bg-emerald-400/[0.07] px-3 py-1 text-[10px] font-medium uppercase tracking-[0.16em] text-emerald-300">
-                <span className={cn("size-1.5 rounded-full bg-emerald-300", handlers.isProcessing && "animate-pulse")} />
-                {handlers.isProcessing ? "Samuel a analisar" : "Samuel online"}
-              </div>
+          <div className="samuel-hero__center">
+            <div className="relative z-10 flex h-full w-full flex-col items-center text-center">
               {!data.executiveContext && (
-                <span className="relative z-10 -mb-5 mt-2 rounded-full border border-amber-300/15 bg-amber-300/[0.06] px-2.5 py-1 text-[9px] font-medium uppercase tracking-[0.14em] text-amber-200/80">
-                  Dados de demonstração
-                </span>
+                <span className="samuel-demo-badge">Dados de demonstração</span>
               )}
               <SamuelHologram active={handlers.isProcessing} />
-              <div className="relative z-20 -mt-16 sm:-mt-20">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-blue-300/80">
-                  AI Executive Operating System
-                </p>
-                <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-white sm:text-4xl">
-                  Olá, Samuel.
-                </h1>
-                <p className="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-slate-300 sm:text-base">
-                  Pronto para impulsionar o crescimento da {companyName} hoje?
-                </p>
-                <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => onNavigate("samuel-ai")}
-                    className="samuel-primary-action group"
-                  >
-                    <span className="samuel-primary-action__wave" aria-hidden="true">
-                      {[8, 15, 10, 22, 13, 26, 18, 11, 20, 9].map((height, index) => (
-                        <i key={`${height}-${index}`} style={{ height }} />
-                      ))}
-                    </span>
-                    Conversar com Samuel
-                    <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-                  </button>
-                  <Link
-                    href="/empresas"
-                    className="flex h-11 items-center gap-2 rounded-xl border border-blue-950/10 bg-white/80 px-4 text-xs font-semibold text-blue-950 shadow-sm transition hover:border-cyan-300/60 hover:bg-white"
-                  >
-                    <BrainCircuit className="size-4 text-cyan-300" />
-                    Company Brain
-                  </Link>
-                </div>
+              <div className="samuel-hero__identity">
+                <h1>Olá, Samuel! <span aria-hidden="true">👋</span></h1>
+                <p>Pronto para impulsionar<br className="sm:hidden" /> o crescimento da {companyName} hoje?</p>
+                <span className="samuel-online-badge">
+                  <i className={cn(handlers.isProcessing && "animate-pulse")} />
+                  {handlers.isProcessing ? "Samuel a analisar" : "Samuel online"}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onNavigate("samuel-ai")}
+                  className="samuel-primary-action group"
+                >
+                  <span className="samuel-primary-action__wave" aria-hidden="true">
+                    {[8, 15, 10, 22, 13, 26, 18, 11, 20, 9].map((height, index) => (
+                      <i key={`${height}-${index}`} style={{ height }} />
+                    ))}
+                  </span>
+                  Falar com Samuel
+                  <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+                </button>
               </div>
             </div>
           </div>
 
-          <aside className="samuel-hero__summary order-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-200/80">
-              Resumo executivo
-            </p>
-            <ul className="mt-5 space-y-4">
+          <aside className="samuel-hero__summary">
+            <p className="samuel-hero__card-title">Resumo do dia</p>
+            <ul>
               {[
-                { label: "Itens na inbox", value: inbox.summary.totalItems, icon: BriefcaseBusiness, tone: "text-blue-300" },
-                { label: "Tarefas pendentes", value: pendingTasks, icon: Clock3, tone: "text-amber-300" },
-                { label: "Ações urgentes", value: urgentActions, icon: Zap, tone: "text-rose-300" },
-                { label: "Executivos online", value: onlineExecutives, icon: Bot, tone: "text-cyan-300" },
+                { label: "Itens na inbox", value: inbox.summary.totalItems, icon: BriefcaseBusiness, tone: "text-blue-600" },
+                { label: "Tarefas pendentes", value: pendingTasks, icon: Clock3, tone: "text-amber-500" },
+                { label: "Ações urgentes", value: urgentActions, icon: Zap, tone: "text-rose-500" },
+                { label: "Executivos online", value: onlineExecutives, icon: Bot, tone: "text-cyan-600" },
               ].map((item) => (
-                <li key={item.label} className="flex items-center gap-3">
-                  <span className="flex size-9 items-center justify-center rounded-xl border border-white/[0.07] bg-white/[0.04]">
+                <li key={item.label}>
+                  <span className="samuel-summary-icon">
                     <item.icon className={cn("size-4", item.tone)} strokeWidth={1.8} />
                   </span>
                   <div>
-                    <p className="text-lg font-semibold leading-none text-white">{item.value}</p>
-                    <p className="mt-1 text-[10px] text-slate-500">{item.label}</p>
+                    <p>{item.value}</p>
+                    <span>{item.label}</span>
                   </div>
                 </li>
               ))}
             </ul>
-            <button
-              type="button"
-              onClick={() => onNavigate("executive-inbox")}
-              className="mt-5 flex items-center gap-1.5 text-[11px] font-medium text-blue-300 hover:text-cyan-200"
-            >
-              Abrir Executive Inbox <ArrowRight className="size-3.5" />
-            </button>
           </aside>
         </div>
       </section>
 
-      <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+      <section className="samuel-modules-grid">
         {QUICK_MODULES.map((module) => (
           <button
             key={module.label}
             type="button"
             onClick={() => onNavigate(module.section)}
-            className="samuel-module-card group flex min-h-36 flex-col items-start rounded-2xl border p-4 text-left transition duration-300 hover:-translate-y-1"
+            className="samuel-module-card group"
           >
-            <span className={cn("flex size-11 items-center justify-center rounded-2xl border", TONE_STYLES[module.tone])}>
-              <module.icon className="size-5" strokeWidth={1.8} />
+            <span className={cn("samuel-module-card__icon", TONE_STYLES[module.tone])}>
+              <module.icon strokeWidth={1.7} />
             </span>
-            <p className="mt-4 text-sm font-semibold text-white">{module.label}</p>
-            <p className="mt-1 text-[10px] leading-relaxed text-slate-500">{module.description}</p>
-            <span className="mt-auto self-end rounded-full border border-white/[0.08] p-1.5 text-slate-500 transition group-hover:border-blue-300/25 group-hover:text-blue-300">
-              <ArrowRight className="size-3.5" />
-            </span>
+            <p>{module.label}</p>
+            <span>{module.description}</span>
+            <i>
+              <ArrowRight className="size-3" />
+            </i>
           </button>
         ))}
       </section>
 
-      <section className="rounded-2xl border border-white/[0.07] bg-white/[0.025] p-4 sm:p-5">
+      <section className="samuel-performance">
         <SectionTitle
           eyebrow={data.executiveContext ? "Desempenho geral" : "Desempenho geral · demonstração"}
           title="Sinais vitais da operação"
         />
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="samuel-performance__grid">
           {performance.map((metric) => (
             <MetricCard key={metric.label} {...metric} />
           ))}
+          <article className="samuel-ad-score">
+            <div>
+              <p>Pontuação de anúncios</p>
+              <strong>{data.marketingExecutive?.paidMediaScore ?? 0}</strong>
+              <span>{scoreStatus(data.marketingExecutive?.paidMediaScore ?? 0)}</span>
+            </div>
+            <Gauge className="size-6" />
+          </article>
         </div>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[1.05fr_1.05fr_.9fr]">
-        <article className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 sm:p-5">
+      <section className="samuel-dashboard-grid">
+        <article className="samuel-dashboard-card">
           <SectionTitle
-            eyebrow="Foco do dia"
-            title="Prioridades executivas"
-            action={{ label: "Ver tarefas", onClick: () => onNavigate("executive-tasks") }}
+            eyebrow="Anúncios ativos"
+            title="Campanhas"
+            action={{ label: "Ver todas", onClick: () => onNavigate("meta") }}
           />
-          <ol className="space-y-2">
-            {priorities.length > 0 ? (
-              priorities.map((priority, index) => (
-                <li key={`${priority}-${index}`} className="flex items-start gap-3 rounded-xl border border-white/[0.055] bg-black/15 px-3 py-3">
-                  <span className={cn(
-                    "mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold",
-                    index === 0 ? "bg-blue-400 text-slate-950" : "border border-white/10 bg-white/[0.04] text-slate-400",
-                  )}>
-                    {index + 1}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-xs font-medium leading-relaxed text-slate-200">{priority}</p>
-                    <p className="mt-1 text-[10px] text-slate-600">Prioridade {index === 0 ? "alta" : "executiva"}</p>
-                  </div>
-                </li>
-              ))
-            ) : (
-              <li className="rounded-xl border border-dashed border-white/10 p-5 text-center text-xs text-slate-500">
-                As prioridades surgirão após a primeira análise.
-              </li>
-            )}
-          </ol>
-        </article>
-
-        <article className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 sm:p-5">
-          <SectionTitle
-            eyebrow="Plano executivo"
-            title="Próximas ações"
-            action={{ label: "Ver agenda", onClick: () => onNavigate("executive-agenda") }}
-          />
-          <div className="relative space-y-1 before:absolute before:bottom-4 before:left-[11px] before:top-4 before:w-px before:bg-gradient-to-b before:from-blue-400/70 before:to-violet-400/10">
-            {(timeline.length > 0 ? timeline : (data.executiveCeo?.nextActions ?? []).slice(0, 4).map((action, index) => ({
-              id: `action-${index}`,
-              label: action,
-              deadline: index === 0 ? "Hoje" : "Próximo ciclo",
-              status: "pending" as const,
-            }))).map((item) => (
-              <div key={item.id} className="relative flex gap-3 rounded-xl px-0 py-3 pl-0 transition hover:bg-white/[0.025]">
-                <span className="relative z-10 mt-1 size-[23px] shrink-0 rounded-full border-4 border-[#080d19] bg-blue-400 shadow-[0_0_14px_rgba(96,165,250,.55)]" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium leading-relaxed text-slate-200">{item.label}</p>
-                  <div className="mt-1 flex items-center gap-2 text-[10px] text-slate-600">
-                    <Clock3 className="size-3" />
-                    <span>{item.deadline}</span>
-                    <span>·</span>
-                    <span className="capitalize">{item.status.replaceAll("_", " ")}</span>
-                  </div>
-                </div>
-              </div>
+          <div className="samuel-campaign-list">
+            {campaigns.map((campaign, index) => (
+              <button key={campaign.id} type="button" onClick={() => onNavigate("meta")}>
+                <span className={cn("samuel-campaign-logo", index === 0 ? "is-google" : index === 1 ? "is-meta" : "is-linkedin")}>
+                  {index === 0 ? <Target /> : index === 1 ? <Megaphone /> : <BriefcaseBusiness />}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <strong>{campaign.name}</strong>
+                  <small>{campaign.status}</small>
+                </span>
+                <span className="samuel-campaign-roi">
+                  <small>ROI</small>
+                  <b>{campaign.roi > 0 ? `${campaign.roi.toFixed(1)}x` : "—"}</b>
+                </span>
+              </button>
             ))}
           </div>
         </article>
 
-        <article className="rounded-2xl border border-blue-950/[0.07] bg-white/75 p-4 shadow-[0_18px_60px_rgba(37,74,138,.08)] sm:p-5">
+        <article className="samuel-dashboard-card">
           <SectionTitle
-            eyebrow="Integrações ao vivo"
-            title="Google Workspace"
+            eyebrow="Postagens das redes"
+            title="Canais sociais"
+            action={{ label: "Ver todas", onClick: () => onNavigate("marketing") }}
+          />
+          <div className="samuel-social-grid">
+            {socialChannels.map((channel) => (
+              <button key={channel.label} type="button" onClick={() => onNavigate("marketing")}>
+                <span className={channel.color}><channel.icon /></span>
+                <strong>{channel.value}</strong>
+                <small>{channel.label}</small>
+              </button>
+            ))}
+          </div>
+          <p className="samuel-card-subtitle">Próximas postagens</p>
+          <div className="samuel-post-list">
+            {(data.marketingExecutive?.marketingRecommendations.slice(0, 2) ?? priorities.slice(0, 2).map((title, index) => ({
+              id: `post-${index}`,
+              title,
+              description: index === 0 ? "Instagram · Hoje, 10:00" : "LinkedIn · Amanhã, 09:30",
+            }))).map((post) => (
+              <button key={post.id} type="button" onClick={() => onNavigate("marketing")}>
+                <span><Send className="size-3.5" /></span>
+                <span className="min-w-0 flex-1">
+                  <strong>{post.title}</strong>
+                  <small>{"description" in post ? post.description : "Conteúdo recomendado pelo Samuel"}</small>
+                </span>
+                <b>Pronto</b>
+              </button>
+            ))}
+          </div>
+        </article>
+
+        <article className="samuel-dashboard-card">
+          <SectionTitle
+            eyebrow="Próximas tarefas"
+            title="Foco executivo"
+            action={{ label: "Ver todas", onClick: () => onNavigate("executive-tasks") }}
+          />
+          <ol className="samuel-task-list">
+            {priorities.length > 0 ? priorities.map((priority, index) => (
+              <li key={`${priority}-${index}`}>
+                <i />
+                <span className="min-w-0 flex-1">
+                  <strong>{priority}</strong>
+                  <small>{index === 0 ? "Hoje" : index === 1 ? "Amanhã" : "Próximo ciclo"}</small>
+                </span>
+                <b className={cn(index === 0 ? "text-rose-500" : index === 1 ? "text-amber-500" : "text-emerald-600")}>
+                  {index === 0 ? "Alta" : index === 1 ? "Média" : "Normal"}
+                </b>
+              </li>
+            )) : (
+              <li className="samuel-empty-state">As prioridades surgirão após a primeira análise.</li>
+            )}
+          </ol>
+        </article>
+
+        <article className="samuel-dashboard-card">
+          <SectionTitle
+            eyebrow="Calendário de hoje"
+            title="Agenda executiva"
+            action={{ label: "Ver agenda", onClick: () => onNavigate("executive-agenda") }}
+          />
+          <div className="samuel-calendar-list">
+            {calendarItems.map((item, index) => (
+              <button key={item.id} type="button" onClick={() => onNavigate("executive-agenda")}>
+                <time>{index === 0 ? "10:00" : index === 1 ? "14:00" : index === 2 ? "16:30" : "18:00"}</time>
+                <i />
+                <span className="min-w-0">
+                  <strong>{item.label}</strong>
+                  <small>{item.deadline}</small>
+                </span>
+              </button>
+            ))}
+          </div>
+        </article>
+
+        <article className="samuel-dashboard-card">
+          <SectionTitle
+            eyebrow="Integrações ativas"
+            title="Ecossistema conectado"
             action={{ label: "Gerir", onClick: () => onNavigate("google-analytics") }}
           />
           <GoogleWorkspacePanel companyId={data.executiveContext?.company.id} />
-          <div className="mt-4 border-t border-blue-950/[0.07] pt-3">
-            <p className="mb-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-500">Outros módulos</p>
-            <div className="grid grid-cols-3 gap-1.5">
-              {[
-                { label: "Analytics", connected: Boolean(data.googleAnalyticsExecutive), icon: BarChart3 },
-                { label: "Meta", connected: Boolean(data.metaExecutive), icon: Megaphone },
-                { label: "LinkedIn", connected: Boolean(data.linkedInExecutive), icon: UsersRound },
-              ].map((item) => (
-                <div key={item.label} className="rounded-lg border border-blue-950/[0.06] bg-blue-50/60 px-2 py-2 text-center">
-                  <item.icon className="mx-auto size-3.5 text-blue-700" />
-                  <p className="mt-1 truncate text-[9px] font-medium text-blue-950">{item.label}</p>
-                  <span className={cn("mx-auto mt-1 block size-1.5 rounded-full", item.connected ? "bg-emerald-500" : "bg-slate-300")} />
-                </div>
-              ))}
-            </div>
-          </div>
-        </article>
-      </section>
-
-      <section className="grid gap-4 lg:grid-cols-[1.35fr_.65fr]">
-        <article className="relative overflow-hidden rounded-2xl border border-cyan-300/15 bg-[linear-gradient(135deg,rgba(30,64,175,.16),rgba(8,47,73,.08),rgba(88,28,135,.12))] p-5 sm:p-6">
-          <div className="pointer-events-none absolute -right-16 -top-20 size-64 rounded-full bg-cyan-400/10 blur-3xl" />
-          <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center">
-            <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-300/10 text-cyan-200 shadow-[0_0_35px_rgba(34,211,238,.12)]">
-              <Lightbulb className="size-7" strokeWidth={1.5} />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-300/80">Insight inteligente</p>
-              <p className="mt-2 text-sm font-medium leading-relaxed text-slate-100 sm:text-base">{insight}</p>
-              <button
-                type="button"
-                onClick={() => onNavigate("samuel-ai")}
-                className="mt-3 flex items-center gap-1.5 text-[11px] font-semibold text-cyan-300 hover:text-cyan-100"
-              >
-                Analisar com Samuel <ArrowRight className="size-3.5" />
+          <div className="samuel-other-integrations">
+            {[
+              { label: "Analytics", connected: Boolean(data.googleAnalyticsExecutive), icon: BarChart3 },
+              { label: "Meta", connected: Boolean(data.metaExecutive), icon: Megaphone },
+              { label: "LinkedIn", connected: Boolean(data.linkedInExecutive), icon: BriefcaseBusiness },
+            ].map((item) => (
+              <button key={item.label} type="button" onClick={() => onNavigate(item.label === "Meta" ? "meta" : item.label === "LinkedIn" ? "linkedin" : "google-analytics")}>
+                <item.icon />
+                <span>{item.label}</span>
+                <i className={item.connected ? "is-connected" : undefined} />
               </button>
-            </div>
+            ))}
           </div>
         </article>
 
-        <article className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Growth Score</p>
-              <p className="mt-2 text-4xl font-semibold tracking-tight text-white">{data.executiveCeo?.growthScore ?? 0}</p>
-              <p className="mt-1 text-xs text-emerald-300">{scoreStatus(data.executiveCeo?.growthScore ?? 0)}</p>
-            </div>
-            <span className="flex size-11 items-center justify-center rounded-2xl border border-violet-300/15 bg-violet-400/10 text-violet-300">
-              <Gauge className="size-5" />
-            </span>
+        <article className="samuel-dashboard-card samuel-insight-card">
+          <div className="samuel-insight-visual" aria-hidden="true">
+            <span><BrainCircuit /></span>
           </div>
-          <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-white/[0.07]">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-blue-500 via-cyan-400 to-violet-400 transition-all duration-1000"
-              style={{ width: `${data.executiveCeo?.growthScore ?? 0}%` }}
-            />
-          </div>
-          <div className="mt-4 flex items-center justify-between text-[10px] text-slate-600">
-            <span className="flex items-center gap-1"><ShieldCheck className="size-3" /> Risco {data.executiveCeo?.riskScore ?? 0}</span>
-            <span className="flex items-center gap-1"><Sparkles className="size-3" /> Oportunidade {data.executiveCeo?.opportunityScore ?? 0}</span>
+          <p>Insights inteligentes</p>
+          <h2>{insight}</h2>
+          <button type="button" onClick={() => onNavigate("samuel-ai")}>
+            Ver análise completa <ArrowRight className="size-3.5" />
+          </button>
+          <div>
+            <span><ShieldCheck className="size-3.5" /> Confiança {data.executiveStatus.analysisConfidence}%</span>
+            <span><Sparkles className="size-3.5" /> Growth {data.executiveCeo?.growthScore ?? 0}</span>
           </div>
         </article>
       </section>
+
+      <Link href="/empresas" className="samuel-company-brain-link">
+        <BrainCircuit className="size-4" />
+        Gerir Company Brain da {companyName}
+        <ArrowRight className="ml-auto size-4" />
+      </Link>
     </div>
   );
 }

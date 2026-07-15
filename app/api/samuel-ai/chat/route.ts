@@ -20,6 +20,8 @@ import type {
   SamuelChatRuntimeSummary,
   SamuelChatStreamEvent,
 } from "@/features/samuel-ai/chat/samuel-chat.types";
+import { loadGoogleWorkspaceChatSignal } from "@/features/google-workspace/google-workspace-chat.server";
+import type { GoogleWorkspaceChatSignal } from "@/features/google-workspace/google-workspace-chat";
 import { SamuelConversationRepository } from "@/features/samuel-ai/server/samuel-conversation.repository";
 import { getWorkspaceSessionIdentity } from "@/features/samuel-ai/server/workspace-session";
 import type { ChatMessage } from "@/features/samuel-ai/types";
@@ -90,6 +92,7 @@ function toRuntimeSummary(
 function buildCompletionInput(
   runtimeResult: Awaited<ReturnType<typeof runSamuelRuntime>>,
   history: ChatMessage[],
+  workspaceSignal?: GoogleWorkspaceChatSignal,
 ): LLMCompletionInput {
   const response = runtimeResult.response;
   return {
@@ -103,6 +106,7 @@ function buildCompletionInput(
         `[RUNTIME] Recomendação: ${response.recommendation}`,
         `[RUNTIME] Próximo passo: ${response.nextStep}`,
         `[RUNTIME] Evidências consolidadas: ${runtimeResult.evidenceCount}`,
+        ...(workspaceSignal?.fragments ?? []),
       ],
     },
   };
@@ -214,6 +218,10 @@ export async function POST(request: Request) {
       }
 
       try {
+        const workspaceSignal = await loadGoogleWorkspaceChatSignal(
+          chatRequest.query,
+          chatRequest.companyId,
+        );
         const runtimeResult = await runSamuelRuntime({
           query: chatRequest.query,
           tenantId: `workspace-${chatRequest.companyId}`,
@@ -241,7 +249,11 @@ export async function POST(request: Request) {
 
           try {
             const completion = await provider.stream(
-              buildCompletionInput(runtimeResult, chatRequest.history ?? []),
+              buildCompletionInput(
+                runtimeResult,
+                chatRequest.history ?? [],
+                workspaceSignal,
+              ),
               (delta) => {
                 content += delta;
                 send({ type: "delta", delta });
@@ -270,7 +282,10 @@ export async function POST(request: Request) {
         }
 
         if (!content) {
-          content = buildSamuelFallbackAnswer(chatRequest.query, runtimeSummary);
+          content = workspaceSignal.fallbackAnswer ??
+            buildSamuelFallbackAnswer(chatRequest.query, runtimeSummary, {
+              providerConfigured: Boolean(provider),
+            });
           send({ type: "provider", provider: providerId, model });
           send({ type: "delta", delta: content });
         }

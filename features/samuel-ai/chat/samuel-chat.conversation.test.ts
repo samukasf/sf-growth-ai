@@ -76,6 +76,17 @@ describe("buildSamuelFallbackAnswer", () => {
     expect(answer).not.toContain("Dados insuficientes");
   });
 
+  it("does not ask for a key when a configured provider is temporarily unavailable", () => {
+    const answer = buildSamuelFallbackAnswer(
+      "Explica a teoria da relatividade",
+      runtimeSummary,
+      { providerConfigured: true },
+    );
+
+    expect(answer).toContain("temporariamente indisponível");
+    expect(answer).not.toContain("OPENAI_API_KEY");
+  });
+
   it("keeps the deterministic runtime answer for business intents", () => {
     const answer = buildSamuelFallbackAnswer("Analisa as vendas", {
       ...runtimeSummary,

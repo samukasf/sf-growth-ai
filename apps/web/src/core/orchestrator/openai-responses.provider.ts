@@ -85,9 +85,11 @@ export function buildResponsesApiInput(
   input: LLMCompletionInput,
 ): ResponsesApiInputMessage[] {
   const intent = String(input.payload.metadata.intent ?? "general");
-  const includeRuntimeContext = !["conversation", "creative", "general"].includes(
-    intent,
+  const hasLiveIntegrationContext = input.payload.fragments.some((fragment) =>
+    fragment.startsWith("[GOOGLE WORKSPACE — DADO AO VIVO]"),
   );
+  const includeRuntimeContext = hasLiveIntegrationContext ||
+    !["conversation", "creative", "general"].includes(intent);
   const fragments = input.payload.fragments
     .slice(0, 40)
     .map((fragment) => `- ${fragment}`)
