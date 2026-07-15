@@ -3,7 +3,7 @@
 > Estado verificado em 15 de julho de 2026  
 > Produto: SF Growth AI — Executive Operating System  
 > Interface principal: `/samuel-ai`  
-> Stack: Next.js 16, React 19, TypeScript, Supabase, OpenAI Responses API e OpenAI Realtime
+> Stack: Next.js 16, React 19, TypeScript, Supabase, Vercel AI Gateway, OpenAI Responses e OpenAI Realtime
 
 ## 1. Resumo executivo
 
@@ -11,7 +11,7 @@ O SF Growth AI já possui uma base ampla de produto e deixou de ser apenas um pr
 
 A nova Home aproxima o produto da referência visual definida para o Samuel AI: protagonista holográfico, composição clara em azul e branco, cartões executivos sobrepostos, módulos de acesso rápido, indicadores, campanhas, redes, tarefas, agenda, integrações e insights. A tela é responsiva e possui navegação inferior própria para celular.
 
-O sistema trabalha com degradação segura. Quando um serviço externo está indisponível, a interface e o Samuel Runtime continuam funcionando, exibem um estado honesto e evitam inventar dados. Neste momento, três desbloqueios externos ainda precisam de ação humana: adicionar saldo à conta da API OpenAI, reconceder o escopo correto do Google Calendar e aprovar a migration de produção que cria o histórico persistente do chat e da Executive Inbox.
+O sistema trabalha com degradação segura. Quando um serviço externo está indisponível, a interface e o Samuel Runtime continuam funcionando, exibem um estado honesto e evitam inventar dados. O chat textual com IA e o Google Workspace foram validados no ambiente público. Os desbloqueios que ainda precisam de ação humana são a aprovação da migration de produção para histórico persistente, a definição da autenticação do piloto e, para habilitar a voz Realtime real, saldo disponível na conta da API OpenAI.
 
 ## 2. Legenda de estado
 
@@ -186,6 +186,7 @@ A Home do Samuel foi reconstruída com:
 - Manifesto e ícones próprios para instalar o Samuel AI na tela inicial do celular em modo standalone.
 - Animações desativáveis automaticamente por `prefers-reduced-motion` para acessibilidade.
 - Layout claro, tecnológico e executivo, com contraste e microinterações.
+- Página dinâmica, alinhada ao modelo atual do Supabase, para carregar a empresa e os dados conectados a cada acesso.
 
 ## 5. Estado real das integrações
 
@@ -195,9 +196,10 @@ A Home do Samuel foi reconstruída com:
 | Gmail | Operacional | Conexão real encontrada e contagem de não lidos validada. |
 | Google Drive | Operacional | Arquivos recentes retornados pelo provider real. |
 | Google Contacts | Implementado/concedido | Escopo presente; UI exibe ligação. |
-| Google Calendar | Bloqueado por escopo | A API retorna 403; é necessário reconectar e conceder o escopo atual. |
-| OpenAI Responses | Bloqueado por cota | Chave alcança a API, mas a conta retorna `insufficient_quota`. |
-| OpenAI Realtime | Implementado | Código, validação e WebRTC prontos; depende da mesma conta OpenAI com saldo. |
+| Google Calendar | Operacional | Consulta real validada; retornou zero compromissos para o dia do teste. |
+| Chat textual com IA | Operacional | Streaming público validado pelo Vercel AI Gateway com `openai/gpt-oss-20b`. |
+| OpenAI Responses direto | Fallback disponível | A chave local alcança a API, mas a conta direta retorna `insufficient_quota`; isso não bloqueia o chat público via gateway. |
+| OpenAI Realtime | Implementado | Código, validação e WebRTC prontos; a voz ao vivo depende da conta OpenAI direta com saldo. |
 | Google Analytics | Implementado | Cliente e adaptador reais; depende de configuração/propriedade com dados. |
 | Search Console | Implementado | Cliente e adaptador reais; depende de credencial/propriedade com dados. |
 | Google Business | Implementado | Adaptador pronto; depende de credenciais e conta. |
@@ -264,14 +266,23 @@ npm run build  → aprovado
 
 O build de produção compilou todas as rotas, concluiu TypeScript e gerou as páginas sem erro. Os testes cobrem runtime, contexto, protocolo do chat, Responses API, voz Realtime e cenários de fallback.
 
+Smoke tests executados na aplicação pública:
+
+- interface `/samuel-ai` carregada sem erro da aplicação;
+- manifesto PWA e ícones disponíveis;
+- Gmail: 201 mensagens não lidas retornadas pela conta conectada;
+- Google Calendar: consulta operacional, com zero eventos no dia do teste;
+- Google Drive: 8 arquivos recentes retornados;
+- chat com IA: streaming concluído pelo gateway em respostas sobre Gmail, Agenda e Drive.
+
 ## 9. O que já funciona sem ajuda adicional
 
 - Nova interface e animações.
 - Navegação responsiva.
 - Pipeline SSR e módulos executivos.
-- Chat e fallback determinístico.
+- Chat com IA em streaming e fallback determinístico.
 - Estado ao vivo do Google Workspace.
-- Gmail e Drive conectados.
+- Gmail, Google Calendar, Google Drive e escopo de Contatos conectados.
 - Executive Inbox em armazenamento local.
 - Company Brain, análise, descoberta e Superbrain nas rotas existentes.
 - CI com teste, lint e build.
@@ -281,13 +292,11 @@ O build de produção compilou todas as rotas, concluiu TypeScript e gerou as p�
 
 Estas ações não podem ser concluídas com segurança apenas pelo código:
 
-1. Adicionar saldo/crédito à API OpenAI e confirmar o limite mensal em `https://platform.openai.com/settings/organization/billing`.
-2. Adicionar/confirmar `OPENAI_API_KEY` no ambiente Production da Vercel e fazer novo deploy. A assinatura ChatGPT não inclui créditos de API.
-3. Reconectar a conta Google e conceder o escopo do Calendar solicitado pelo OAuth atual.
-4. Aprovar a aplicação das migrations pendentes no projeto Supabase.
-5. Ativar proteção contra senhas comprometidas no painel de autenticação do Supabase.
-6. Definir a regra de acesso do piloto: autenticação Supabase, lista de utilizadores autorizados e empresa padrão.
-7. Conectar contas/propriedades reais de Analytics, Search Console, Google Business, Meta e LinkedIn quando desejado.
+1. Aprovar de forma específica a aplicação da migration pendente no projeto Supabase, depois da revisão de impacto em produção.
+2. Definir a regra de acesso do piloto: autenticação Supabase, lista de utilizadores autorizados e empresa padrão.
+3. Para usar voz Realtime real, adicionar saldo/crédito à API OpenAI, confirmar o limite mensal em `https://platform.openai.com/settings/organization/billing` e manter `OPENAI_API_KEY` no ambiente Production da Vercel. A assinatura ChatGPT não inclui créditos de API.
+4. Ativar proteção contra senhas comprometidas no painel de autenticação do Supabase.
+5. Conectar contas/propriedades reais de Analytics, Search Console, Google Business, Meta e LinkedIn quando desejado.
 
 ## 11. Critério para considerar o sistema pronto para operação comercial
 
@@ -295,8 +304,7 @@ O produto pode ser apresentado como demo/piloto após a publicação visual. Par
 
 - autenticação obrigatória;
 - migrations aplicadas e RLS revisto;
-- OpenAI com saldo e variáveis em produção;
-- Calendar reautorizado;
+- saldo da OpenAI direta caso a voz Realtime seja liberada;
 - smoke test mobile de chat, voz, Gmail, Drive, Agenda e Executive Inbox;
 - monitoramento de erros e custos;
 - confirmação antes de qualquer ação externa com efeito real.
