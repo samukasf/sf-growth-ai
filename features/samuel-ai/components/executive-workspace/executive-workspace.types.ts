@@ -40,6 +40,10 @@ import type { ExecutiveMonitoring } from "../../services/executive-monitoring.se
 import type { ExecutiveRecommendation } from "../../services/executive-recommendation.service";
 import type { ExecutiveStrategy } from "../../services/executive-strategy.service";
 import type { OrchestratorSnapshot } from "../../services/executive-orchestrator.types";
+import type {
+  SamuelChatSendOptions,
+  SamuelChatSendResult,
+} from "../../chat/samuel-chat.types";
 
 export type ExecutiveWorkspaceData = {
   brain: ExecutiveBrain;
@@ -84,7 +88,10 @@ export type ExecutiveWorkspaceData = {
 };
 
 export type ExecutiveWorkspaceHandlers = {
-  onSendMessage: (content: string) => Promise<string>;
+  onSendMessage: (
+    content: string,
+    options: SamuelChatSendOptions,
+  ) => Promise<SamuelChatSendResult>;
   onFirstMessage: () => void;
   isProcessing: boolean;
   inboxActions?: ExecutiveInboxActionRecord[];

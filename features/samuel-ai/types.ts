@@ -5,4 +5,5 @@ export type ChatMessage = {
   role: ChatRole;
   content: string;
   timestamp: string;
+  status?: "streaming" | "complete" | "cancelled" | "error";
 };

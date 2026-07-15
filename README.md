@@ -1,40 +1,63 @@
-# sf-growth-ai
+# SF Growth AI
 
-AI platform that helps small businesses grow through marketing, branding and artificial intelligence.
+Workspace executivo em Next.js 16 com Samuel Runtime, contexto empresarial, memória, módulos especializados e conversa contínua com streaming pela Responses API.
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## Arranque local
 
-## Getting Started
-
-First, run the development server:
+Requisitos: Node.js 20+ e npm.
 
 ```bash
+npm ci
+cp .env.example .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+A aplicação fica disponível em [http://localhost:3000/samuel-ai](http://localhost:3000/samuel-ai).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Configuração
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Preencha em `.env.local`:
 
-## Learn More
+- `OPENAI_API_KEY` para conversas geradas por IA. `OPENAI_MODEL` é configurável (`gpt-5.4-mini` por padrão para equilibrar latência e custo).
+- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` e `SUPABASE_SERVICE_ROLE_KEY` para dados e histórico persistente.
+- `AI_GATEWAY_API_KEY`, `AI_GATEWAY_BASE_URL` e `AI_GATEWAY_MODEL` apenas quando utilizar um gateway compatível com a Responses API. Estes valores têm precedência sobre os equivalentes OpenAI.
 
-To learn more about Next.js, take a look at the following resources:
+Sem uma chave de IA, o chat informa claramente a limitação e continua funcional para análises empresariais com a resposta determinística do Samuel Runtime. Sem a configuração administrativa do Supabase, o histórico fica isolado no navegador. Nenhuma destas degradações impede o build.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## CI/CD
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Este repositório inclui GitHub Actions em `.github/workflows/ci.yml` para executar `npm test`, `npm run lint` e `npm run build` em pushes e pull requests. Configure as variáveis acima como secrets/variables do ambiente de deploy; nunca grave chaves reais no repositório.
 
-## Deploy on Vercel
+## Base de dados
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+As migrations estão em `supabase/migrations`. As migrations `20260714110000_samuel_conversations.sql` e `20260714112000_executive_inbox_actions.sql` criam o histórico do chat e a persistência da Executive Inbox, com índices e RLS.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Num projeto Supabase ligado:
+
+```bash
+npx supabase db push
+```
+
+A `SUPABASE_SERVICE_ROLE_KEY` é usada apenas no servidor para associar a sessão HTTP ao histórico do chat e nunca deve receber o prefixo `NEXT_PUBLIC_`.
+
+## Samuel Runtime
+
+O endpoint `POST /api/samuel-ai/chat`:
+
+1. valida a mensagem e limita o histórico por quantidade e tamanho;
+2. carrega memória, contexto, Company Brain e conselho disponível;
+3. executa as sete etapas do pipeline real;
+4. envia o histórico como mensagens estruturadas e transmite deltas de texto progressivos;
+5. persiste utilizador, resposta, provedor, modelo e resumo do runtime.
+
+O prompt do Samuel AI mantém a continuidade da conversa, responde no idioma do utilizador e usa o contexto empresarial somente quando for relevante. O cliente suporta restauro de histórico, fallback local, cancelamento, erro e retry.
+
+## Qualidade
+
+```bash
+npm test
+npm run lint
+npm run build
+```
+
+Os testes cobrem o pipeline, a ponte do Workspace para o Runtime, o protocolo NDJSON e o streaming da Responses API.

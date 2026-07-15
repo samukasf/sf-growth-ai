@@ -39,14 +39,14 @@ Estabelecer a interface executiva principal e o pipeline SSR de engines como fun
 - [x] Executive Inbox como centro de comando
 - [x] Executive Workspace com 19 seções de navegação
 - [x] Dashboard executivo com seções especializadas
-- [x] Chat com Samuel AI (orquestração simulada)
+- [x] Chat com Samuel AI ligado ao Samuel Runtime e Responses API
 - [x] Integrações: Google Analytics, Search Console, Google Business, Meta
 - [x] Supabase como fonte de dados primária
 
 ### Pendências
 
-- [ ] Persistência completa da Executive Inbox
-- [ ] AI Provider real no chat e orquestrador
+- [x] Persistência da Executive Inbox com fallback local e sincronização remota
+- [x] AI Provider real no chat e orquestrador
 - [ ] Market Watcher com dados reais
 - [ ] LinkedIn integration
 - [ ] Onboarding e rotas de produto além de `/samuel-ai`

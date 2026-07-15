@@ -29,7 +29,7 @@ export function classifyQueryIntent(query: string): QueryIntentResult {
     .toLowerCase();
 
   let intent = "general";
-  let confidence = 60;
+  let confidence = 80;
 
   if (/vend|sales|receita|fatur/.test(normalized)) {
     intent = "sales";
@@ -46,9 +46,21 @@ export function classifyQueryIntent(query: string): QueryIntentResult {
   } else if (/analis|diagnóst|diagnost|empresa/.test(normalized)) {
     intent = "analysis";
     confidence = 95;
+  } else if (
+    /escrev|redig|poema|historia|roteiro|brainstorm|ideia|criativ/.test(normalized)
+  ) {
+    intent = "creative";
+    confidence = 90;
   } else if (/crie|criar|create|execut/.test(normalized)) {
     intent = "execution";
     confidence = 80;
+  } else if (
+    /^(oi|ola|boas|bom dia|boa tarde|boa noite|obrigad|valeu)\b/.test(
+      normalized,
+    ) || /(quem e voce|quem es tu|o que voce faz|o que fazes)/.test(normalized)
+  ) {
+    intent = "conversation";
+    confidence = 98;
   }
 
   const requiresCouncil =

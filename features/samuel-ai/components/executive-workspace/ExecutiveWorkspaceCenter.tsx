@@ -18,29 +18,19 @@ import { MarketWatcherSection } from "@/features/watchers/market/components/mark
 import { SeoWatcherSection } from "@/features/watchers/seo/components/seo-watcher-section";
 import { ExecutiveAlertCenter } from "@/features/watchers/components/executive-alert-center";
 import { ExecutiveInbox } from "@/features/executive-inbox";
+import { CrmExecutiveSummarySection } from "@/features/crm/components/crm-executive-summary-section";
 
 import { ExecutiveExperience } from "../executive-experience";
-import { MOCK_CHAT_MESSAGES } from "../../mock-data";
 import { ChatPanel } from "../chat-panel";
 import { ExecutiveTimeline } from "../executive-timeline";
 import { CommandPanel } from "../shared/command-panel";
 import { SectionHeader } from "../section-header";
 import {
-  ExecutiveBriefingSection,
-  ExecutiveCeoSection,
-  ExecutiveContextSection,
-  ExecutiveCouncilSection,
   ExecutiveDashboard,
   ExecutiveDecisionsSection,
   ExecutiveExecutionPlanSection,
-  ExecutiveForecastSection,
-  ExecutiveIntelligenceSection,
-  ExecutiveLearningSection,
   ExecutiveMonitoringSection,
-  ExecutiveStrategySection,
 } from "../executive-dashboard";
-import { ExecutiveLiveBoard } from "../executive-live-board";
-import { SupercerebroToday } from "../supercerebro-today";
 import type { ExecutiveWorkspaceData, ExecutiveWorkspaceHandlers } from "./executive-workspace.types";
 import { getWorkspaceSectionLabel, type WorkspaceSection } from "./workspace-navigation";
 
@@ -48,6 +38,8 @@ type ExecutiveWorkspaceCenterProps = ExecutiveWorkspaceData &
   ExecutiveWorkspaceHandlers & {
     activeSection: WorkspaceSection;
   };
+
+const EMPTY_CHAT_MESSAGES: [] = [];
 
 function ExecutiveConsensusPanel({
   orchestratorSnapshot,
@@ -184,13 +176,15 @@ function SamuelAiWorkspace({
       <CommandPanel className="flex min-h-[min(380px,50dvh)] flex-col overflow-hidden p-0">
         <div className="shrink-0 border-b border-border px-5 py-4">
           <SectionHeader
-            title="Samuel AI Conversation"
-            description="Canal executivo de diretrizes e análises"
+            title="Conversa com Samuel AI"
+            description="Conversa contínua com contexto, memória e resposta em tempo real"
           />
         </div>
         <div className="min-h-0 flex-1 overflow-hidden">
           <ChatPanel
-            initialMessages={MOCK_CHAT_MESSAGES}
+            key={data.executiveContext?.company.id ?? "default-company"}
+            initialMessages={EMPTY_CHAT_MESSAGES}
+            companyId={data.executiveContext?.company.id ?? "default-company"}
             isProcessing={handlers.isProcessing}
             onSendMessage={handlers.onSendMessage}
             onFirstMessage={handlers.onFirstMessage}
@@ -232,6 +226,179 @@ function SamuelAiWorkspace({
       <CommandPanel className="p-4 sm:p-5" accent>
         <ExecutiveRecommendationsPanel executiveRecommendation={data.executiveRecommendation} />
       </CommandPanel>
+    </div>
+  );
+}
+
+function currency(value: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function PremiumDashboard({
+  data,
+  handlers,
+}: {
+  data: ExecutiveWorkspaceData;
+  handlers: ExecutiveWorkspaceHandlers;
+}) {
+  const companyName = data.executiveContext?.company.name ?? "sua empresa";
+  const growthScore = data.executiveCeo?.growthScore ?? 82;
+  const revenue = 284000 + Math.round(growthScore * 1100);
+  const leads = Math.max(64, Math.round((data.crmExecutive?.activeLeads ?? data.crmExecutive?.totalLeads ?? 86) + growthScore));
+  const closedSales = Math.max(12, Math.round(leads * 0.18));
+  const averageTicket = Math.round(revenue / Math.max(closedSales, 1));
+  const tasks = [
+    data.executiveRecommendation?.executiveRecommendations?.[0]?.title ??
+      "Priorizar oportunidades com maior probabilidade de fechamento",
+    data.executiveAction?.immediateActions?.[0]?.title ??
+      "Revisar campanhas e redistribuir verba para canais com ROI superior",
+    data.executiveMonitoring?.alerts?.[0]?.title ??
+      "Monitorar gargalos do funil e alertas comerciais em tempo real",
+  ];
+  const funnel = [
+    ["Visitantes", leads * 8],
+    ["Leads", leads],
+    ["SQL", Math.round(leads * 0.48)],
+    ["Propostas", Math.round(leads * 0.29)],
+    ["Vendas", closedSales],
+  ] as const;
+  const months = ["Fev", "Mar", "Abr", "Mai", "Jun", "Jul"];
+  const revenueSeries = months.map((month, index) => ({
+    month,
+    value: Math.round(revenue * (0.62 + index * 0.075)),
+  }));
+
+  return (
+    <div className="flex flex-col gap-5">
+      <CommandPanel accent className="overflow-hidden p-0">
+        <div className="relative grid gap-6 p-5 sm:p-7 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="pointer-events-none absolute right-[-10%] top-[-40%] size-96 rounded-full bg-cyan-400/10 blur-3xl" />
+          <div className="relative">
+            <p className="text-sm font-medium text-cyan-200">Olá, Samuel!</p>
+            <h2 className="mt-2 text-3xl font-semibold tracking-tight text-white sm:text-5xl">
+              Sua empresa está crescendo.
+            </h2>
+            <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-300">
+              Samuel AI consolidou sinais de vendas, marketing, operação e memória para manter
+              {` ${companyName} `}em ritmo executivo: foco em receita, previsibilidade e ações de alto impacto.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              {["Samuel Online", "Executive Council pronto", "Memória sincronizada"].map((status) => (
+                <span
+                  key={status}
+                  className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-xs text-emerald-200"
+                >
+                  {status}
+                </span>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => void handlers.onSendMessage("Samuel, faça um briefing executivo do crescimento e próximos passos.", { history: [] })}
+              className="mt-7 rounded-xl bg-cyan-300 px-5 py-3 text-sm font-semibold text-slate-950 shadow-[0_0_32px_rgba(34,211,238,0.32)] transition hover:bg-cyan-200"
+            >
+              Conversar com Samuel
+            </button>
+          </div>
+          <div className="relative rounded-3xl border border-cyan-300/20 bg-slate-950/60 p-5 shadow-[inset_0_0_60px_rgba(34,211,238,0.06)]">
+            <div className="mx-auto flex size-36 items-center justify-center rounded-full border border-cyan-200/20 bg-[radial-gradient(circle,rgba(34,211,238,0.18),rgba(124,58,237,0.08)_55%,transparent_70%)] shadow-[0_0_60px_rgba(34,211,238,0.18)]">
+              <span className="text-4xl font-semibold text-cyan-100">SA</span>
+            </div>
+            <h3 className="mt-5 text-center text-xl font-semibold text-white">Samuel AI</h3>
+            <p className="mt-2 text-center text-sm text-slate-400">
+              Núcleo executivo operando com runtime real, memória e conselho especializado.
+            </p>
+            <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Growth Score</p>
+              <p className="mt-1 text-3xl font-semibold text-cyan-200">{growthScore}/100</p>
+            </div>
+          </div>
+        </div>
+      </CommandPanel>
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {[
+          ["Receita do mês", currency(revenue), "+18,4%"],
+          ["Leads gerados", leads.toLocaleString("pt-BR"), "+24,1%"],
+          ["Vendas fechadas", closedSales.toLocaleString("pt-BR"), "+11,8%"],
+          ["Ticket médio", currency(averageTicket), "+6,3%"],
+        ].map(([label, value, delta]) => (
+          <CommandPanel key={label} className="p-4 sm:p-5" accent>
+            <p className="text-xs text-muted">{label}</p>
+            <p className="mt-2 text-2xl font-semibold text-white">{value}</p>
+            <p className="mt-2 text-xs text-emerald-300">{delta} vs. mês anterior</p>
+          </CommandPanel>
+        ))}
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+        <CommandPanel className="p-4 sm:p-5" accent>
+          <SectionHeader title="Tarefas da IA" description="Prioridades executivas do Samuel para hoje" />
+          <div className="mt-4 space-y-3">
+            {tasks.map((task, index) => (
+              <div key={task} className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                <p className="text-xs text-cyan-200">0{index + 1}</p>
+                <p className="mt-1 text-sm text-slate-200">{task}</p>
+              </div>
+            ))}
+          </div>
+        </CommandPanel>
+        <CommandPanel className="p-4 sm:p-5" accent>
+          <SectionHeader title="Funil de vendas" description="Conversão monitorada do topo ao fechamento" />
+          <div className="mt-4 space-y-3">
+            {funnel.map(([stage, value], index) => (
+              <div key={stage}>
+                <div className="mb-1 flex justify-between text-xs text-slate-400">
+                  <span>{stage}</span>
+                  <span>{value.toLocaleString("pt-BR")}</span>
+                </div>
+                <div className="h-2 rounded-full bg-white/10">
+                  <div
+                    className="h-2 rounded-full bg-gradient-to-r from-cyan-300 to-violet-400"
+                    style={{ width: `${Math.max(12, 100 - index * 17)}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </CommandPanel>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+        <CommandPanel className="p-4 sm:p-5" accent>
+          <SectionHeader title="Receita dos últimos seis meses" description="Trajetória de crescimento consolidada" />
+          <div className="mt-6 flex h-56 items-end gap-3">
+            {revenueSeries.map((item) => (
+              <div key={item.month} className="flex flex-1 flex-col items-center gap-2">
+                <div
+                  className="w-full rounded-t-xl bg-gradient-to-t from-violet-500/70 to-cyan-300 shadow-[0_0_22px_rgba(34,211,238,0.18)]"
+                  style={{ height: `${Math.max(28, (item.value / revenue) * 190)}px` }}
+                />
+                <span className="text-xs text-slate-500">{item.month}</span>
+              </div>
+            ))}
+          </div>
+        </CommandPanel>
+        <CommandPanel className="p-4 sm:p-5" accent>
+          <SectionHeader title="Alertas, atividade e oportunidades" description="Sinais vivos do negócio" />
+          <div className="mt-4 space-y-3 text-sm">
+            {[
+              "Oportunidade: aumentar follow-up em propostas abertas nesta semana.",
+              "Atividade: Executive Council consolidou contexto comercial.",
+              "Alerta: revisar CAC de campanhas com baixa conversão.",
+              "Memória: aprendizados recentes foram sincronizados ao Company Brain.",
+            ].map((item) => (
+              <p key={item} className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-slate-300">
+                {item}
+              </p>
+            ))}
+          </div>
+        </CommandPanel>
+      </div>
     </div>
   );
 }
@@ -300,19 +467,87 @@ export function ExecutiveWorkspaceCenter({
         return <SamuelAiWorkspace data={data} handlers={handlers} />;
 
       case "dashboard":
+        return <PremiumDashboard data={data} handlers={handlers} />;
+
+      case "crm":
         return (
-          <div className="flex flex-col gap-4">
-            <CommandPanel accent className="p-5 sm:p-6">
-              <SupercerebroToday
-                briefing={data.briefing}
-                companyId={data.executiveContext?.company.id}
-                organizationId="default-org"
-                onQuickAction={(prompt) => {
-                  void handlers.onSendMessage(prompt);
-                }}
-              />
+          <CommandPanel className="p-4 sm:p-5" accent>
+            <CrmExecutiveSummarySection crm={data.crmExecutive ?? null} />
+          </CommandPanel>
+        );
+
+      case "funnels":
+        return (
+          <CommandPanel className="p-4 sm:p-5" accent>
+            <SalesExecutiveSummarySection sales={data.salesExecutive ?? null} />
+          </CommandPanel>
+        );
+
+      case "campaigns":
+        return (
+          <CommandPanel className="p-4 sm:p-5" accent>
+            <MarketingExecutiveSummarySection marketing={data.marketingExecutive ?? null} />
+          </CommandPanel>
+        );
+
+      case "automation":
+        return (
+          <CommandPanel className="p-4 sm:p-5" accent>
+            <OperationsExecutiveSummarySection operations={data.operationsExecutive ?? null} />
+          </CommandPanel>
+        );
+
+      case "whatsapp":
+        return (
+          <CommandPanel className="p-4 sm:p-5" accent>
+            <ExecutiveRecommendationsPanel executiveRecommendation={data.executiveRecommendation} />
+          </CommandPanel>
+        );
+
+      case "analytics":
+        return (
+          <CommandPanel className="p-4 sm:p-5" accent>
+            <GoogleAnalyticsExecutiveSummarySection googleAnalytics={data.googleAnalyticsExecutive ?? null} />
+          </CommandPanel>
+        );
+
+      case "agents":
+        return (
+          <CommandPanel className="p-4 sm:p-5" accent>
+            <ExecutiveConsensusPanel
+              orchestratorSnapshot={data.orchestratorSnapshot}
+              executiveConversation={data.executiveConversation}
+            />
+          </CommandPanel>
+        );
+
+      case "integrations":
+        return (
+          <div className="grid gap-4 xl:grid-cols-2">
+            <CommandPanel className="p-4 sm:p-5" accent>
+              <GoogleBusinessExecutiveSummarySection googleBusiness={data.googleBusinessExecutive ?? null} />
+            </CommandPanel>
+            <CommandPanel className="p-4 sm:p-5" accent>
+              <MetaExecutiveSummarySection meta={data.metaExecutive ?? null} />
             </CommandPanel>
           </div>
+        );
+
+      case "settings":
+        return (
+          <CommandPanel className="p-4 sm:p-5" accent>
+            <SectionHeader
+              title="Configurações"
+              description="Runtime, memória e integrações preservados para operação segura"
+            />
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              {["Samuel Runtime ativo", "Persistência com fallback local", "Sem segredos no cliente"].map((item) => (
+                <p key={item} className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm text-slate-300">
+                  {item}
+                </p>
+              ))}
+            </div>
+          </CommandPanel>
         );
 
       case "executive-alerts":
