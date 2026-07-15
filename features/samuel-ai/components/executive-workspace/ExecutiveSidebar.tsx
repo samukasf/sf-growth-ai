@@ -17,7 +17,8 @@ type ExecutiveSidebarProps = {
 };
 
 const GROUP_ORDER: WorkspaceNavGroup[] = [
-  "core",
+  "principal",
+  "workspace",
   "executive",
   "modules",
   "integrations",
@@ -36,11 +37,11 @@ export function ExecutiveSidebar({
 
   const content = (
     <nav className="flex flex-col gap-4 p-4">
-      <div className="hidden lg:block">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-accent">
-          Executive Workspace
+      <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/[0.04] p-4 shadow-[0_0_35px_rgba(34,211,238,0.08)]">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-cyan-200">
+          SF GROWTH AI
         </p>
-        <p className="mt-1 text-xs text-muted">Navegação modular</p>
+        <p className="mt-1 text-xs text-muted">Samuel Executive OS</p>
       </div>
 
       {GROUP_ORDER.map((group) => {
@@ -63,7 +64,7 @@ export function ExecutiveSidebar({
                       className={cn(
                         "w-full rounded-lg px-3 py-2 text-left text-xs font-medium transition-all duration-200",
                         isActive
-                          ? "bg-accent/10 text-accent ring-1 ring-accent/25"
+                          ? "bg-cyan-400/10 text-cyan-200 shadow-[0_0_22px_rgba(34,211,238,0.12)] ring-1 ring-cyan-300/25"
                           : "text-muted hover:bg-white/[0.04] hover:text-foreground",
                       )}
                     >
@@ -92,7 +93,7 @@ export function ExecutiveSidebar({
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-[260px] shrink-0 border-r border-white/[0.06] bg-black/80 backdrop-blur-xl transition-transform duration-300 lg:static lg:z-auto lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 w-[280px] shrink-0 border-r border-cyan-300/[0.08] bg-[#030712]/90 backdrop-blur-xl transition-transform duration-300 lg:static lg:z-auto lg:translate-x-0",
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         )}
       >
