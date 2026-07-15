@@ -455,20 +455,38 @@ input:focus-visible {
 .samuel-hero__identity {
   position: absolute;
   z-index: 15;
+  isolation: isolate;
   left: 0;
   right: 0;
   bottom: 0.55rem;
   display: flex;
   flex-direction: column;
   align-items: center;
-  text-shadow: 0 1px 12px rgba(255, 255, 255, 0.95);
+  text-shadow: 0 2px 18px rgba(1, 14, 45, 0.92);
+}
+
+.samuel-hero__identity::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -1rem -3.5rem -0.65rem;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(3, 25, 72, 0.76) 0%,
+    rgba(3, 32, 88, 0.48) 42%,
+    rgba(8, 47, 105, 0.14) 68%,
+    transparent 78%
+  );
+  filter: blur(7px);
+  pointer-events: none;
 }
 
 .samuel-hero__identity h1 {
   font-size: clamp(1.65rem, 3vw, 2.45rem);
   font-weight: 780;
   letter-spacing: -0.04em;
-  color: #071a48;
+  color: #ffffff;
 }
 
 .samuel-hero__identity > p {
@@ -477,7 +495,7 @@ input:focus-visible {
   font-size: clamp(0.67rem, 1.3vw, 0.85rem);
   font-weight: 520;
   line-height: 1.45;
-  color: #16346f;
+  color: #e9f8ff;
 }
 
 .samuel-online-badge {
@@ -489,7 +507,7 @@ input:focus-visible {
   font-weight: 750;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #15336a;
+  color: #dff8ff;
 }
 
 .samuel-online-badge i {

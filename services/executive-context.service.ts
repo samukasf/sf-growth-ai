@@ -111,14 +111,18 @@ async function getCompany(companyId: string): Promise<CompanyRecord> {
   const { data, error } = await supabase
     .from("companies")
     .select(
-      "id, name, industry, city, country, description, website, business_stage, annual_revenue",
+      "id, name, industry, city, country, website, annual_revenue",
     )
     .eq("id", companyId)
     .single();
 
   if (error) throw error;
 
-  return data as CompanyRecord;
+  return {
+    ...(data as Omit<CompanyRecord, "description" | "business_stage">),
+    description: null,
+    business_stage: null,
+  };
 }
 
 async function getBusinessProfile(
@@ -127,7 +131,7 @@ async function getBusinessProfile(
   const { data, error } = await supabase
     .from("business_profiles")
     .select(
-      "id, company_id, segment, positioning, differentiators, objectives, mission, vision, value_proposition",
+      "id, company_id, segment:industry, positioning:business_model, differentiators:differentials, objectives:goals, mission, vision, value_proposition:services",
     )
     .eq("company_id", companyId)
     .maybeSingle();
