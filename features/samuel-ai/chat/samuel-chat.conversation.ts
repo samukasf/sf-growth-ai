@@ -42,6 +42,7 @@ function normalize(value: string) {
 export function buildSamuelFallbackAnswer(
   query: string,
   runtimeSummary: SamuelChatRuntimeSummary,
+  options: { providerConfigured?: boolean } = {},
 ) {
   const normalized = normalize(query);
 
@@ -73,6 +74,10 @@ export function buildSamuelFallbackAnswer(
       `Recomendação\n${runtimeSummary.recommendation}`,
       `Próximo passo\n${runtimeSummary.nextStep}`,
     ].join("\n\n");
+  }
+
+  if (options.providerConfigured) {
+    return "A inteligência generativa do Samuel AI está temporariamente indisponível. O Samuel Runtime continua online para análises empresariais estruturadas; tente novamente após alguns instantes.";
   }
 
   return "A inteligência generativa do Samuel AI ainda não está configurada neste ambiente. Adicione a variável OPENAI_API_KEY no servidor para liberar conversas completas sobre qualquer tema. O Samuel Runtime continua disponível para análises empresariais estruturadas.";

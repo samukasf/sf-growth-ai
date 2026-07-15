@@ -71,6 +71,20 @@ describe("OpenAIResponsesProvider", () => {
     });
   });
 
+  it("injects live Google Workspace data even when the intent is general", () => {
+    const input = buildResponsesApiInput({
+      payload: {
+        ...completionInput.payload,
+        userQuery: "Quantos e-mails não lidos tenho?",
+        fragments: ["[GOOGLE WORKSPACE — DADO AO VIVO] Gmail: 23 e-mail(s) não lido(s)"],
+        metadata: { intent: "general" },
+      },
+    });
+
+    expect(input.at(-1)?.content).toContain("DADO AO VIVO");
+    expect(input.at(-1)?.content).toContain("23 e-mail(s) não lido(s)");
+  });
+
   it("streams semantic text deltas", async () => {
     const encoder = new TextEncoder();
     const body = new ReadableStream<Uint8Array>({
