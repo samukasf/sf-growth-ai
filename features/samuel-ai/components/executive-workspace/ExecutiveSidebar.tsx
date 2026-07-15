@@ -1,5 +1,28 @@
 "use client";
 
+import type { LucideIcon } from "lucide-react";
+import {
+  Activity,
+  BarChart3,
+  BellRing,
+  Bot,
+  BrainCircuit,
+  BriefcaseBusiness,
+  Building2,
+  CalendarDays,
+  ChartNoAxesCombined,
+  CircleDollarSign,
+  Gauge,
+  Inbox,
+  LayoutDashboard,
+  Megaphone,
+  Radar,
+  Scale,
+  Search,
+  ShieldCheck,
+  UsersRound,
+} from "lucide-react";
+
 import { cn } from "@/utils/cn";
 
 import {
@@ -17,12 +40,33 @@ type ExecutiveSidebarProps = {
 };
 
 const GROUP_ORDER: WorkspaceNavGroup[] = [
-  "principal",
-  "workspace",
+  "core",
   "executive",
   "modules",
   "integrations",
 ];
+
+const NAV_ICONS: Partial<Record<WorkspaceSection, LucideIcon>> = {
+  "executive-inbox": Inbox,
+  dashboard: LayoutDashboard,
+  "samuel-ai": Bot,
+  "executive-alerts": BellRing,
+  "executive-timeline": Activity,
+  "executive-agenda": CalendarDays,
+  "executive-tasks": ShieldCheck,
+  "executive-watchers": Radar,
+  marketing: Megaphone,
+  sales: BriefcaseBusiness,
+  finance: CircleDollarSign,
+  operations: Gauge,
+  hr: UsersRound,
+  legal: Scale,
+  "google-business": Building2,
+  "google-analytics": BarChart3,
+  "search-console": Search,
+  meta: ChartNoAxesCombined,
+  linkedin: UsersRound,
+};
 
 export function ExecutiveSidebar({
   activeSection,
@@ -36,12 +80,19 @@ export function ExecutiveSidebar({
   };
 
   const content = (
-    <nav className="flex flex-col gap-4 p-4">
-      <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/[0.04] p-4 shadow-[0_0_35px_rgba(34,211,238,0.08)]">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-cyan-200">
-          SF GROWTH AI
-        </p>
-        <p className="mt-1 text-xs text-muted">Samuel Executive OS</p>
+    <nav className="flex min-h-full flex-col gap-5 p-4 text-blue-950">
+      <div className="hidden rounded-2xl border border-blue-950/10 bg-gradient-to-br from-blue-50 to-indigo-50 p-3.5 lg:block">
+        <div className="flex items-center gap-3">
+          <span className="flex size-9 items-center justify-center rounded-xl border border-blue-300/15 bg-blue-400/10 text-blue-300">
+            <BrainCircuit className="size-[18px]" strokeWidth={1.7} />
+          </span>
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-800">
+              Command Center
+            </p>
+            <p className="mt-0.5 text-[10px] text-blue-950/45">Navegação executiva</p>
+          </div>
+        </div>
       </div>
 
       {GROUP_ORDER.map((group) => {
@@ -50,24 +101,32 @@ export function ExecutiveSidebar({
 
         return (
           <div key={group}>
-            <p className="mb-1.5 px-2 text-[10px] font-medium uppercase tracking-wider text-muted">
+            <p className="mb-2 px-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-blue-950/35">
               {WORKSPACE_GROUP_LABELS[group]}
             </p>
-            <ul className="flex flex-col gap-0.5">
+            <ul className="flex flex-col gap-1">
               {items.map((item) => {
                 const isActive = activeSection === item.id;
+                const Icon = NAV_ICONS[item.id] ?? LayoutDashboard;
                 return (
                   <li key={item.id}>
                     <button
                       type="button"
                       onClick={() => handleSelect(item.id)}
                       className={cn(
-                        "w-full rounded-lg px-3 py-2 text-left text-xs font-medium transition-all duration-200",
+                        "group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[11px] font-medium transition-all duration-200",
                         isActive
-                          ? "bg-cyan-400/10 text-cyan-200 shadow-[0_0_22px_rgba(34,211,238,0.12)] ring-1 ring-cyan-300/25"
-                          : "text-muted hover:bg-white/[0.04] hover:text-foreground",
+                          ? "bg-blue-50 text-blue-800 ring-1 ring-blue-200 shadow-[inset_3px_0_0_#2563eb]"
+                          : "text-blue-950/50 hover:bg-blue-50 hover:text-blue-800",
                       )}
                     >
+                      <Icon
+                        className={cn(
+                          "size-4 shrink-0 transition",
+                          isActive ? "text-blue-600" : "text-blue-950/35 group-hover:text-blue-600",
+                        )}
+                        strokeWidth={1.7}
+                      />
                       {item.label}
                     </button>
                   </li>
@@ -77,6 +136,18 @@ export function ExecutiveSidebar({
           </div>
         );
       })}
+
+      <div className="mt-auto rounded-2xl border border-blue-950/[0.08] bg-blue-50/70 p-3">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[9px] font-semibold uppercase tracking-[0.16em] text-blue-950/45">Samuel Runtime</span>
+          <span className="flex items-center gap-1.5 text-[9px] text-emerald-400">
+            <span className="size-1.5 rounded-full bg-emerald-400" /> online
+          </span>
+        </div>
+        <div className="mt-2 h-1 overflow-hidden rounded-full bg-blue-950/[0.07]">
+          <div className="h-full w-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-400" />
+        </div>
+      </div>
     </nav>
   );
 
@@ -93,7 +164,7 @@ export function ExecutiveSidebar({
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-[280px] shrink-0 border-r border-cyan-300/[0.08] bg-[#030712]/90 backdrop-blur-xl transition-transform duration-300 lg:static lg:z-auto lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 w-[270px] shrink-0 border-r border-blue-950/[0.07] bg-white/95 shadow-[8px_0_30px_rgba(15,45,100,.04)] backdrop-blur-2xl transition-transform duration-300 lg:static lg:z-auto lg:translate-x-0",
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         )}
       >

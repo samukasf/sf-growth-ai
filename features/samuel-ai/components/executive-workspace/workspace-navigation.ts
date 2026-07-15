@@ -1,16 +1,7 @@
 export type WorkspaceSection =
+  | "executive-inbox"
   | "dashboard"
   | "samuel-ai"
-  | "crm"
-  | "funnels"
-  | "campaigns"
-  | "automation"
-  | "whatsapp"
-  | "analytics"
-  | "agents"
-  | "integrations"
-  | "settings"
-  | "executive-inbox"
   | "executive-alerts"
   | "executive-timeline"
   | "executive-agenda"
@@ -28,12 +19,7 @@ export type WorkspaceSection =
   | "meta"
   | "linkedin";
 
-export type WorkspaceNavGroup =
-  | "principal"
-  | "workspace"
-  | "executive"
-  | "modules"
-  | "integrations";
+export type WorkspaceNavGroup = "core" | "executive" | "modules" | "integrations";
 
 export type WorkspaceNavItem = {
   id: WorkspaceSection;
@@ -43,29 +29,20 @@ export type WorkspaceNavItem = {
 };
 
 export const WORKSPACE_NAV_ITEMS: WorkspaceNavItem[] = [
-  { id: "dashboard", label: "Dashboard", group: "principal" },
-  { id: "samuel-ai", label: "Conversa com IA", group: "principal" },
-  { id: "crm", label: "CRM Inteligente", group: "workspace" },
-  { id: "funnels", label: "Funis de Vendas", group: "workspace" },
-  { id: "campaigns", label: "Campanhas", group: "workspace" },
-  { id: "automation", label: "Automação", group: "workspace" },
-  { id: "whatsapp", label: "WhatsApp", group: "workspace" },
-  { id: "analytics", label: "Análises", group: "workspace" },
-  { id: "agents", label: "Agentes IA", group: "workspace" },
-  { id: "integrations", label: "Integrações", group: "workspace" },
-  { id: "settings", label: "Configurações", group: "workspace" },
-  { id: "executive-inbox", label: "Executive Inbox", group: "executive" },
-  { id: "executive-alerts", label: "Executive Alerts", group: "executive" },
-  { id: "executive-timeline", label: "Executive Timeline", group: "executive" },
-  { id: "executive-agenda", label: "Executive Agenda", group: "executive" },
-  { id: "executive-tasks", label: "Executive Tasks", group: "executive" },
-  { id: "executive-watchers", label: "Executive Watchers", group: "executive" },
+  { id: "dashboard", label: "Início", group: "core" },
+  { id: "samuel-ai", label: "Conversar com Samuel", group: "core" },
+  { id: "executive-inbox", label: "Executive Inbox", group: "core" },
+  { id: "executive-alerts", label: "Alertas executivos", group: "executive" },
+  { id: "executive-timeline", label: "Linha do tempo", group: "executive" },
+  { id: "executive-agenda", label: "Agenda executiva", group: "executive" },
+  { id: "executive-tasks", label: "Tarefas e decisões", group: "executive" },
+  { id: "executive-watchers", label: "Monitorização", group: "executive" },
   { id: "marketing", label: "Marketing", group: "modules" },
-  { id: "sales", label: "Sales", group: "modules" },
-  { id: "finance", label: "Finance", group: "modules" },
-  { id: "operations", label: "Operations", group: "modules" },
-  { id: "hr", label: "HR", group: "modules" },
-  { id: "legal", label: "Legal", group: "modules" },
+  { id: "sales", label: "Vendas e CRM", group: "modules" },
+  { id: "finance", label: "Finanças", group: "modules" },
+  { id: "operations", label: "Operações", group: "modules" },
+  { id: "hr", label: "Pessoas", group: "modules" },
+  { id: "legal", label: "Jurídico", group: "modules" },
   { id: "google-business", label: "Google Business", group: "integrations" },
   { id: "google-analytics", label: "Google Analytics", group: "integrations" },
   { id: "search-console", label: "Search Console", group: "integrations" },
@@ -74,10 +51,9 @@ export const WORKSPACE_NAV_ITEMS: WorkspaceNavItem[] = [
 ];
 
 export const WORKSPACE_GROUP_LABELS: Record<WorkspaceNavGroup, string> = {
-  principal: "Principal",
-  workspace: "Sistema",
-  executive: "Executivo",
-  modules: "Módulos",
+  core: "Central",
+  executive: "Execução",
+  modules: "Áreas de negócio",
   integrations: "Integrações",
 };
 
