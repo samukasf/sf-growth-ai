@@ -18,9 +18,10 @@ A aplicação fica disponível em [http://localhost:3000/samuel-ai](http://local
 
 Preencha em `.env.local`:
 
-- `OPENAI_API_KEY` para conversas geradas por IA. `OPENAI_MODEL` é configurável (`gpt-5.4-mini` por padrão para equilibrar latência e custo).
+- `OPENAI_API_KEY` para conversas geradas por IA e para a voz Realtime. `OPENAI_MODEL` é configurável (`gpt-5.4-mini` por padrão).
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` e `SUPABASE_SERVICE_ROLE_KEY` para dados e histórico persistente.
-- `AI_GATEWAY_API_KEY`, `AI_GATEWAY_BASE_URL` e `AI_GATEWAY_MODEL` apenas quando utilizar um gateway compatível com a Responses API. Estes valores têm precedência sobre os equivalentes OpenAI.
+- `AI_GATEWAY_API_KEY`, `AI_GATEWAY_BASE_URL` e `AI_GATEWAY_MODEL` somente para o chat textual. O gateway pode manter uma IA aberta como provedora principal do texto, mas nunca controla a voz Realtime.
+- `OPENAI_REALTIME_MODEL` e `OPENAI_REALTIME_VOICE` exclusivamente para a voz.
 
 Sem uma chave de IA, o chat informa claramente a limitação e continua funcional para análises empresariais com a resposta determinística do Samuel Runtime. Sem a configuração administrativa do Supabase, o histórico fica isolado no navegador. Nenhuma destas degradações impede o build.
 
@@ -54,23 +55,18 @@ O prompt do Samuel AI mantém a continuidade da conversa, responde no idioma do 
 
 ## Voz Realtime do Samuel AI
 
-A conversa por voz usa WebRTC no navegador e a OpenAI Realtime API pelo endpoint server-side `POST /api/samuel-ai/realtime/offer`. O navegador envia apenas a oferta SDP para o servidor; o servidor combina essa oferta com a configuração da sessão e chama `https://api.openai.com/v1/realtime/calls` usando `OPENAI_API_KEY`. A chave nunca é exposta ao cliente.
+A conversa por voz usa WebRTC no navegador e a OpenAI Realtime API pelo endpoint server-side `POST /api/samuel-ai/realtime/offer`. O navegador envia apenas a oferta SDP; a chave permanece no servidor.
 
-Variáveis opcionais:
+A voz utiliza o esquema GA da Realtime API:
 
-- `OPENAI_REALTIME_MODEL` define o modelo de voz Realtime. Padrão: `gpt-realtime-2.1`.
-- `OPENAI_REALTIME_VOICE` define a voz do Samuel. Padrão: `marin`.
+- `audio.input.transcription` usa `gpt-4o-mini-transcribe`;
+- `audio.input.turn_detection` usa detecção automática de fala (`server_vad`);
+- `audio.output.voice` usa a voz definida em `OPENAI_REALTIME_VOICE`;
+- `OPENAI_REALTIME_MODEL` aceita somente modelos Realtime e usa `gpt-realtime-2.1` como padrão.
 
-Características e limites:
+O usuário inicia a conversa e fala naturalmente. A detecção automática encerra cada turno, cria a resposta e permite interromper o Samuel. A sessão termina automaticamente após oito minutos. Se WebRTC, microfone ou a Realtime API estiverem indisponíveis, o chat textual e o ditado do navegador continuam disponíveis.
 
-- O modo padrão é tocar para falar, para reduzir custo e evitar captura contínua acidental.
-- A sessão é encerrada automaticamente após 8 minutos e os tracks de áudio são finalizados no cleanup.
-- Há rate limiting básico por sessão/empresa no endpoint de negociação SDP.
-- O servidor envia `OpenAI-Safety-Identifier` com hash anonimizado da sessão e da empresa.
-- O app não registra chaves, áudio ou conteúdo sensível em logs.
-- Se WebRTC, microfone ou a Realtime API estiverem indisponíveis, o chat textual e o fallback local continuam disponíveis.
-- A validação final de voz exige navegador com microfone permitido; o build local não comprova áudio real, conexão Realtime nem permissão do dispositivo.
-
+`AI_GATEWAY_*` é exclusivo do chat textual. Nenhuma configuração do gateway ou de modelo aberto é reutilizada na rota de voz.
 
 ## Qualidade
 
@@ -80,4 +76,4 @@ npm run lint
 npm run build
 ```
 
-Os testes cobrem o pipeline, a ponte do Workspace para o Runtime, o protocolo NDJSON e o streaming da Responses API.
+Os testes cobrem o pipeline, a ponte do Workspace para o Runtime, o protocolo NDJSON, o streaming da Responses API e a configuração server-side da voz Realtime.
