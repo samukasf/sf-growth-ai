@@ -25,7 +25,6 @@ type RealtimeServerEvent = {
   type?: string;
   delta?: string;
   transcript?: string;
-  item?: { role?: SamuelRealtimeTranscriptRole };
   error?: { message?: string };
 };
 
@@ -139,51 +138,54 @@ export function useSamuelRealtimeVoice({
     };
   }, []);
 
-  const handleServerEvent = useCallback((event: RealtimeServerEvent) => {
-    switch (event.type) {
-      case "input_audio_buffer.speech_started":
-        dispatch({ type: "listening" });
-        break;
-      case "input_audio_buffer.speech_stopped":
-        dispatch({ type: "processing" });
-        break;
-      case "response.audio.delta":
-        dispatch({ type: "speaking" });
-        break;
-      case "response.done":
-        dispatch({ type: "listening" });
-        break;
-      case "conversation.item.input_audio_transcription.completed": {
-        const content = event.transcript?.trim();
-        if (content) {
-          dispatch({ type: "user_transcript", content, final: true });
-          onTranscript?.({ role: "user", content, final: true });
+  const handleServerEvent = useCallback(
+    (event: RealtimeServerEvent) => {
+      switch (event.type) {
+        case "input_audio_buffer.speech_started":
+          dispatch({ type: "listening" });
+          break;
+        case "input_audio_buffer.speech_stopped":
+          dispatch({ type: "processing" });
+          break;
+        case "response.output_audio.delta":
+          dispatch({ type: "speaking" });
+          break;
+        case "response.done":
+          dispatch({ type: "listening" });
+          break;
+        case "conversation.item.input_audio_transcription.completed": {
+          const content = event.transcript?.trim();
+          if (content) {
+            dispatch({ type: "user_transcript", content, final: true });
+            onTranscript?.({ role: "user", content, final: true });
+          }
+          break;
         }
-        break;
+        case "response.output_audio_transcript.delta":
+          if (event.delta) {
+            dispatch({ type: "assistant_transcript", content: event.delta });
+          }
+          break;
+        case "response.output_audio_transcript.done": {
+          const content = event.transcript?.trim();
+          if (content) {
+            dispatch({ type: "assistant_transcript", content, final: true });
+            onTranscript?.({ role: "assistant", content, final: true });
+          }
+          break;
+        }
+        case "error":
+          dispatch({
+            type: "error",
+            error: event.error?.message ?? "A sessão de voz encontrou um erro.",
+          });
+          break;
+        default:
+          break;
       }
-      case "response.audio_transcript.delta":
-        if (event.delta) {
-          dispatch({ type: "assistant_transcript", content: event.delta });
-        }
-        break;
-      case "response.audio_transcript.done": {
-        const content = event.transcript?.trim();
-        if (content) {
-          dispatch({ type: "assistant_transcript", content, final: true });
-          onTranscript?.({ role: "assistant", content, final: true });
-        }
-        break;
-      }
-      case "error":
-        dispatch({
-          type: "error",
-          error: event.error?.message ?? "A sessão de voz encontrou um erro.",
-        });
-        break;
-      default:
-        break;
-    }
-  }, [onTranscript]);
+    },
+    [onTranscript],
+  );
 
   const start = useCallback(async () => {
     if (!supportsRealtimeVoice()) {
@@ -220,25 +222,27 @@ export function useSamuelRealtimeVoice({
       audioRef.current = audio;
       peer.ontrack = (event) => {
         audio.srcObject = event.streams[0];
+        void audio.play().catch(() => {
+          // Mobile Safari may wait for the next explicit user interaction.
+        });
+      };
+      peer.onconnectionstatechange = () => {
+        if (peer.connectionState === "failed") {
+          dispatch({
+            type: "error",
+            error: "A conexão de voz foi interrompida. Tente iniciar novamente.",
+          });
+          cleanup();
+        }
       };
 
       const channel = peer.createDataChannel("oai-events");
       dataChannelRef.current = channel;
-      channel.addEventListener("open", () => {
-        sendEvent({
-          type: "session.update",
-          session: {
-            instructions: contextSummary,
-            input_audio_transcription: { model: "gpt-realtime-transcribe" },
-            turn_detection: null,
-          },
-        });
-      });
       channel.addEventListener("message", (message) => {
         try {
           handleServerEvent(JSON.parse(String(message.data)) as RealtimeServerEvent);
         } catch {
-          // Ignore malformed Realtime events; do not log user content.
+          // Ignore malformed events without logging conversation content.
         }
       });
 
@@ -257,9 +261,7 @@ export function useSamuelRealtimeVoice({
         now,
         maxDurationMs: SAMUEL_REALTIME_MAX_DURATION_MS,
       });
-      timeoutRef.current = setTimeout(() => {
-        end();
-      }, SAMUEL_REALTIME_MAX_DURATION_MS);
+      timeoutRef.current = setTimeout(end, SAMUEL_REALTIME_MAX_DURATION_MS);
     } catch (error) {
       cleanup();
       dispatch({
@@ -280,7 +282,6 @@ export function useSamuelRealtimeVoice({
     conversationId,
     end,
     handleServerEvent,
-    sendEvent,
   ]);
 
   useEffect(() => cleanup, [cleanup]);

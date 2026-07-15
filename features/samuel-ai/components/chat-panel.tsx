@@ -630,7 +630,7 @@ export function ChatPanel({
               )}
               aria-pressed={realtimeActive}
             >
-              {realtimeActive ? "Encerrar voz" : "Tocar para falar"}
+              {realtimeActive ? "Encerrar voz" : "Iniciar conversa por voz"}
             </button>
             <button
               type="button"
