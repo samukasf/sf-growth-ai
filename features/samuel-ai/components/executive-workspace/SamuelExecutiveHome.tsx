@@ -9,7 +9,6 @@ import {
   Bot,
   BrainCircuit,
   BriefcaseBusiness,
-  CheckCircle2,
   CircleDollarSign,
   Clock3,
   Gauge,
@@ -25,6 +24,7 @@ import {
 } from "lucide-react";
 
 import { buildExecutiveInbox } from "@/features/executive-inbox";
+import { GoogleWorkspacePanel } from "@/features/google-workspace/GoogleWorkspacePanel";
 import { cn } from "@/utils/cn";
 
 import type {
@@ -194,6 +194,20 @@ function SamuelHologram({ active }: { active: boolean }) {
   return (
     <div className={cn("samuel-hologram", active && "samuel-hologram--active")} aria-hidden="true">
       <div className="samuel-hologram__aura" />
+      <div className="samuel-hologram__energy" />
+      <div className="samuel-hologram__particles">
+        {Array.from({ length: 16 }, (_, index) => (
+          <i
+            key={index}
+            style={{
+              left: `${8 + ((index * 31) % 84)}%`,
+              top: `${14 + ((index * 47) % 76)}%`,
+              animationDelay: `${-(index * 0.37)}s`,
+              animationDuration: `${3.2 + (index % 5) * 0.55}s`,
+            }}
+          />
+        ))}
+      </div>
       <svg viewBox="0 0 520 440" role="presentation" className="samuel-hologram__svg">
         <defs>
           <radialGradient id="samuel-core" cx="50%" cy="44%" r="58%">
@@ -238,6 +252,12 @@ function SamuelHologram({ active }: { active: boolean }) {
           <circle cx="260" cy="40" r="3" />
           <circle cx="397" cy="286" r="2.5" />
           <circle cx="117" cy="130" r="2" />
+        </g>
+        <g className="samuel-hologram__data-arcs" fill="none" stroke="#38bdf8" strokeLinecap="round">
+          <path d="M82 250c-18-92 22-178 91-224" strokeOpacity=".5" strokeWidth="2" strokeDasharray="22 12" />
+          <path d="M438 250c18-92-22-178-91-224" strokeOpacity=".4" strokeWidth="1.5" strokeDasharray="8 14" />
+          <path d="M139 360c-38-34-61-78-65-126" strokeOpacity=".3" strokeDasharray="2 9" />
+          <path d="M381 360c38-34 61-78 65-126" strokeOpacity=".3" strokeDasharray="2 9" />
         </g>
 
         <path
@@ -318,35 +338,6 @@ function SectionTitle({
         </button>
       )}
     </div>
-  );
-}
-
-function IntegrationItem({
-  label,
-  connected,
-  icon: Icon,
-}: {
-  label: string;
-  connected: boolean;
-  icon: LucideIcon;
-}) {
-  return (
-    <li className="flex items-center gap-3 rounded-xl px-2 py-2 transition hover:bg-white/[0.035]">
-      <span className="flex size-8 items-center justify-center rounded-lg border border-white/[0.07] bg-white/[0.04] text-slate-300">
-        <Icon className="size-4" strokeWidth={1.8} />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-xs font-medium text-slate-200">{label}</p>
-        <p className={cn("text-[10px]", connected ? "text-emerald-400" : "text-slate-600")}>
-          {connected ? "Módulo ativo" : "Aguardando ligação"}
-        </p>
-      </div>
-      {connected ? (
-        <CheckCircle2 className="size-4 text-emerald-400" />
-      ) : (
-        <span className="size-2 rounded-full bg-slate-700" />
-      )}
-    </li>
   );
 }
 
@@ -606,19 +597,29 @@ export function SamuelExecutiveHome({
           </div>
         </article>
 
-        <article className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 sm:p-5">
+        <article className="rounded-2xl border border-blue-950/[0.07] bg-white/75 p-4 shadow-[0_18px_60px_rgba(37,74,138,.08)] sm:p-5">
           <SectionTitle
-            eyebrow="Integrações"
-            title="Ecossistema conectado"
+            eyebrow="Integrações ao vivo"
+            title="Google Workspace"
             action={{ label: "Gerir", onClick: () => onNavigate("google-analytics") }}
           />
-          <ul className="space-y-0.5">
-            <IntegrationItem label="Google Analytics" connected={Boolean(data.googleAnalyticsExecutive)} icon={BarChart3} />
-            <IntegrationItem label="Google Business" connected={Boolean(data.googleBusinessExecutive)} icon={BriefcaseBusiness} />
-            <IntegrationItem label="Meta Ads" connected={Boolean(data.metaExecutive)} icon={Megaphone} />
-            <IntegrationItem label="LinkedIn" connected={Boolean(data.linkedInExecutive)} icon={UsersRound} />
-            <IntegrationItem label="Company Brain" connected={Boolean(data.executiveContext)} icon={BrainCircuit} />
-          </ul>
+          <GoogleWorkspacePanel companyId={data.executiveContext?.company.id} />
+          <div className="mt-4 border-t border-blue-950/[0.07] pt-3">
+            <p className="mb-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-500">Outros módulos</p>
+            <div className="grid grid-cols-3 gap-1.5">
+              {[
+                { label: "Analytics", connected: Boolean(data.googleAnalyticsExecutive), icon: BarChart3 },
+                { label: "Meta", connected: Boolean(data.metaExecutive), icon: Megaphone },
+                { label: "LinkedIn", connected: Boolean(data.linkedInExecutive), icon: UsersRound },
+              ].map((item) => (
+                <div key={item.label} className="rounded-lg border border-blue-950/[0.06] bg-blue-50/60 px-2 py-2 text-center">
+                  <item.icon className="mx-auto size-3.5 text-blue-700" />
+                  <p className="mt-1 truncate text-[9px] font-medium text-blue-950">{item.label}</p>
+                  <span className={cn("mx-auto mt-1 block size-1.5 rounded-full", item.connected ? "bg-emerald-500" : "bg-slate-300")} />
+                </div>
+              ))}
+            </div>
+          </div>
         </article>
       </section>
 
