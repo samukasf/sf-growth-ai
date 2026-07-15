@@ -24,6 +24,10 @@ Preencha em `.env.local`:
 
 Sem uma chave de IA, o chat informa claramente a limitação e continua funcional para análises empresariais com a resposta determinística do Samuel Runtime. Sem a configuração administrativa do Supabase, o histórico fica isolado no navegador. Nenhuma destas degradações impede o build.
 
+## CI/CD
+
+Este repositório inclui GitHub Actions em `.github/workflows/ci.yml` para executar `npm test`, `npm run lint` e `npm run build` em pushes e pull requests. Configure as variáveis acima como secrets/variables do ambiente de deploy; nunca grave chaves reais no repositório.
+
 ## Base de dados
 
 As migrations estão em `supabase/migrations`. As migrations `20260714110000_samuel_conversations.sql` e `20260714112000_executive_inbox_actions.sql` criam o histórico do chat e a persistência da Executive Inbox, com índices e RLS.

@@ -1,7 +1,16 @@
 export type WorkspaceSection =
-  | "executive-inbox"
   | "dashboard"
   | "samuel-ai"
+  | "crm"
+  | "funnels"
+  | "campaigns"
+  | "automation"
+  | "whatsapp"
+  | "analytics"
+  | "agents"
+  | "integrations"
+  | "settings"
+  | "executive-inbox"
   | "executive-alerts"
   | "executive-timeline"
   | "executive-agenda"
@@ -19,7 +28,12 @@ export type WorkspaceSection =
   | "meta"
   | "linkedin";
 
-export type WorkspaceNavGroup = "core" | "executive" | "modules" | "integrations";
+export type WorkspaceNavGroup =
+  | "principal"
+  | "workspace"
+  | "executive"
+  | "modules"
+  | "integrations";
 
 export type WorkspaceNavItem = {
   id: WorkspaceSection;
@@ -29,9 +43,18 @@ export type WorkspaceNavItem = {
 };
 
 export const WORKSPACE_NAV_ITEMS: WorkspaceNavItem[] = [
-  { id: "executive-inbox", label: "Executive Inbox", group: "core" },
-  { id: "dashboard", label: "Dashboard", group: "core" },
-  { id: "samuel-ai", label: "Samuel AI", group: "core" },
+  { id: "dashboard", label: "Dashboard", group: "principal" },
+  { id: "samuel-ai", label: "Conversa com IA", group: "principal" },
+  { id: "crm", label: "CRM Inteligente", group: "workspace" },
+  { id: "funnels", label: "Funis de Vendas", group: "workspace" },
+  { id: "campaigns", label: "Campanhas", group: "workspace" },
+  { id: "automation", label: "Automação", group: "workspace" },
+  { id: "whatsapp", label: "WhatsApp", group: "workspace" },
+  { id: "analytics", label: "Análises", group: "workspace" },
+  { id: "agents", label: "Agentes IA", group: "workspace" },
+  { id: "integrations", label: "Integrações", group: "workspace" },
+  { id: "settings", label: "Configurações", group: "workspace" },
+  { id: "executive-inbox", label: "Executive Inbox", group: "executive" },
   { id: "executive-alerts", label: "Executive Alerts", group: "executive" },
   { id: "executive-timeline", label: "Executive Timeline", group: "executive" },
   { id: "executive-agenda", label: "Executive Agenda", group: "executive" },
@@ -51,7 +74,8 @@ export const WORKSPACE_NAV_ITEMS: WorkspaceNavItem[] = [
 ];
 
 export const WORKSPACE_GROUP_LABELS: Record<WorkspaceNavGroup, string> = {
-  core: "Núcleo",
+  principal: "Principal",
+  workspace: "Sistema",
   executive: "Executivo",
   modules: "Módulos",
   integrations: "Integrações",
