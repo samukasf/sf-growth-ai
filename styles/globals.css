@@ -309,7 +309,8 @@ input:focus-visible {
   height: 535px;
   margin-top: -0.5rem;
   --samuel-eye-rgb: 125, 211, 252;
-  --samuel-eye-opacity: 0.68;
+  --samuel-eye-shell-rgb: 125, 211, 252;
+  --samuel-eye-opacity: 0.82;
   --samuel-mouth-open: 0;
   --samuel-speech-progress: 0;
   --samuel-gaze-x: 0px;
@@ -421,40 +422,55 @@ input:focus-visible {
 
 .samuel-hologram__eye {
   position: absolute;
-  top: 22.65%;
+  top: 22.25%;
   display: block;
-  width: 10.6%;
-  height: 2.65%;
+  width: 10.15%;
+  height: 3.45%;
   overflow: hidden;
-  border: 1px solid rgba(var(--samuel-eye-rgb), 0.22);
-  border-radius: 48% 48% 54% 54%;
+  border: 0;
+  border-radius: 50%;
   opacity: var(--samuel-eye-opacity);
   background:
-    radial-gradient(ellipse at 50% 58%, rgba(255, 255, 255, 0.94) 0 4%, rgba(var(--samuel-eye-rgb), 0.78) 8% 15%, rgba(var(--samuel-eye-rgb), 0.2) 29%, transparent 68%);
+    linear-gradient(180deg, rgba(2, 8, 23, 0.82) 0 10%, transparent 34% 67%, rgba(2, 8, 23, 0.72) 90% 100%),
+    radial-gradient(ellipse at 50% 52%, rgba(224, 250, 255, 0.84) 0 15%, rgba(var(--samuel-eye-shell-rgb), 0.32) 31%, rgba(7, 25, 55, 0.96) 67%, rgba(2, 8, 23, 0.99) 100%);
   box-shadow:
-    0 0 7px rgba(var(--samuel-eye-rgb), 0.68),
-    0 0 16px rgba(var(--samuel-eye-rgb), 0.28),
-    inset 0 0 6px rgba(255, 255, 255, 0.3);
+    0 0 4px rgba(var(--samuel-eye-shell-rgb), 0.42),
+    0 0 9px rgba(var(--samuel-eye-shell-rgb), 0.18),
+    inset 0 0 7px rgba(var(--samuel-eye-shell-rgb), 0.22);
+  clip-path: polygon(2% 51%, 17% 24%, 50% 11%, 83% 24%, 98% 51%, 83% 77%, 50% 89%, 17% 77%);
   transform-origin: center;
   animation: samuel-eye-alive 6.8s linear infinite;
-  transition: opacity 240ms ease, border-color 240ms ease, box-shadow 240ms ease;
+  transition: opacity 240ms ease, box-shadow 240ms ease;
 }
 
-.samuel-hologram__eye--left { left: 34.55%; }
-.samuel-hologram__eye--right { right: 34.55%; animation-delay: -0.055s; }
+.samuel-hologram__eye--left { left: 34.75%; }
+.samuel-hologram__eye--right { right: 34.75%; animation-delay: -0.055s; }
 
 .samuel-hologram__eye b {
   position: absolute;
   left: 50%;
-  top: 52%;
+  top: 50%;
   display: block;
-  width: 17%;
+  width: 31%;
   aspect-ratio: 1;
   border-radius: 50%;
-  background: #eaffff;
-  box-shadow: 0 0 4px #fff, 0 0 8px rgba(var(--samuel-eye-rgb), 0.78);
+  background:
+    radial-gradient(circle at 50% 50%, rgba(1, 7, 24, 0.98) 0 26%, rgba(var(--samuel-eye-rgb), 1) 30% 52%, rgba(224, 252, 255, 0.92) 57% 63%, rgba(var(--samuel-eye-rgb), 0.38) 67%, transparent 72%);
+  box-shadow: 0 0 3px rgba(224, 252, 255, 0.82), 0 0 7px rgba(var(--samuel-eye-rgb), 0.55);
   transform: translate(calc(-50% + var(--samuel-gaze-x)), calc(-50% + var(--samuel-gaze-y)));
   transition: transform 90ms ease-out;
+}
+
+.samuel-hologram__eye b::after {
+  position: absolute;
+  left: 56%;
+  top: 24%;
+  width: 18%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 0 3px rgba(224, 252, 255, 0.75);
+  content: "";
 }
 
 .samuel-hologram__brow {
@@ -476,28 +492,28 @@ input:focus-visible {
 .samuel-hologram__mouth {
   position: absolute;
   z-index: 2;
-  left: 44.9%;
-  top: 34.85%;
+  left: 45.55%;
+  top: 35.02%;
   display: block;
-  width: 10.2%;
-  height: 1.55%;
+  width: 8.9%;
+  height: 1.35%;
   border: 0;
   border-radius: 48% 48% 55% 55%;
   opacity: 0;
   background:
-    radial-gradient(ellipse at center, rgba(1, 8, 30, 0.92) 0 44%, rgba(20, 83, 135, 0.58) 58%, rgba(165, 243, 252, 0.58) 74%, transparent 79%);
-  box-shadow: 0 0 calc(2px + var(--samuel-mouth-open) * 5px) rgba(34, 211, 238, 0.42);
-  transform: scaleX(0.88) scaleY(calc(0.14 + var(--samuel-mouth-open) * 0.82));
+    radial-gradient(ellipse at center, rgba(1, 8, 30, 0.94) 0 48%, rgba(20, 83, 135, 0.45) 62%, rgba(165, 243, 252, 0.4) 74%, transparent 80%);
+  box-shadow: 0 0 calc(1px + var(--samuel-mouth-open) * 3px) rgba(34, 211, 238, 0.3);
+  transform: scaleX(0.86) scaleY(calc(0.08 + var(--samuel-mouth-open) * 0.62));
   transition: opacity 70ms linear, transform 70ms linear;
   transform-origin: center;
 }
 
 .samuel-hologram--speaking .samuel-hologram__mouth {
-  opacity: calc(0.12 + var(--samuel-mouth-open) * 0.74);
+  opacity: calc(var(--samuel-mouth-open) * 0.76);
 }
 
-.samuel-hologram__mouth--viseme-1 { transform: scaleX(0.74) scaleY(calc(0.18 + var(--samuel-mouth-open) * 0.86)); }
-.samuel-hologram__mouth--viseme-2 { transform: scaleX(1) scaleY(calc(0.1 + var(--samuel-mouth-open) * 0.66)); }
+.samuel-hologram__mouth--viseme-1 { transform: scaleX(0.76) scaleY(calc(0.1 + var(--samuel-mouth-open) * 0.72)); }
+.samuel-hologram__mouth--viseme-2 { transform: scaleX(0.96) scaleY(calc(0.07 + var(--samuel-mouth-open) * 0.54)); }
 
 .samuel-hologram__particles {
   position: absolute;
@@ -650,7 +666,7 @@ input:focus-visible {
 }
 
 .samuel-hologram--sleeping {
-  --samuel-eye-opacity: 0.08;
+  --samuel-eye-opacity: 0.035;
   filter: drop-shadow(0 0 16px rgba(30, 64, 175, 0.13));
 }
 
@@ -2071,9 +2087,9 @@ input:focus-visible {
     filter: brightness(1);
   }
   44.2%, 77.5% {
-    opacity: 0.015;
-    transform: scaleY(0.035);
-    filter: brightness(0.35);
+    opacity: 0;
+    transform: scaleY(0.01);
+    filter: brightness(0);
   }
 }
 
