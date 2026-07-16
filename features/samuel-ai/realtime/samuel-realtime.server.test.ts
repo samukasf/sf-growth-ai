@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   buildRealtimeSession,
   DEFAULT_REALTIME_MODEL,
+  DEFAULT_REALTIME_VOICE,
   InvalidRealtimeModelError,
   resolveRealtimeModel,
 } from "./samuel-realtime.server";
@@ -41,7 +42,7 @@ describe("Realtime voice server configuration", () => {
   it("builds the GA audio schema with automatic turn detection", () => {
     const session = buildRealtimeSession({
       model: "gpt-realtime-2.1",
-      voice: "marin",
+      voice: DEFAULT_REALTIME_VOICE,
       contextSummary: "Empresa de teste",
     });
 
@@ -51,9 +52,10 @@ describe("Realtime voice server configuration", () => {
       create_response: true,
       interrupt_response: true,
     });
-    expect(session.audio.output.voice).toBe("marin");
+    expect(session.audio.output.voice).toBe("cedar");
     expect(session).not.toHaveProperty("input_audio_transcription");
     expect(session).not.toHaveProperty("turn_detection");
     expect(session.instructions).toContain("Empresa de teste");
+    expect(session.instructions).toContain("voz masculina adulta");
   });
 });

@@ -21,7 +21,7 @@ Preencha em `.env.local`:
 - `OPENAI_API_KEY` para conversas geradas por IA e para a voz Realtime. `OPENAI_MODEL` é configurável (`gpt-5.4-mini` por padrão).
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` e `SUPABASE_SERVICE_ROLE_KEY` para dados e histórico persistente.
 - `AI_GATEWAY_API_KEY`, `AI_GATEWAY_BASE_URL` e `AI_GATEWAY_MODEL` somente para o chat textual. O gateway pode manter uma IA aberta como provedora principal do texto, mas nunca controla a voz Realtime.
-- `OPENAI_REALTIME_MODEL` e `OPENAI_REALTIME_VOICE` exclusivamente para a voz.
+- `OPENAI_REALTIME_MODEL` exclusivamente para a voz; a identidade vocal do Samuel usa `cedar`.
 
 Sem uma chave de IA, o chat informa claramente a limitação e continua funcional para análises empresariais com a resposta determinística do Samuel Runtime. Sem a configuração administrativa do Supabase, o histórico fica isolado no navegador. Nenhuma destas degradações impede o build.
 
@@ -61,7 +61,7 @@ A voz utiliza o esquema GA da Realtime API:
 
 - `audio.input.transcription` usa `gpt-4o-mini-transcribe`;
 - `audio.input.turn_detection` usa detecção automática de fala (`server_vad`);
-- `audio.output.voice` usa a voz definida em `OPENAI_REALTIME_VOICE`;
+- `audio.output.voice` usa a identidade masculina fixa `cedar`;
 - `OPENAI_REALTIME_MODEL` aceita somente modelos Realtime e usa `gpt-realtime-2.1` como padrão.
 
 O usuário inicia a conversa e fala naturalmente. A detecção automática encerra cada turno, cria a resposta e permite interromper o Samuel. A sessão termina automaticamente após oito minutos. Se WebRTC, microfone ou a Realtime API estiverem indisponíveis, o chat textual e o ditado do navegador continuam disponíveis.

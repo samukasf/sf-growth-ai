@@ -8,6 +8,19 @@ import {
   useState,
   type KeyboardEvent,
 } from "react";
+import {
+  AlertTriangle,
+  Headphones,
+  Mic,
+  MicOff,
+  Radio,
+  RotateCcw,
+  Send,
+  SlidersHorizontal,
+  Sparkles,
+  Volume2,
+  VolumeX,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/cn";
@@ -99,7 +112,7 @@ function realtimeStateLabel(state: ReturnType<typeof useSamuelRealtimeVoice>["se
     case "paused":
       return "Pausado";
     case "error":
-      return "Erro na voz";
+      return "Realtime indisponível";
     default:
       return "Inativo";
   }
@@ -122,53 +135,53 @@ function ExecutiveMessage({ message }: { message: ChatMessage }) {
 
   if (isUser) {
     return (
-      <div className="flex flex-col items-end gap-1">
-        <div className="max-w-[90%] border-r-2 border-accent/40 pr-4">
-          <p className="text-[10px] font-medium uppercase tracking-wider text-muted">
+      <div className="samuel-message-row samuel-message-row--user">
+        <div className="samuel-message samuel-message--user">
+          <p className="samuel-message__author">
             Você
           </p>
-          <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">
+          <p className="samuel-message__content">
             {message.content}
           </p>
         </div>
-        <span className="text-[11px] text-muted">{formatTime(message.timestamp)}</span>
+        <span className="samuel-message__time">{formatTime(message.timestamp)}</span>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="samuel-message-row samuel-message-row--assistant">
       <div
         className={cn(
-          "max-w-full rounded-lg border bg-white/[0.03] px-4 py-4",
-          message.status === "error" ? "border-red-500/30" : "border-border",
+          "samuel-message samuel-message--assistant",
+          message.status === "error" && "samuel-message--error",
         )}
       >
-        <div className="mb-3 flex items-center gap-2 border-b border-border pb-3">
-          <div className="flex size-7 items-center justify-center rounded-md border border-accent/30 bg-accent/10">
-            <span className="text-[10px] font-bold text-accent">SA</span>
+        <div className="samuel-message__header">
+          <div className="samuel-message__avatar">
+            <Sparkles aria-hidden="true" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-foreground">Samuel AI™</p>
-            <p className="text-[10px] text-muted">
+            <p className="samuel-message__name">Samuel AI™</p>
+            <p className="samuel-message__status">
               {message.status === "streaming"
-                ? "Samuel AI a responder…"
+                ? "A construir sua resposta…"
                 : message.status === "cancelled"
                   ? "Resposta cancelada"
                   : message.status === "error"
                     ? "Falha na resposta"
-                    : "Inteligência conversacional"}
+                    : "Inteligência executiva"}
             </p>
           </div>
           {message.status === "streaming" && (
-            <span className="ml-auto size-2 animate-pulse rounded-full bg-accent" />
+            <span className="samuel-message__thinking" aria-label="Samuel está respondendo" />
           )}
         </div>
-        <div className="space-y-0.5 whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
+        <div className="samuel-message__content">
           {message.content || "A preparar a resposta com o contexto disponível…"}
         </div>
       </div>
-      <span className="text-[11px] text-muted">{formatTime(message.timestamp)}</span>
+      <span className="samuel-message__time">{formatTime(message.timestamp)}</span>
     </div>
   );
 }
@@ -193,6 +206,7 @@ export function ChatPanel({
   const [voiceNotice, setVoiceNotice] = useState<string | null>(null);
   const [voiceAutoSend, setVoiceAutoSend] = useState(true);
   const [voiceReplyEnabled, setVoiceReplyEnabled] = useState(true);
+  const [voiceConsoleOpen, setVoiceConsoleOpen] = useState(false);
   const {
     blocked: browserSpeechBlocked,
     cancel: cancelBrowserSpeech,
@@ -541,12 +555,12 @@ export function ChatPanel({
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="samuel-chat-shell">
       <div
         role="log"
         aria-live="polite"
         aria-label="Conversa com Samuel AI"
-        className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4 sm:space-y-6 sm:p-6"
+        className="samuel-chat-log"
       >
         <div className={cn("samuel-chat-presence", samuelSpeaking && "samuel-chat-presence--speaking")}>
           <SamuelHologram
@@ -572,13 +586,14 @@ export function ChatPanel({
         </div>
 
         {!hasEngaged && (
-          <div className="flex min-h-[220px] flex-col items-center justify-center rounded-2xl border border-cyan-300/10 bg-cyan-300/[0.03] px-4 py-10 text-center">
-            <div className="mb-4 flex size-16 items-center justify-center rounded-full border border-cyan-300/20 bg-cyan-300/10 text-cyan-100 shadow-[0_0_36px_rgba(34,211,238,0.18)]">
-              SA
+          <div className="samuel-chat-empty">
+            <div className="samuel-chat-empty__icon">
+              <Sparkles aria-hidden="true" />
             </div>
-            <p className="max-w-md text-sm text-muted">
-              Converse com o Samuel AI sobre estratégia, tecnologia, ideias,
-              escrita ou qualquer outro tema. Toque no microfone para conversar por voz.
+            <strong>Samuel está pronto para começar</strong>
+            <p>
+              Escreva sua mensagem ou use o microfone. As respostas podem ser
+              reproduzidas com a voz masculina do Samuel.
             </p>
           </div>
         )}
@@ -588,27 +603,26 @@ export function ChatPanel({
         ))}
 
         {warning && (
-          <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-xs text-amber-200/90">
+          <div className="samuel-chat-notice samuel-chat-notice--warning">
             {warning}
           </div>
         )}
 
-        {(voiceNotice || realtimeVoice.session.error || browserSpeechBlocked) && (
-          <div className="rounded-lg border border-cyan-400/20 bg-cyan-400/5 px-4 py-3 text-xs text-cyan-100/90">
+        {(voiceNotice || browserSpeechBlocked) && (
+          <div className="samuel-chat-notice samuel-chat-notice--voice">
             {voiceNotice ||
-              realtimeVoice.session.error ||
               "O navegador bloqueou a reprodução automática. Use “Ouvir última resposta” para liberar a voz."}
           </div>
         )}
 
         {error && (
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-red-500/20 bg-red-500/5 px-4 py-3">
-            <p className="text-xs text-red-200/90">{error}</p>
+          <div className="samuel-chat-notice samuel-chat-notice--error">
+            <p>{error}</p>
             {lastFailedQuery && (
               <Button
                 type="button"
                 variant="secondary"
-                className="h-8 shrink-0 px-3 text-xs"
+                className="h-8 shrink-0 border-red-200 bg-white px-3 text-xs text-red-700"
                 onClick={() => void performSend(lastFailedQuery, true)}
                 disabled={busy}
               >
@@ -621,34 +635,41 @@ export function ChatPanel({
         <div ref={bottomRef} />
       </div>
 
-      <div className="shrink-0 border-t border-border bg-black/30 p-3 backdrop-blur-xl sm:p-5">
-        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-[10px] font-medium uppercase tracking-wider text-muted">
-            Conversa
-          </p>
+      <div className="samuel-chat-composer">
+        <div className="samuel-chat-composer__heading">
+          <div>
+            <span>Canal executivo seguro</span>
+            <strong>Converse com Samuel</strong>
+          </div>
           {providerLabel && (
-            <p className="truncate text-[10px] text-muted">{providerLabel}</p>
+            <p>{providerLabel}</p>
           )}
         </div>
-        <div className="mb-3 rounded-xl border border-white/10 bg-white/[0.025] p-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-medium uppercase tracking-wider text-muted">
-                Voz Realtime
-              </p>
-              <p className="mt-1 text-xs text-cyan-100">
-                {realtimeStateLabel(realtimeVoice.session.state)}
-              </p>
+
+        <div
+          className={cn(
+            "samuel-voice-console",
+            realtimeActive && "samuel-voice-console--active",
+            samuelSpeaking && "samuel-voice-console--speaking",
+            realtimeVoice.session.state === "error" && "samuel-voice-console--error",
+          )}
+        >
+          <div className="samuel-voice-console__topline">
+            <div className="samuel-voice-console__identity">
+              <span><Radio aria-hidden="true" /></span>
+              <div>
+                <p>Samuel Voice · masculina</p>
+                <strong>{realtimeStateLabel(realtimeVoice.session.state)}</strong>
+              </div>
             </div>
             <div
               aria-hidden="true"
-              className="flex h-8 items-end gap-1"
+              className="samuel-voice-console__meter"
               title="Visualizador de áudio"
             >
               {[0.28, 0.5, 0.8, 0.44, 0.64].map((weight, index) => (
                 <span
                   key={weight}
-                  className="w-1.5 rounded-full bg-cyan-300/70 transition-all"
                   style={{
                     height: `${8 + Math.round(realtimeVoice.session.audioLevel * weight * 28)}px`,
                     opacity: realtimeActive ? 1 : 0.35 + index * 0.08,
@@ -657,77 +678,92 @@ export function ChatPanel({
               ))}
             </div>
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-muted">
+
+          <div className="samuel-voice-console__primary-actions">
             <button
               type="button"
               onClick={() => {
                 if (realtimeActive) realtimeVoice.end();
-                else void realtimeVoice.start();
+                else {
+                  setVoiceConsoleOpen(true);
+                  void realtimeVoice.start();
+                }
               }}
               disabled={busy || !hydrated}
-              className={cn(
-                "min-h-11 rounded-full border px-4 py-2 font-medium transition",
-                realtimeActive
-                  ? "border-red-300/30 bg-red-400/10 text-red-100"
-                  : "border-cyan-300/30 bg-cyan-300/10 text-cyan-100",
-              )}
+              className="samuel-voice-console__start"
               aria-pressed={realtimeActive}
             >
-              {realtimeActive ? "Encerrar voz" : "Iniciar conversa por voz"}
+              {realtimeActive ? <MicOff aria-hidden="true" /> : <Mic aria-hidden="true" />}
+              {realtimeActive
+                ? "Encerrar conversa"
+                : realtimeVoice.session.state === "error"
+                  ? "Tentar voz novamente"
+                  : "Iniciar conversa por voz"}
             </button>
             <button
               type="button"
-              onClick={realtimeVoice.interrupt}
-              disabled={!realtimeActive || realtimeVoice.session.state !== "speaking"}
-              className="min-h-11 rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 transition disabled:opacity-45"
+              onClick={() => setVoiceConsoleOpen((current) => !current)}
+              className="samuel-voice-console__settings"
+              aria-expanded={voiceConsoleOpen}
             >
-              Interromper Samuel
-            </button>
-            <button
-              type="button"
-              onClick={() => realtimeVoice.setMuted(!realtimeVoice.session.muted)}
-              disabled={!realtimeActive}
-              className={cn(
-                "min-h-11 rounded-full border px-4 py-2 transition disabled:opacity-45",
-                realtimeVoice.session.muted
-                  ? "border-amber-300/30 bg-amber-300/10 text-amber-100"
-                  : "border-white/10 bg-white/[0.03]",
-              )}
-            >
-              {realtimeVoice.session.muted ? "Ativar mic" : "Mute"}
-            </button>
-            <button
-              type="button"
-              onClick={() => realtimeVoice.setTextMode(!realtimeVoice.session.textMode)}
-              disabled={!realtimeActive}
-              className={cn(
-                "min-h-11 rounded-full border px-4 py-2 transition disabled:opacity-45",
-                realtimeVoice.session.textMode
-                  ? "border-violet-300/30 bg-violet-300/10 text-violet-100"
-                  : "border-white/10 bg-white/[0.03]",
-              )}
-            >
-              {realtimeVoice.session.textMode ? "Voltar voz" : "Texto/voz"}
+              <SlidersHorizontal aria-hidden="true" />
+              {voiceConsoleOpen ? "Ocultar ajustes" : "Ajustes"}
             </button>
           </div>
-          <p className="mt-2 text-[11px] text-muted">
-            Padrão tocar para falar para controlar custos. Se Realtime estiver indisponível,
-            use o chat textual ou o ditado.
-          </p>
+
+          {realtimeVoice.session.error && (
+            <div className="samuel-voice-console__error" role="alert">
+              <AlertTriangle aria-hidden="true" />
+              <div>
+                <strong>A voz avançada não conectou</strong>
+                <p>{realtimeVoice.session.error}</p>
+                <span>O chat e a leitura masculina das respostas continuam disponíveis.</span>
+              </div>
+            </div>
+          )}
+
+          {(voiceConsoleOpen || realtimeActive) && (
+            <div className="samuel-voice-console__details">
+              <div className="samuel-voice-console__controls">
+                <button
+                  type="button"
+                  onClick={realtimeVoice.interrupt}
+                  disabled={!realtimeActive || realtimeVoice.session.state !== "speaking"}
+                >
+                  <VolumeX aria-hidden="true" /> Interromper Samuel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => realtimeVoice.setMuted(!realtimeVoice.session.muted)}
+                  disabled={!realtimeActive}
+                >
+                  {realtimeVoice.session.muted ? <Mic aria-hidden="true" /> : <MicOff aria-hidden="true" />}
+                  {realtimeVoice.session.muted ? "Ativar microfone" : "Silenciar microfone"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => realtimeVoice.setTextMode(!realtimeVoice.session.textMode)}
+                  disabled={!realtimeActive}
+                >
+                  <Headphones aria-hidden="true" />
+                  {realtimeVoice.session.textMode ? "Retomar conversa" : "Somente resposta"}
+                </button>
+              </div>
+              <p>Toque para iniciar. A conversa Realtime usa microfone e encerra automaticamente.</p>
+            </div>
+          )}
         </div>
 
-        <div className="mb-3 flex flex-wrap items-center gap-2 text-[11px] text-muted">
+        <div className="samuel-chat-voice-options">
           <button
             type="button"
             onClick={() => setVoiceAutoSend((current) => !current)}
             className={cn(
-              "rounded-full border px-3 py-1 transition",
-              voiceAutoSend
-                ? "border-cyan-300/30 bg-cyan-300/10 text-cyan-100"
-                : "border-border bg-white/[0.03]",
+              "samuel-chat-voice-option",
+              voiceAutoSend && "samuel-chat-voice-option--active",
             )}
           >
-            Voz envia automático
+            <Mic aria-hidden="true" /> Ditado envia sozinho
           </button>
           <button
             type="button"
@@ -736,13 +772,12 @@ export function ChatPanel({
               cancelBrowserSpeech();
             }}
             className={cn(
-              "rounded-full border px-3 py-1 transition",
-              voiceReplyEnabled
-                ? "border-violet-300/30 bg-violet-300/10 text-violet-100"
-                : "border-border bg-white/[0.03]",
+              "samuel-chat-voice-option",
+              voiceReplyEnabled && "samuel-chat-voice-option--active",
             )}
           >
-            Samuel responde em voz
+            {voiceReplyEnabled ? <Volume2 aria-hidden="true" /> : <VolumeX aria-hidden="true" />}
+            Voz masculina {voiceReplyEnabled ? "ativa" : "desativada"}
           </button>
           <button
             type="button"
@@ -753,12 +788,13 @@ export function ChatPanel({
               }
             }}
             disabled={!lastAssistantMessage || !browserSpeechSupported}
-            className="rounded-full border border-blue-300/30 bg-blue-300/10 px-3 py-1 text-blue-100 transition disabled:cursor-not-allowed disabled:opacity-45"
+            className="samuel-chat-voice-option"
           >
-            Ouvir última resposta
+            <RotateCcw aria-hidden="true" /> Ouvir resposta
           </button>
         </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+
+        <div className="samuel-chat-input-grid">
           <textarea
             value={input}
             onChange={(event) => setInput(event.target.value)}
@@ -767,50 +803,40 @@ export function ChatPanel({
             aria-label="Mensagem para o Samuel AI"
             disabled={busy || !hydrated}
             rows={2}
-            className={cn(
-              "min-h-[5rem] flex-1 resize-none rounded-xl border border-border bg-white/[0.03] px-3.5 py-3 text-sm text-foreground",
-              "placeholder:text-zinc-600",
-              "transition-colors duration-200",
-              "hover:border-white/[0.12] hover:bg-white/[0.05]",
-              "focus:border-accent/40 focus:bg-white/[0.05] focus:outline-none focus:ring-1 focus:ring-accent/30",
-              "disabled:cursor-not-allowed disabled:opacity-50",
-            )}
+            className="samuel-chat-textarea"
           />
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={listening ? stopVoiceInput : startVoiceInput}
-            disabled={!hydrated || busy}
-            className={cn(
-              "shrink-0 sm:w-auto",
-              listening &&
-                "border-cyan-300/30 bg-cyan-300/10 text-cyan-100 shadow-[0_0_24px_rgba(34,211,238,0.18)]",
+          <div className="samuel-chat-input-actions">
+            <button
+              type="button"
+              onClick={listening ? stopVoiceInput : startVoiceInput}
+              disabled={!hydrated || busy}
+              className={cn("samuel-chat-dictation", listening && "is-listening")}
+            >
+              {listening ? <MicOff aria-hidden="true" /> : <Mic aria-hidden="true" />}
+              {listening ? "Parar" : "Ditado"}
+            </button>
+            {busy ? (
+              <button
+                type="button"
+                onClick={() => abortRef.current?.abort()}
+                className="samuel-chat-send is-cancel"
+              >
+                Cancelar
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void performSend(input)}
+                disabled={!hydrated || !input.trim() || !onSendMessage}
+                className="samuel-chat-send"
+              >
+                <Send aria-hidden="true" /> Enviar
+              </button>
             )}
-          >
-            {listening ? "Parar ditado" : "Ditado texto"}
-          </Button>
-          {busy ? (
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => abortRef.current?.abort()}
-              className="shrink-0 sm:w-auto"
-            >
-              Cancelar
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              onClick={() => void performSend(input)}
-              disabled={!hydrated || !input.trim() || !onSendMessage}
-              className="shrink-0 sm:w-auto"
-            >
-              Enviar
-            </Button>
-          )}
+          </div>
         </div>
-        <p className="mt-2 text-[11px] text-muted">
-          Enter para enviar · Shift+Enter para nova linha · Voz com Web Speech API do navegador
+        <p className="samuel-chat-composer__helper">
+          Enter envia · Shift+Enter cria uma nova linha · Samuel pode ler a resposta em voz alta
         </p>
       </div>
     </div>
