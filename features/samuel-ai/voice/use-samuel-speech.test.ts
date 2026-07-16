@@ -13,13 +13,13 @@ describe("selectSamuelMasculineVoice", () => {
     expect(selectSamuelMasculineVoice(voices)?.name).toBe("Felipe");
   });
 
-  it("evita uma voz explicitamente feminina quando há opção neutra", () => {
+  it("não presume que uma voz neutra seja masculina", () => {
     const voices = [
       { name: "Luciana", lang: "pt-BR", localService: true },
       { name: "Português Brasil", lang: "pt-BR", localService: false },
     ];
 
-    expect(selectSamuelMasculineVoice(voices)?.name).toBe("Português Brasil");
+    expect(selectSamuelMasculineVoice(voices)).toBeNull();
   });
 
   it("não troca português por uma voz masculina de outro idioma", () => {

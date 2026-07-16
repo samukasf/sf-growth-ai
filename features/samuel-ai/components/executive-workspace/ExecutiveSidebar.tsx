@@ -21,6 +21,7 @@ import {
   Search,
   ShieldCheck,
   UsersRound,
+  WandSparkles,
 } from "lucide-react";
 
 import { cn } from "@/utils/cn";
@@ -50,6 +51,7 @@ const NAV_ICONS: Partial<Record<WorkspaceSection, LucideIcon>> = {
   "executive-inbox": Inbox,
   dashboard: LayoutDashboard,
   "samuel-ai": Bot,
+  studio: WandSparkles,
   "executive-alerts": BellRing,
   "executive-timeline": Activity,
   "executive-agenda": CalendarDays,

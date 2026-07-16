@@ -10,8 +10,8 @@ import {
   ListTodo,
   Menu,
   MessageSquareText,
-  Radar,
   Sparkles,
+  WandSparkles,
 } from "lucide-react";
 
 import { cn } from "@/utils/cn";
@@ -199,7 +199,7 @@ export function ExecutiveWorkspace({
             {...handlers}
           />
 
-          {activeSection !== "dashboard" && (
+          {activeSection !== "dashboard" && activeSection !== "studio" && (
             <div className="hidden shrink-0 xl:block xl:overflow-y-auto">
               <ExecutiveWorkspaceRightPanel {...workspaceData} />
             </div>
@@ -229,7 +229,7 @@ function MobileCommandBar({
     { section: "executive-inbox", label: "Inbox", icon: Inbox },
     { section: "samuel-ai", label: "Samuel", icon: MessageSquareText, primary: true },
     { section: "executive-tasks", label: "Tarefas", icon: ListTodo },
-    { section: "executive-alerts", label: "Alertas", icon: Radar },
+    { section: "studio", label: "Studio", icon: WandSparkles },
   ];
 
   return (

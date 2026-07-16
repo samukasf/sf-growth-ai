@@ -248,7 +248,9 @@ export class OpenAIResponsesProvider implements LLMProviderPort {
   }
 }
 
-export function createConfiguredResponsesProvider() {
+export function createConfiguredResponsesProvider(
+  overrides: Partial<Pick<ResponsesProviderConfig, "model" | "maxOutputTokens">> = {},
+) {
   const config = getResponsesProviderConfig();
-  return config ? new OpenAIResponsesProvider(config) : null;
+  return config ? new OpenAIResponsesProvider({ ...config, ...overrides }) : null;
 }
