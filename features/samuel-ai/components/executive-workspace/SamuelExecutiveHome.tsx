@@ -1,8 +1,8 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import {
   Activity,
   ArrowRight,
@@ -24,14 +24,19 @@ import {
   ThumbsUp,
   TrendingUp,
   UsersRound,
+  Volume2,
+  VolumeX,
   Workflow,
   Zap,
 } from "lucide-react";
 
 import { buildExecutiveInbox } from "@/features/executive-inbox";
 import { GoogleWorkspacePanel } from "@/features/google-workspace/GoogleWorkspacePanel";
+import { buildProactiveSamuelGreeting } from "@/features/samuel-ai/proactive/proactive-samuel";
+import { useSamuelSpeech } from "@/features/samuel-ai/voice/use-samuel-speech";
 import { cn } from "@/utils/cn";
 
+import { SamuelHologram } from "../samuel-hologram";
 import type {
   ExecutiveWorkspaceData,
   ExecutiveWorkspaceHandlers,
@@ -195,42 +200,6 @@ function ScoreRing({ score }: { score: number }) {
   );
 }
 
-function SamuelHologram({ active }: { active: boolean }) {
-  return (
-    <div className={cn("samuel-hologram", active && "samuel-hologram--active")} aria-hidden="true">
-      <div className="samuel-hologram__aura" />
-      <div className="samuel-hologram__energy" />
-      <div className="samuel-hologram__ring samuel-hologram__ring--outer" />
-      <div className="samuel-hologram__ring samuel-hologram__ring--middle" />
-      <div className="samuel-hologram__ring samuel-hologram__ring--inner" />
-      <div className="samuel-hologram__radar" />
-      <div className="samuel-hologram__particles">
-        {Array.from({ length: 24 }, (_, index) => (
-          <i
-            key={index}
-            style={{
-              left: `${5 + ((index * 37) % 91)}%`,
-              top: `${8 + ((index * 43) % 82)}%`,
-              animationDelay: `${-(index * 0.29)}s`,
-              animationDuration: `${3 + (index % 6) * 0.48}s`,
-            }}
-          />
-        ))}
-      </div>
-      <Image
-        src="/samuel-hologram-v2.webp"
-        alt=""
-        width={1122}
-        height={1402}
-        priority
-        sizes="(max-width: 640px) 310px, (max-width: 1024px) 430px, 520px"
-        className="samuel-hologram__portrait"
-      />
-      <div className="samuel-hologram__scan" />
-      <div className="samuel-hologram__base" />
-    </div>
-  );
-}
 function SectionTitle({
   eyebrow,
   title,
@@ -343,6 +312,42 @@ export function SamuelExecutiveHome({
         deadline: index === 0 ? "Hoje" : "Próximo ciclo",
         status: "pending" as const,
       }));
+  const proactiveGreeting = buildProactiveSamuelGreeting({
+    companyName,
+    urgentActions,
+    pendingTasks,
+    topPriority: priorities[0],
+  });
+  const [proactiveVisible, setProactiveVisible] = useState(false);
+  const [proactiveDismissed, setProactiveDismissed] = useState(false);
+  const {
+    blocked: speechBlocked,
+    cancel: cancelSpeech,
+    speak,
+    speaking: samuelSpeaking,
+    supported: speechSupported,
+  } = useSamuelSpeech();
+
+  useEffect(() => {
+    const visualTimer = setTimeout(() => setProactiveVisible(true), 550);
+    const companyKey = data.executiveContext?.company.id ?? companyName;
+    const storageKey = `sf-growth-ai:samuel-proactive:${companyKey}`;
+    const speechTimer = setTimeout(() => {
+      try {
+        if (sessionStorage.getItem(storageKey)) return;
+        sessionStorage.setItem(storageKey, "presented");
+      } catch {
+        // Browsers with private storage disabled can still receive the greeting.
+      }
+      speak(proactiveGreeting.spokenMessage, { automatic: true });
+    }, 1_050);
+
+    return () => {
+      clearTimeout(visualTimer);
+      clearTimeout(speechTimer);
+      cancelSpeech();
+    };
+  }, [cancelSpeech, companyName, data.executiveContext?.company.id, proactiveGreeting.spokenMessage, speak]);
 
   return (
     <div className="samuel-home flex flex-col gap-4 pb-20 lg:pb-4">
@@ -372,13 +377,71 @@ export function SamuelExecutiveHome({
               {!data.executiveContext && (
                 <span className="samuel-demo-badge">Dados de demonstração</span>
               )}
-              <SamuelHologram active={handlers.isProcessing} />
+              <SamuelHologram
+                active={handlers.isProcessing || samuelSpeaking}
+                speaking={samuelSpeaking}
+              />
+              {proactiveVisible && !proactiveDismissed && (
+                <div
+                  className={cn(
+                    "samuel-proactive-card",
+                    samuelSpeaking && "samuel-proactive-card--speaking",
+                  )}
+                  aria-live="polite"
+                >
+                  <button
+                    type="button"
+                    className="samuel-proactive-card__close"
+                    onClick={() => {
+                      setProactiveDismissed(true);
+                      cancelSpeech();
+                    }}
+                    aria-label="Fechar saudação do Samuel"
+                  >
+                    ×
+                  </button>
+                  <div className="samuel-proactive-card__heading">
+                    <span className="samuel-proactive-card__signal" aria-hidden="true" />
+                    <p>{samuelSpeaking ? "Samuel está falando" : proactiveGreeting.eyebrow}</p>
+                  </div>
+                  <p className="samuel-proactive-card__message">{proactiveGreeting.message}</p>
+                  {speechBlocked && (
+                    <p className="samuel-proactive-card__notice">
+                      O celular bloqueou o áudio automático. Toque em “Ouvir Samuel”.
+                    </p>
+                  )}
+                  <div className="samuel-proactive-card__actions">
+                    <button type="button" onClick={() => onNavigate("samuel-ai")}>
+                      <MessageSquareText aria-hidden="true" /> Conversar agora
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (samuelSpeaking) cancelSpeech();
+                        else speak(proactiveGreeting.spokenMessage);
+                      }}
+                      disabled={!speechSupported}
+                    >
+                      {samuelSpeaking ? <VolumeX aria-hidden="true" /> : <Volume2 aria-hidden="true" />}
+                      {samuelSpeaking
+                        ? "Parar voz"
+                        : speechSupported
+                          ? "Ouvir Samuel"
+                          : "Voz indisponível"}
+                    </button>
+                  </div>
+                </div>
+              )}
               <div className="samuel-hero__identity">
                 <h1>Olá, Samuel! <span aria-hidden="true">👋</span></h1>
                 <p>Pronto para impulsionar<br className="sm:hidden" /> o crescimento da {companyName} hoje?</p>
                 <span className="samuel-online-badge">
-                  <i className={cn(handlers.isProcessing && "animate-pulse")} />
-                  {handlers.isProcessing ? "Samuel a analisar" : "Samuel online"}
+                  <i className={cn((handlers.isProcessing || samuelSpeaking) && "animate-pulse")} />
+                  {samuelSpeaking
+                    ? "Samuel falando"
+                    : handlers.isProcessing
+                      ? "Samuel a analisar"
+                      : "Samuel online"}
                 </span>
                 <button
                   type="button"
