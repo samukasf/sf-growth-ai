@@ -23,6 +23,8 @@ type SamuelHologramProps = {
   compact?: boolean;
   audioLevel?: number;
   speechProgress?: number;
+  taskProgress?: number | null;
+  smiling?: boolean;
   className?: string;
 };
 
@@ -49,6 +51,8 @@ export function SamuelHologram({
   compact = false,
   audioLevel = 0,
   speechProgress = 0,
+  taskProgress = null,
+  smiling = false,
   className,
 }: SamuelHologramProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -57,6 +61,8 @@ export function SamuelHologram({
   const isSpeaking = resolvedState === "speaking";
   const particleCount = compact ? 14 : 28;
   const progress = clamp(speechProgress);
+  const hasTaskProgress = typeof taskProgress === "number" && Number.isFinite(taskProgress);
+  const normalizedTaskProgress = hasTaskProgress ? clamp(taskProgress / 100) : 0;
   const syntheticMouth = isSpeaking
     ? 0.34 + Math.abs(Math.sin(progress * 58 + 0.8)) * 0.58
     : 0;
@@ -70,10 +76,11 @@ export function SamuelHologram({
       ({
         "--samuel-mouth-open": mouthLevel.toFixed(3),
         "--samuel-speech-progress": progress.toFixed(3),
+        "--samuel-task-progress": normalizedTaskProgress.toFixed(3),
         "--samuel-gaze-x": "0px",
         "--samuel-gaze-y": "0px",
       }) as CSSProperties,
-    [mouthLevel, progress],
+    [mouthLevel, normalizedTaskProgress, progress],
   );
 
   function trackGaze(event: PointerEvent<HTMLDivElement>) {
@@ -103,6 +110,7 @@ export function SamuelHologram({
         `samuel-hologram--${resolvedState}`,
         resolvedState !== "resting" && resolvedState !== "sleeping" && "samuel-hologram--active",
         isSpeaking && "samuel-hologram--speaking",
+        smiling && "samuel-hologram--smiling",
         compact && "samuel-hologram--compact",
         className,
       )}
@@ -154,8 +162,19 @@ export function SamuelHologram({
           />
         ))}
       </div>
-      <div className="samuel-hologram__task-progress" aria-hidden="true">
-        <i /><i /><i />
+      <div
+        className="samuel-hologram__task-progress"
+        data-mode={hasTaskProgress ? "determinate" : "indeterminate"}
+        aria-hidden="true"
+      >
+        {hasTaskProgress ? (
+          <>
+            <span><b /></span>
+            <strong>{Math.round(normalizedTaskProgress * 100)}%</strong>
+          </>
+        ) : (
+          <><i /><i /><i /></>
+        )}
       </div>
       <div className="samuel-hologram__scan" aria-hidden="true" />
       <div className="samuel-hologram__base" aria-hidden="true" />

@@ -36,6 +36,26 @@ describe("createGoogleWorkspaceChatSignal", () => {
     expect(signal.fallbackAnswer).toContain("precisa de reautorização");
   });
 
+  it("includes the next real calendar event when it is available", () => {
+    const signal = createGoogleWorkspaceChatSignal("Qual é meu próximo compromisso?", {
+      ...summary,
+      calendar: {
+        connected: true,
+        count: 2,
+        nextEvent: {
+          id: "event-1",
+          title: "Reunião de produto",
+          start: "2026-07-16T14:00:00.000Z",
+          end: "2026-07-16T15:00:00.000Z",
+          allDay: false,
+        },
+      },
+    });
+
+    expect(signal.fallbackAnswer).toContain("Reunião de produto");
+    expect(signal.fallbackAnswer).toContain("próximo");
+  });
+
   it("never claims a requested external action was executed", () => {
     const signal = createGoogleWorkspaceChatSignal("Responda meus e-mails", summary);
 

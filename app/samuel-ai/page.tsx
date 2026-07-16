@@ -186,6 +186,9 @@ export default async function SamuelAiRoute() {
     }
   } catch {
     crmExecutive = buildCrmExecutive({
+      contacts: [],
+      leads: [],
+      deals: [],
       companyName: executiveContext?.company.name,
     });
   }

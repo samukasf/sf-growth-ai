@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getGoogleCalendarProviderForCompany } from "@/features/google-calendar/google-calendar.provider";
+import type { CalendarEvent } from "@/features/google-calendar/types";
 import { getGoogleDriveProviderForCompany } from "@/features/google-drive/google-drive.provider";
 import {
   findGoogleOAuthConnection,
@@ -8,6 +9,7 @@ import {
 } from "@/integrations/gmail";
 
 import type {
+  GoogleWorkspaceCalendarEvent,
   GoogleWorkspaceServiceStatus,
   GoogleWorkspaceSummary,
 } from "./google-workspace.types";
@@ -35,6 +37,42 @@ function failed(error: unknown): GoogleWorkspaceServiceStatus {
     connected: false,
     count: null,
     error: error instanceof Error ? error.message : "Integração temporariamente indisponível",
+  };
+}
+
+function compact(value: string | undefined, maxLength: number) {
+  const normalized = value?.replace(/\s+/g, " ").trim();
+  if (!normalized) return undefined;
+  return normalized.length > maxLength
+    ? `${normalized.slice(0, maxLength - 1).trimEnd()}…`
+    : normalized;
+}
+
+function calendarEventSnapshot(event: CalendarEvent): GoogleWorkspaceCalendarEvent {
+  const location = compact(event.location, 120);
+  return {
+    id: event.id,
+    title: compact(event.summary, 160) ?? "Compromisso sem título",
+    start: event.start.dateTime ?? `${event.start.date}T00:00:00`,
+    end: event.end.dateTime ?? `${event.end.date}T23:59:59`,
+    allDay: !event.start.dateTime,
+    ...(location ? { location } : {}),
+  };
+}
+
+function buildCalendarStatus(events: CalendarEvent[]) {
+  const snapshots = events.slice(0, 8).map(calendarEventSnapshot);
+  const now = Date.now();
+  const nextEvent = snapshots.find((event) => {
+    const end = Date.parse(event.end);
+    return Number.isFinite(end) && end >= now;
+  }) ?? null;
+
+  return {
+    connected: true,
+    count: events.length,
+    events: snapshots,
+    nextEvent,
   };
 }
 
@@ -70,7 +108,9 @@ export async function buildGoogleWorkspaceSummary(
   ]);
 
   const gmail = tasks[0].status === "fulfilled" ? enabled(tasks[0].value) : failed(tasks[0].reason);
-  const calendar = tasks[1].status === "fulfilled" ? enabled(tasks[1].value.length) : failed(tasks[1].reason);
+  const calendar = tasks[1].status === "fulfilled"
+    ? buildCalendarStatus(tasks[1].value)
+    : failed(tasks[1].reason);
   const drive = tasks[2].status === "fulfilled" ? enabled(tasks[2].value.length) : failed(tasks[2].reason);
 
   return {

@@ -51,6 +51,7 @@ export type MarketingRecommendation = {
 };
 
 export type MarketingExecutive = {
+  usesDemoData: boolean;
   marketingHealthScore: number;
   brandScore: number;
   seoScore: number;
@@ -137,7 +138,7 @@ function clampScore(value: number): number {
 
 function resolveCampaigns(input: MarketingExecutiveInput): MarketingCampaignRecord[] {
   const campaigns = input.campaigns ?? [];
-  return campaigns.length > 0 ? campaigns : MOCK_CAMPAIGNS;
+  return input.campaigns === undefined ? MOCK_CAMPAIGNS : campaigns;
 }
 
 function platformScore(campaigns: MarketingCampaignRecord[], platform: string): number {
@@ -484,6 +485,7 @@ export function buildMarketingExecutive(
   );
 
   return {
+    usesDemoData: input.campaigns === undefined,
     marketingHealthScore,
     ...scores,
     audienceGrowth: buildAudienceGrowth(input),
