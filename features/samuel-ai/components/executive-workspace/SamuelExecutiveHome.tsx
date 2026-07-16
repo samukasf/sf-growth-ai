@@ -17,6 +17,7 @@ import {
   Clock3,
   Database,
   Gauge,
+  Globe2,
   Megaphone,
   MessageSquareText,
   Music2,
@@ -89,6 +90,13 @@ const QUICK_MODULES: QuickModule[] = [
     section: "marketing",
     icon: Sparkles,
     tone: "cyan",
+  },
+  {
+    label: "Sites",
+    description: "Criar site navegável",
+    section: "site-builder",
+    icon: Globe2,
+    tone: "emerald",
   },
   {
     label: "Relatórios",

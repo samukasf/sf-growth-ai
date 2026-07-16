@@ -24,6 +24,7 @@ import { SamuelStudio } from "@/features/samuel-ai/studio";
 import { ExecutiveExperience } from "../executive-experience";
 import { ChatPanel } from "../chat-panel";
 import { ExecutiveTimeline } from "../executive-timeline";
+import { SamuelSiteBuilder } from "../site-builder";
 import { CommandPanel } from "../shared/command-panel";
 import { SectionHeader } from "../section-header";
 import {
@@ -298,6 +299,23 @@ export function ExecutiveWorkspaceCenter({
 
       case "studio":
         return <SamuelStudio />;
+
+      case "site-builder":
+        return (
+          <SamuelSiteBuilder
+            companyName={data.executiveContext?.company.name ?? data.briefing.companyName}
+            companySegment={
+              data.executiveContext?.businessProfile?.segment ??
+              data.executiveContext?.company.industry ??
+              undefined
+            }
+            companyLocation={
+              [data.executiveContext?.company.city, data.executiveContext?.company.country]
+                .filter(Boolean)
+                .join(", ") || undefined
+            }
+          />
+        );
 
       case "dashboard":
         return (

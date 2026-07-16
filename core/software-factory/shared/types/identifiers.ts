@@ -29,7 +29,14 @@ export type SoftwareProjectType =
 
 export type SoftwarePriorityLevel = "low" | "medium" | "high" | "critical" | "strategic";
 export type SoftwareApprovalStatus = "pending" | "approved" | "rejected";
-export type ArtifactKind = "source_blueprint" | "schema" | "api_contract" | "ui_map" | "automation_flow";
+export type ArtifactKind =
+  | "source_blueprint"
+  | "schema"
+  | "api_contract"
+  | "ui_map"
+  | "automation_flow"
+  | "navigable_preview"
+  | "handoff_package";
 
 export const SOFTWARE_PROJECT_TYPES: readonly { key: SoftwareProjectType; label: string }[] = [
   { key: "website", label: "Website" },
@@ -45,4 +52,3 @@ export const SOFTWARE_PROJECT_TYPES: readonly { key: SoftwareProjectType; label:
   { key: "microservice", label: "Microservice" },
   { key: "automation", label: "Automation" },
 ] as const;
-
