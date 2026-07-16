@@ -1,22 +1,29 @@
 export type SiteBuilderTone = "executive" | "premium" | "local";
+export type SiteBuilderMode = "website" | "app";
 
 export type SiteBuilderDraft = {
+  mode: SiteBuilderMode;
   businessName: string;
   segment: string;
   offer: string;
   goal: string;
   location: string;
   cta: string;
+  whatsapp: string;
+  mapsQuery: string;
   tone: SiteBuilderTone;
 };
 
 const DEFAULT_DRAFT: SiteBuilderDraft = {
+  mode: "website",
   businessName: "A sua empresa",
   segment: "serviços profissionais",
   offer: "soluções completas para clientes exigentes",
   goal: "gerar pedidos de orçamento qualificados",
   location: "Portugal",
   cta: "Pedir orçamento",
+  whatsapp: "",
+  mapsQuery: "",
   tone: "executive",
 };
 
@@ -31,6 +38,25 @@ function cleanText(value: string | undefined, fallback: string, maxLength = 120)
   return (normalized || fallback).slice(0, maxLength);
 }
 
+function cleanOptionalText(value: string | undefined, maxLength = 120): string {
+  return (value?.replace(/\s+/g, " ").trim() ?? "").slice(0, maxLength);
+}
+
+function cleanPhone(value: string | undefined): string {
+  return (value ?? "").replace(/[^\d+]/g, "").slice(0, 24);
+}
+
+function buildWhatsAppUrl(phone: string) {
+  const digits = phone.replace(/\D/g, "");
+  return digits ? `https://wa.me/${digits}` : "#contact";
+}
+
+function buildMapsUrl(query: string) {
+  return query
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`
+    : "#contact";
+}
+
 export function escapeHtml(value: string): string {
   return value
     .replaceAll("&", "&amp;")
@@ -42,14 +68,18 @@ export function escapeHtml(value: string): string {
 
 export function normalizeSiteBuilderDraft(input: Partial<SiteBuilderDraft>): SiteBuilderDraft {
   const tone = input.tone && input.tone in TONE_THEME ? input.tone : DEFAULT_DRAFT.tone;
+  const mode = input.mode === "app" ? "app" : DEFAULT_DRAFT.mode;
 
   return {
+    mode,
     businessName: cleanText(input.businessName, DEFAULT_DRAFT.businessName, 70),
     segment: cleanText(input.segment, DEFAULT_DRAFT.segment, 90),
     offer: cleanText(input.offer, DEFAULT_DRAFT.offer, 150),
     goal: cleanText(input.goal, DEFAULT_DRAFT.goal, 150),
     location: cleanText(input.location, DEFAULT_DRAFT.location, 70),
     cta: cleanText(input.cta, DEFAULT_DRAFT.cta, 42),
+    whatsapp: cleanPhone(input.whatsapp),
+    mapsQuery: cleanOptionalText(input.mapsQuery, 140),
     tone,
   };
 }
@@ -69,12 +99,16 @@ export function buildSiteBuilderFilename(input: Partial<SiteBuilderDraft>): stri
 export function buildSiteBuilderHtml(input: Partial<SiteBuilderDraft>): string {
   const draft = normalizeSiteBuilderDraft(input);
   const theme = TONE_THEME[draft.tone];
+  const modeLabel = draft.mode === "app" ? "Mini-app navegável" : "Website completo";
   const businessName = escapeHtml(draft.businessName);
   const segment = escapeHtml(draft.segment);
   const offer = escapeHtml(draft.offer);
   const goal = escapeHtml(draft.goal);
   const location = escapeHtml(draft.location);
   const cta = escapeHtml(draft.cta);
+  const whatsappUrl = buildWhatsAppUrl(draft.whatsapp);
+  const mapsUrl = buildMapsUrl(draft.mapsQuery || `${draft.businessName} ${draft.location}`);
+  const showAppSection = draft.mode === "app";
 
   return `<!doctype html>
 <html lang="pt">
@@ -200,15 +234,39 @@ export function buildSiteBuilderHtml(input: Partial<SiteBuilderDraft>): string {
     .contact { display: grid; grid-template-columns: 1fr .9fr; gap: 22px; align-items: stretch; }
     .contact-box { border-radius: 28px; padding: 28px; background: linear-gradient(135deg, var(--dark), #111827); color: white; }
     .contact-box p { color: rgba(255,255,255,.72); }
+    .channel-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+    .channel { border: 1px solid rgba(255,255,255,.16); border-radius: 18px; padding: 14px; color: white; background: rgba(255,255,255,.08); }
+    .app-demo { display: grid; grid-template-columns: .82fr 1.18fr; gap: 18px; align-items: stretch; }
+    .app-device {
+      min-height: 520px;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 36px;
+      padding: 18px;
+      background: radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--accent-2) 28%, transparent), transparent 34%), linear-gradient(160deg, #020617, var(--dark));
+      box-shadow: 0 34px 90px rgba(15,23,42,.26);
+      color: white;
+    }
+    .app-status { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; color: rgba(255,255,255,.62); }
+    .app-card { margin-top: 18px; border-radius: 28px; padding: 20px; background: rgba(255,255,255,.1); backdrop-filter: blur(14px); }
+    .app-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 18px; }
+    .app-tabs button { min-height: 42px; border: 0; border-radius: 16px; color: rgba(255,255,255,.68); background: rgba(255,255,255,.08); font-weight: 800; cursor: pointer; }
+    .app-tabs button.active { color: #031026; background: white; }
+    .app-panel { display: none; margin-top: 14px; border-radius: 22px; padding: 18px; background: rgba(255,255,255,.1); }
+    .app-panel.active { display: block; }
+    .app-panel b { display: block; font-size: 28px; }
+    .app-roadmap { display: grid; gap: 12px; }
+    .roadmap-item { border: 1px solid var(--line); border-radius: 20px; padding: 18px; background: #fff; }
+    .roadmap-item span { display: block; color: var(--accent); font-size: 12px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
     footer { padding: 28px clamp(20px, 5vw, 72px); color: #64748b; background: #f8fafc; }
     @keyframes pulse { 0%, 100% { transform: translate3d(-5%, -2%, 0) scale(1); opacity: .7; } 50% { transform: translate3d(6%, 4%, 0) scale(1.08); opacity: 1; } }
     @media (max-width: 820px) {
       .nav { top: 10px; left: 10px; right: 10px; }
       .nav-links { display: none; }
       .hero { padding-inline: 18px; }
-      .hero-grid, .contact { grid-template-columns: 1fr; }
+      .hero-grid, .contact, .app-demo { grid-template-columns: 1fr; }
       .visual { min-height: 320px; }
       .cards { grid-template-columns: 1fr; }
+      .channel-grid { grid-template-columns: 1fr; }
       .metrics { grid-template-columns: 1fr; }
     }
   </style>
@@ -220,6 +278,7 @@ export function buildSiteBuilderHtml(input: Partial<SiteBuilderDraft>): string {
       <div class="nav-links">
         <a href="#services">Serviços</a>
         <a href="#proof">Resultados</a>
+        ${showAppSection ? '<a href="#app">App</a>' : ""}
         <a href="#contact">Contato</a>
       </div>
     </nav>
@@ -236,11 +295,11 @@ export function buildSiteBuilderHtml(input: Partial<SiteBuilderDraft>): string {
         </div>
         <aside class="visual" aria-label="Resumo de performance">
           <div class="visual-card">
-            <strong>Presença digital pronta para vender</strong>
-            <span>Estrutura responsiva, CTA visível e narrativa comercial objetiva.</span>
+            <strong>${modeLabel} pronto para vender</strong>
+            <span>Estrutura responsiva, CTA visível, navegação real e narrativa comercial objetiva.</span>
             <div class="metrics">
               <div class="metric"><b>24h</b><span>para validar a primeira versão</span></div>
-              <div class="metric"><b>3</b><span>seções navegáveis</span></div>
+              <div class="metric"><b>${showAppSection ? "5" : "4"}</b><span>áreas navegáveis</span></div>
               <div class="metric"><b>SEO</b><span>base técnica incluída</span></div>
             </div>
           </div>
@@ -267,21 +326,64 @@ export function buildSiteBuilderHtml(input: Partial<SiteBuilderDraft>): string {
         </div>
       </div>
     </section>
+    ${showAppSection ? `
+    <section id="app" class="content">
+      <div class="section-inner app-demo">
+        <div class="app-device">
+          <div class="app-status"><span>9:41</span><span>${businessName}</span></div>
+          <div class="app-card">
+            <p class="eyebrow">Painel inteligente</p>
+            <h2 style="margin:0;font-size:34px;line-height:1;">Operação em tempo real</h2>
+            <p style="color:rgba(255,255,255,.7);line-height:1.55;">Mini-app navegável para acompanhar leads, pedidos e tarefas comerciais sem depender de planilhas soltas.</p>
+            <div class="app-tabs" role="tablist">
+              <button class="active" data-tab="leads" type="button">Leads</button>
+              <button data-tab="agenda" type="button">Agenda</button>
+              <button data-tab="acoes" type="button">Ações</button>
+            </div>
+            <div class="app-panel active" data-panel="leads"><b>18</b><span>leads qualificados aguardando contato</span></div>
+            <div class="app-panel" data-panel="agenda"><b>5</b><span>compromissos comerciais para esta semana</span></div>
+            <div class="app-panel" data-panel="acoes"><b>3</b><span>ações prioritárias recomendadas pelo Samuel AI</span></div>
+          </div>
+        </div>
+        <div class="app-roadmap">
+          <h2 class="section-title">O app que acompanha o site</h2>
+          <div class="roadmap-item"><span>Etapa 1</span><b>Captura</b><p>Formulários, WhatsApp e campanhas entram numa fila única de oportunidades.</p></div>
+          <div class="roadmap-item"><span>Etapa 2</span><b>Execução</b><p>Tarefas, agenda e follow-up ficam organizados para não perder clientes.</p></div>
+          <div class="roadmap-item"><span>Etapa 3</span><b>Inteligência</b><p>Samuel AI recomenda prioridades com base nos dados conectados.</p></div>
+        </div>
+      </div>
+    </section>` : ""}
     <section id="contact" class="content">
       <div class="section-inner contact">
         <div>
           <h2 class="section-title">Vamos conversar?</h2>
           <p>${businessName} está pronto para receber novos pedidos em ${location}. O próximo passo é transformar esta versão em entrega final com domínio, analytics e publicação.</p>
+          <div class="actions">
+            <a class="button secondary" href="${mapsUrl}" target="_blank" rel="noreferrer">Abrir no Google Maps</a>
+          </div>
         </div>
         <div class="contact-box">
           <h3>${cta}</h3>
           <p>Responda pelo canal preferido e confirme o objetivo: ${goal}.</p>
-          <a class="button primary" href="mailto:contato@example.com">${cta}</a>
+          <div class="channel-grid">
+            <a class="channel" href="${whatsappUrl}" target="_blank" rel="noreferrer"><b>WhatsApp</b><br><span>Atendimento direto</span></a>
+            <a class="channel" href="mailto:contato@example.com"><b>E-mail</b><br><span>Pedido formal</span></a>
+          </div>
         </div>
       </div>
     </section>
     <footer>${businessName} - Website criado com Samuel AI</footer>
   </div>
+  <script>
+    document.querySelectorAll("[data-tab]").forEach(function(button) {
+      button.addEventListener("click", function() {
+        var tab = button.getAttribute("data-tab");
+        document.querySelectorAll("[data-tab]").forEach(function(item) { item.classList.remove("active"); });
+        document.querySelectorAll("[data-panel]").forEach(function(item) { item.classList.toggle("active", item.getAttribute("data-panel") === tab); });
+        button.classList.add("active");
+      });
+    });
+  </script>
 </body>
 </html>`;
 }

@@ -10,13 +10,13 @@ import {
 } from "../../domain";
 import { DefaultArtifactGenerator } from "./default-artifact-generator";
 
-function createProject(projectType: "website" | "dashboard") {
+function createProject(projectType: "website" | "dashboard" | "mobile_app" | "api") {
   return SoftwareProject.create({
     id: `project-${projectType}`,
     organizationId: "org-1",
     companyId: "company-1",
     projectType,
-    title: projectType === "website" ? "Site Grafgil" : "Painel Grafgil",
+    title: projectType === "website" ? "Site Grafgil" : "Produto Grafgil",
     description: "Projeto gerado pelo Samuel AI.",
     businessProblem: "Precisa de entrega navegável.",
     businessGoals: ["Publicar experiência utilizável"],
@@ -91,9 +91,20 @@ describe("DefaultArtifactGenerator", () => {
     expect(artifacts.at(-2)?.contentsSummary).toContain("Preview navegável");
   });
 
-  it("keeps non-website projects on the standard artifact contract", () => {
+  it("adds a navigable preview and handoff package for app projects", () => {
     const artifacts = new DefaultArtifactGenerator().generate({
-      project: createProject("dashboard"),
+      project: createProject("mobile_app"),
+      architecture,
+      specification,
+    });
+
+    expect(artifacts.map((artifact) => artifact.kind)).toContain("navigable_preview");
+    expect(artifacts.map((artifact) => artifact.kind)).toContain("handoff_package");
+  });
+
+  it("keeps non-visual projects on the standard artifact contract", () => {
+    const artifacts = new DefaultArtifactGenerator().generate({
+      project: createProject("api"),
       architecture,
       specification,
     });
