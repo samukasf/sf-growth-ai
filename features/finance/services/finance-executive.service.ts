@@ -239,13 +239,13 @@ function normalizeRecurringMonthly(amount: number, frequency: string): number {
 
 function resolveInput(input: FinanceExecutiveInput) {
   return {
-    revenues: input.revenues?.length ? input.revenues : MOCK_REVENUES,
-    expenses: input.expenses?.length ? input.expenses : MOCK_EXPENSES,
-    invoices: input.invoices?.length ? input.invoices : MOCK_INVOICES,
-    bankAccounts: input.bankAccounts?.length ? input.bankAccounts : MOCK_BANK_ACCOUNTS,
-    recurringPayments: input.recurringPayments?.length
-      ? input.recurringPayments
-      : MOCK_RECURRING,
+    revenues: input.revenues === undefined ? MOCK_REVENUES : input.revenues,
+    expenses: input.expenses === undefined ? MOCK_EXPENSES : input.expenses,
+    invoices: input.invoices === undefined ? MOCK_INVOICES : input.invoices,
+    bankAccounts: input.bankAccounts === undefined ? MOCK_BANK_ACCOUNTS : input.bankAccounts,
+    recurringPayments: input.recurringPayments === undefined
+      ? MOCK_RECURRING
+      : input.recurringPayments,
     companyName: input.companyName ?? "Empresa",
   };
 }

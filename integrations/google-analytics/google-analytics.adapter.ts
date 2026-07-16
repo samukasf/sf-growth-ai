@@ -14,7 +14,6 @@ import {
 } from "./google-analytics.client";
 import { mapSnapshotToMetrics } from "./google-analytics.mapper";
 import type { GoogleAnalyticsApiSnapshot } from "./google-analytics.types";
-import { GoogleAnalyticsApiError } from "./google-analytics.types";
 
 export type GoogleAnalyticsExecutiveEngines = {
   strategy?: ExecutiveStrategy | null;
@@ -81,34 +80,12 @@ export async function buildGoogleAnalyticsExecutiveForCompany(
   companyName?: string,
   engines: GoogleAnalyticsExecutiveEngines = {},
 ): Promise<GoogleAnalyticsExecutive> {
-  try {
-    const metrics = await fetchGoogleAnalyticsMetrics(companyId);
-    return buildGoogleAnalyticsExecutive({
-      ...engines,
-      companyName,
-      metrics,
-    });
-  } catch (error) {
-    if (error instanceof GoogleAnalyticsApiError) {
-      if (
-        error.code === "NOT_CONFIGURED" ||
-        error.code === "TOKEN_EXPIRED" ||
-        error.code === "AUTH_ERROR" ||
-        error.code === "PROPERTY_NOT_FOUND" ||
-        error.code === "RATE_LIMIT"
-      ) {
-        return buildGoogleAnalyticsExecutive({
-          ...engines,
-          companyName,
-        });
-      }
-    }
-
-    return buildGoogleAnalyticsExecutive({
-      ...engines,
-      companyName,
-    });
-  }
+  const metrics = await fetchGoogleAnalyticsMetrics(companyId);
+  return buildGoogleAnalyticsExecutive({
+    ...engines,
+    companyName,
+    metrics,
+  });
 }
 
 export function enrichMarketingWithAnalytics(

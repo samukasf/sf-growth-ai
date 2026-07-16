@@ -29,7 +29,13 @@ export async function fetchGoogleSearchConsoleApiSnapshot(
   const siteUrl = resolveGoogleSearchConsoleSiteUrl(companyId);
   const client = new GoogleSearchConsoleClient({ siteUrl });
 
-  await client.connect();
+  const connection = await client.connect();
+  if (connection.mode !== "live") {
+    throw new GoogleSearchConsoleApiError(
+      "NOT_CONFIGURED",
+      "Search Console sem uma conexão real validada.",
+    );
+  }
 
   const [
     performance,
@@ -78,33 +84,12 @@ export async function buildSearchConsoleExecutiveForCompany(
   companyName?: string,
   engines: SearchConsoleExecutiveEngines = {},
 ): Promise<SearchConsoleExecutive> {
-  try {
-    const metrics = await fetchSearchConsoleMetrics(companyId);
-    return buildSearchConsoleExecutive({
-      ...engines,
-      companyName,
-      metrics,
-    });
-  } catch (error) {
-    if (error instanceof GoogleSearchConsoleApiError) {
-      if (
-        error.code === "TOKEN_EXPIRED" ||
-        error.code === "AUTH_ERROR" ||
-        error.code === "PROPERTY_NOT_FOUND" ||
-        error.code === "RATE_LIMIT"
-      ) {
-        return buildSearchConsoleExecutive({
-          ...engines,
-          companyName,
-        });
-      }
-    }
-
-    return buildSearchConsoleExecutive({
-      ...engines,
-      companyName,
-    });
-  }
+  const metrics = await fetchSearchConsoleMetrics(companyId);
+  return buildSearchConsoleExecutive({
+    ...engines,
+    companyName,
+    metrics,
+  });
 }
 
 export function enrichMarketingWithSearchConsole(

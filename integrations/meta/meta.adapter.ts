@@ -24,7 +24,13 @@ export async function fetchMetaApiSnapshot(companyId?: string): Promise<MetaApiS
   const pageId = resolveMetaPageId(companyId);
   const client = new MetaClient({ pageId });
 
-  await client.connect();
+  const connection = await client.connect();
+  if (connection.mode !== "live") {
+    throw new MetaApiError(
+      "NOT_CONFIGURED",
+      "Integração Meta sem uma conexão real validada.",
+    );
+  }
 
   const [
     facebookPage,
@@ -111,36 +117,14 @@ export async function buildMetaExecutiveForCompany(
   companyName?: string,
   engines: MetaExecutiveEngines = {},
 ): Promise<MetaExecutive> {
-  try {
-    const mapped = await fetchMetaMetrics(companyId);
-    return buildMetaExecutive({
-      ...engines,
-      companyName,
-      metrics: mapped.metrics,
-      bestPerformingPosts: mapped.bestPerformingPosts,
-      weakPerformingPosts: mapped.weakPerformingPosts,
-    });
-  } catch (error) {
-    if (error instanceof MetaApiError) {
-      if (
-        error.code === "TOKEN_EXPIRED" ||
-        error.code === "AUTH_ERROR" ||
-        error.code === "PAGE_NOT_FOUND" ||
-        error.code === "RATE_LIMIT" ||
-        error.code === "INSTAGRAM_NOT_LINKED"
-      ) {
-        return buildMetaExecutive({
-          ...engines,
-          companyName,
-        });
-      }
-    }
-
-    return buildMetaExecutive({
-      ...engines,
-      companyName,
-    });
-  }
+  const mapped = await fetchMetaMetrics(companyId);
+  return buildMetaExecutive({
+    ...engines,
+    companyName,
+    metrics: mapped.metrics,
+    bestPerformingPosts: mapped.bestPerformingPosts,
+    weakPerformingPosts: mapped.weakPerformingPosts,
+  });
 }
 
 export function enrichMarketingWithMeta(

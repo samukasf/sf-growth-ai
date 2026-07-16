@@ -27,8 +27,6 @@ import type { ExecutivePriority } from "../services/executive-priority.service";
 import type { ExecutiveRecommendation } from "../services/executive-recommendation.service";
 import type { ExecutiveStrategy } from "../services/executive-strategy.service";
 
-import { buildExecutiveCompetitor } from "../services/executive-competitor.service";
-
 import { SamuelAiShell } from "./samuel-ai-shell";
 import type { ExecutiveBriefing } from "../executive-brain/types";
 
@@ -95,8 +93,6 @@ export function SamuelAiPage({
   marketWatcher = null,
   seoWatcher = null,
 }: SamuelAiPageProps) {
-  const competitorIntelligence = executiveCompetitor ?? buildExecutiveCompetitor();
-
   return (
     <SamuelAiShell
       executiveBriefing={executiveBriefing}
@@ -108,7 +104,7 @@ export function SamuelAiPage({
       executiveLearning={executiveLearning}
       executiveForecast={executiveForecast}
       executiveStrategy={executiveStrategy}
-      executiveCompetitor={competitorIntelligence}
+      executiveCompetitor={executiveCompetitor}
       executiveAction={executiveAction}
       executivePriority={executivePriority}
       executiveRecommendation={executiveRecommendation}

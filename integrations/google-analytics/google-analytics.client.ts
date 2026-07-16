@@ -167,28 +167,17 @@ export class GoogleAnalyticsClient {
     const property = toPropertyResource(this.config.propertyId);
     const url = `${ADMIN_API_BASE}/${property}`;
 
-    try {
-      const data = await this.fetchJson<{
-        name?: string;
-        displayName?: string;
-      }>(url, this.config.accessToken);
+    const data = await this.fetchJson<{
+      name?: string;
+      displayName?: string;
+    }>(url, this.config.accessToken);
 
-      this.connection = {
-        connected: true,
-        propertyId: this.config.propertyId,
-        propertyName: data.name,
-        displayName: data.displayName,
-      };
-    } catch (error) {
-      if (error instanceof GoogleAnalyticsApiError && error.code === "PROPERTY_NOT_FOUND") {
-        throw error;
-      }
-      this.connection = {
-        connected: true,
-        propertyId: this.config.propertyId,
-        displayName: `GA4 ${this.config.propertyId}`,
-      };
-    }
+    this.connection = {
+      connected: true,
+      propertyId: this.config.propertyId,
+      propertyName: data.name,
+      displayName: data.displayName,
+    };
 
     return this.connection;
   }

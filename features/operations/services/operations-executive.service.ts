@@ -165,7 +165,7 @@ function isOverdue(task: OperationsTaskRecord): boolean {
 
 function resolveInput(input: OperationsExecutiveInput) {
   return {
-    tasks: input.tasks?.length ? input.tasks : MOCK_TASKS,
+    tasks: input.tasks === undefined ? MOCK_TASKS : input.tasks,
     companyName: input.companyName ?? "Empresa",
   };
 }

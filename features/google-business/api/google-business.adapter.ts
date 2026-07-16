@@ -14,7 +14,6 @@ import {
 } from "./google-business.client";
 import { mapSnapshotToMetrics } from "./google-business.mapper";
 import type { GoogleBusinessApiSnapshot } from "./google-business.types";
-import { GoogleBusinessApiError } from "./google-business.types";
 
 export type GoogleBusinessExecutiveEngines = {
   strategy?: ExecutiveStrategy | null;
@@ -54,32 +53,10 @@ export async function buildGoogleBusinessExecutiveForCompany(
   companyName?: string,
   engines: GoogleBusinessExecutiveEngines = {},
 ): Promise<GoogleBusinessExecutive> {
-  try {
-    const metrics = await fetchGoogleBusinessMetrics(companyId);
-    return buildGoogleBusinessExecutive({
-      ...engines,
-      companyName,
-      metrics,
-    });
-  } catch (error) {
-    if (error instanceof GoogleBusinessApiError) {
-      if (
-        error.code === "NOT_CONFIGURED" ||
-        error.code === "TOKEN_EXPIRED" ||
-        error.code === "INSUFFICIENT_PERMISSIONS" ||
-        error.code === "BUSINESS_NOT_FOUND" ||
-        error.code === "RATE_LIMIT"
-      ) {
-        return buildGoogleBusinessExecutive({
-          ...engines,
-          companyName,
-        });
-      }
-    }
-
-    return buildGoogleBusinessExecutive({
-      ...engines,
-      companyName,
-    });
-  }
+  const metrics = await fetchGoogleBusinessMetrics(companyId);
+  return buildGoogleBusinessExecutive({
+    ...engines,
+    companyName,
+    metrics,
+  });
 }

@@ -13,7 +13,9 @@ import {
   BriefcaseBusiness,
   Camera,
   CircleDollarSign,
+  CloudCog,
   Clock3,
+  Database,
   Gauge,
   Megaphone,
   MessageSquareText,
@@ -309,7 +311,6 @@ export function SamuelExecutiveHome({
   const priorities = data.executiveCeo?.topPriorities.length
     ? data.executiveCeo.topPriorities.slice(0, 4)
     : inbox.items.slice(0, 4).map((item) => item.title);
-  const timeline = data.executiveMonitoring?.timeline.slice(0, 4) ?? [];
   const insight =
     data.executiveCeo?.executiveRecommendation ||
     data.briefing.nextRecommendation ||
@@ -346,14 +347,12 @@ export function SamuelExecutiveHome({
     },
   ];
 
-  const fallbackCampaigns = [
-    { id: "google", name: "Google Ads", platform: "Google", roi: 0, status: data.googleAnalyticsExecutive ? "Monitorado" : "Aguardando dados" },
-    { id: "meta", name: "Meta Ads", platform: "Meta", roi: data.metaExecutive?.roas ?? 0, status: data.metaExecutive ? "Monitorado" : "Aguardando dados" },
-    { id: "linkedin", name: "LinkedIn Ads", platform: "LinkedIn", roi: 0, status: data.linkedInExecutive ? "Monitorado" : "Aguardando dados" },
-  ];
-  const campaigns = data.marketingExecutive?.campaignPerformance.length
+  const campaigns = data.marketingExecutive && !data.marketingExecutive.usesDemoData
     ? data.marketingExecutive.campaignPerformance.slice(0, 3)
-    : fallbackCampaigns;
+    : [];
+  const contentRecommendations = data.marketingExecutive && !data.marketingExecutive.usesDemoData
+    ? data.marketingExecutive.marketingRecommendations.slice(0, 2)
+    : [];
 
   const socialChannels = [
     { label: "Instagram", value: data.metaExecutive?.bestPerformingPosts.length ?? 0, icon: Camera, color: "text-fuchsia-600 bg-fuchsia-50" },
@@ -370,15 +369,7 @@ export function SamuelExecutiveHome({
         deadline: event.location ?? "Google Agenda",
         timeLabel: calendarTime(event.start, event.allDay),
       }))
-    : timeline.length > 0
-      ? timeline.map((item) => ({ ...item, timeLabel: item.deadline || "Hoje" }))
-      : (data.executiveCeo?.nextActions ?? []).slice(0, 4).map((action, index) => ({
-        id: `calendar-action-${index}`,
-        label: action,
-        deadline: index === 0 ? "Hoje" : "Próximo ciclo",
-        timeLabel: index === 0 ? "Hoje" : "Plano",
-        status: "pending" as const,
-      }));
+    : [];
 
   const initiativeSignals: SamuelInitiativeSignal[] = [
     ...(data.executiveMonitoring?.alerts ?? []).map((alert) => ({
@@ -639,7 +630,7 @@ export function SamuelExecutiveHome({
           <div className="samuel-hero__center">
             <div className="relative z-10 flex h-full w-full flex-col items-center text-center">
               {!data.executiveContext && (
-                <span className="samuel-demo-badge">Dados de demonstração</span>
+                <span className="samuel-demo-badge">Aguardando dados empresariais reais</span>
               )}
               <SamuelHologram
                 state={homeHologramState}
@@ -789,7 +780,7 @@ export function SamuelExecutiveHome({
 
       <section className="samuel-performance">
         <SectionTitle
-          eyebrow={data.executiveContext ? "Desempenho geral" : "Desempenho geral · demonstração"}
+          eyebrow={data.executiveContext ? "Desempenho geral" : "Desempenho geral · sem dados conectados"}
           title="Sinais vitais da operação"
         />
         <div className="samuel-performance__grid">
@@ -815,7 +806,7 @@ export function SamuelExecutiveHome({
             action={{ label: "Ver todas", onClick: () => onNavigate("meta") }}
           />
           <div className="samuel-campaign-list">
-            {campaigns.map((campaign, index) => (
+            {campaigns.length > 0 ? campaigns.map((campaign, index) => (
               <button key={campaign.id} type="button" onClick={() => onNavigate("meta")}>
                 <span className={cn("samuel-campaign-logo", index === 0 ? "is-google" : index === 1 ? "is-meta" : "is-linkedin")}>
                   {index === 0 ? <Target /> : index === 1 ? <Megaphone /> : <BriefcaseBusiness />}
@@ -829,7 +820,9 @@ export function SamuelExecutiveHome({
                   <b>{campaign.roi > 0 ? `${campaign.roi.toFixed(1)}x` : "—"}</b>
                 </span>
               </button>
-            ))}
+            )) : (
+              <p className="samuel-empty-state">Nenhuma campanha real foi encontrada. Conecte uma conta de anúncios para carregar dados.</p>
+            )}
           </div>
         </article>
 
@@ -848,22 +841,20 @@ export function SamuelExecutiveHome({
               </button>
             ))}
           </div>
-          <p className="samuel-card-subtitle">Próximas postagens</p>
+          <p className="samuel-card-subtitle">Recomendações de conteúdo</p>
           <div className="samuel-post-list">
-            {(data.marketingExecutive?.marketingRecommendations.slice(0, 2) ?? priorities.slice(0, 2).map((title, index) => ({
-              id: `post-${index}`,
-              title,
-              description: index === 0 ? "Instagram · Hoje, 10:00" : "LinkedIn · Amanhã, 09:30",
-            }))).map((post) => (
+            {contentRecommendations.length > 0 ? contentRecommendations.map((post) => (
               <button key={post.id} type="button" onClick={() => onNavigate("marketing")}>
                 <span><Send className="size-3.5" /></span>
                 <span className="min-w-0 flex-1">
                   <strong>{post.title}</strong>
-                  <small>{"description" in post ? post.description : "Conteúdo recomendado pelo Samuel"}</small>
+                  <small>{post.description}</small>
                 </span>
-                <b>Pronto</b>
+                <b>Analisar</b>
               </button>
-            ))}
+            )) : (
+              <p className="samuel-empty-state">Sem sugestões até que existam dados reais de marketing.</p>
+            )}
           </div>
         </article>
 
@@ -898,7 +889,7 @@ export function SamuelExecutiveHome({
             action={{ label: "Ver agenda", onClick: openAgenda }}
           />
           <div className="samuel-calendar-list">
-            {calendarItems.map((item) => (
+            {calendarItems.length > 0 ? calendarItems.map((item) => (
               <button key={item.id} type="button" onClick={openAgenda}>
                 <time>{item.timeLabel}</time>
                 <i />
@@ -907,14 +898,16 @@ export function SamuelExecutiveHome({
                   <small>{item.deadline}</small>
                 </span>
               </button>
-            ))}
+            )) : (
+              <p className="samuel-empty-state">Nenhum compromisso real encontrado na Google Agenda para hoje.</p>
+            )}
           </div>
         </article>
 
         <article className="samuel-dashboard-card">
           <SectionTitle
-            eyebrow="Integrações ativas"
-            title="Ecossistema conectado"
+            eyebrow="Fontes verificadas"
+            title="Ecossistema real"
             action={{ label: "Gerir", onClick: () => onNavigate("google-analytics") }}
           />
           <GoogleWorkspacePanel
@@ -923,13 +916,16 @@ export function SamuelExecutiveHome({
           />
           <div className="samuel-other-integrations">
             {[
-              { label: "Analytics", connected: Boolean(data.googleAnalyticsExecutive), icon: BarChart3 },
-              { label: "Meta", connected: Boolean(data.metaExecutive), icon: Megaphone },
-              { label: "LinkedIn", connected: Boolean(data.linkedInExecutive), icon: BriefcaseBusiness },
+              { label: "Dados", status: data.executiveContext ? "Conectado" : "Configurar", connected: Boolean(data.executiveContext), icon: Database, section: "dashboard" as const },
+              { label: "Analytics", status: data.googleAnalyticsExecutive ? "Conectado" : "Configurar", connected: Boolean(data.googleAnalyticsExecutive), icon: BarChart3, section: "google-analytics" as const },
+              { label: "Meta", status: data.metaExecutive ? "Conectado" : "Configurar", connected: Boolean(data.metaExecutive), icon: Megaphone, section: "meta" as const },
+              { label: "LinkedIn", status: data.linkedInExecutive ? "Conectado" : "Configurar", connected: Boolean(data.linkedInExecutive), icon: BriefcaseBusiness, section: "linkedin" as const },
+              { label: "Vercel", status: vercelDeployment?.configured ? vercelDeployment.state : "Configurar", connected: Boolean(vercelDeployment?.configured), icon: CloudCog, section: "studio" as const },
+              { label: "Studio IA", status: "Navegável", connected: true, icon: AppWindow, section: "studio" as const },
             ].map((item) => (
-              <button key={item.label} type="button" onClick={() => onNavigate(item.label === "Meta" ? "meta" : item.label === "LinkedIn" ? "linkedin" : "google-analytics")}>
+              <button key={item.label} type="button" onClick={() => onNavigate(item.section)}>
                 <item.icon />
-                <span>{item.label}</span>
+                <span><strong>{item.label}</strong><small>{item.status}</small></span>
                 <i className={item.connected ? "is-connected" : undefined} />
               </button>
             ))}
