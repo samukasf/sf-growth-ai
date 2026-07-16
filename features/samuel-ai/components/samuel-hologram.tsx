@@ -144,6 +144,7 @@ export function SamuelHologram({
         <svg
           className="samuel-hologram__figure"
           viewBox="0 0 600 720"
+          preserveAspectRatio="xMidYMax meet"
           focusable="false"
         >
           <defs>
