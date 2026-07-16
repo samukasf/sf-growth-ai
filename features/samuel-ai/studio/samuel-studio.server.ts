@@ -62,6 +62,7 @@ export function studioFailureDiagnostic(error: unknown) {
   return message
     .replace(/Bearer\s+[A-Za-z0-9._~-]+/gi, "Bearer [protegido]")
     .replace(/\bsk-[A-Za-z0-9_-]+\b/g, "[chave protegida]")
+    .replace(/organization\s+`[^`]+`/gi, "organization `[protegida]`")
     .replace(/https?:\/\/\S+/gi, "[endereço protegido]")
     .replace(/\s+/g, " ")
     .trim()

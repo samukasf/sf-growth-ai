@@ -46,11 +46,12 @@ describe("Samuel Studio", () => {
 
   it("remove credenciais e endereços do diagnóstico de fallback", () => {
     const diagnostic = studioFailureDiagnostic(
-      new Error("Bearer segredo123 sk-projeto123 falhou em https://gateway.example/path"),
+      new Error("Bearer segredo123 sk-projeto123 organization `org_privada` falhou em https://gateway.example/path"),
     );
     expect(diagnostic).toContain("[protegido]");
     expect(diagnostic).toContain("[chave protegida]");
     expect(diagnostic).toContain("[endereço protegido]");
     expect(diagnostic).not.toContain("segredo123");
+    expect(diagnostic).not.toContain("org_privada");
   });
 });
