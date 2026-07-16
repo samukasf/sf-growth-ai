@@ -21,7 +21,12 @@ export type SamuelStudioGenerateRequest = {
 
 export type SamuelStudioGenerateResponse = {
   project: SamuelStudioProject;
+  source: "gateway" | "starter";
   warning?: string;
+  diagnostic?: {
+    structured: string;
+    plain: string;
+  };
 };
 
 export type SamuelStudioStatus = {
