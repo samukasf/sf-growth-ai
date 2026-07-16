@@ -6,6 +6,7 @@ import {
   createStarterStudioProject,
   parseGeneratedStudioProject,
   SAMUEL_STUDIO_TEXT_FORMAT,
+  shouldRetryStudioWithoutSchema,
   studioFailureDiagnostic,
   validateStudioRequest,
 } from "@/features/samuel-ai/studio/samuel-studio.server";
@@ -119,7 +120,7 @@ export async function POST(request: Request) {
       reasoningEffort: "low",
     });
     let plainFailure: unknown;
-    if (plainProvider) {
+    if (plainProvider && shouldRetryStudioWithoutSchema(structuredFailure)) {
       try {
         const project = await completeProject(plainProvider);
         const response: SamuelStudioGenerateResponse = { project, source: "gateway" };
@@ -127,6 +128,8 @@ export async function POST(request: Request) {
       } catch (error) {
         plainFailure = error;
       }
+    } else {
+      plainFailure = new Error("Nova tentativa textual não aplicável a esta falha.");
     }
 
     {

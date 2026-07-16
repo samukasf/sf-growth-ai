@@ -4,6 +4,7 @@ import {
   buildStudioPrompt,
   parseGeneratedStudioProject,
   SAMUEL_STUDIO_TEXT_FORMAT,
+  shouldRetryStudioWithoutSchema,
   studioFailureDiagnostic,
   validateStudioRequest,
 } from "./samuel-studio.server";
@@ -35,6 +36,25 @@ describe("Samuel Studio", () => {
     )).toThrow(/capacidade externa/);
   });
 
+  it("remove recursos externos do CSS sem descartar o projeto", () => {
+    const project = parseGeneratedStudioProject(
+      JSON.stringify({
+        name: "Site seguro",
+        summary: "Sem rede",
+        files: {
+          "/App.js": 'import "./styles.css"; export default function App(){return <main />}',
+          "/styles.css": '@import url("https://fonts.example/font.css"); .hero{background-image:url(https://images.example/hero.jpg)}',
+          "/data.js": "",
+        },
+      }),
+      context,
+    );
+
+    expect(project.files["/styles.css"]).not.toContain("https://");
+    expect(project.files["/styles.css"]).not.toContain("@import");
+    expect(project.files["/styles.css"]).toContain("background-image:none");
+  });
+
   it("valida o brief e instrui uma geração isolada", () => {
     const request = validateStudioRequest({ type: "app", brief: "Aplicativo executivo para organizar clientes" });
     const prompt = buildStudioPrompt(request);
@@ -53,5 +73,11 @@ describe("Samuel Studio", () => {
     expect(diagnostic).toContain("[endereço protegido]");
     expect(diagnostic).not.toContain("segredo123");
     expect(diagnostic).not.toContain("org_privada");
+  });
+
+  it("só repete sem schema quando a falha pode ser de compatibilidade", () => {
+    expect(shouldRetryStudioWithoutSchema(new Error("Unsupported parameter: text.format"))).toBe(true);
+    expect(shouldRetryStudioWithoutSchema(new Error("Rate limit reached on tokens per minute"))).toBe(false);
+    expect(shouldRetryStudioWithoutSchema(new Error("capacidade externa não permitida"))).toBe(false);
   });
 });
