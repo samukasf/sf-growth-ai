@@ -1,0 +1,9 @@
+{
+  "crons": [
+    {
+      "path": "/api/samuel-ai/autonomous-improvement",
+      "schedule": "0 * * * *"
+    }
+  ]
+}
+

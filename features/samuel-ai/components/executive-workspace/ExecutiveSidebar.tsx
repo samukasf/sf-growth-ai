@@ -52,6 +52,7 @@ const NAV_ICONS: Partial<Record<WorkspaceSection, LucideIcon>> = {
   "executive-inbox": Inbox,
   dashboard: LayoutDashboard,
   "samuel-ai": Bot,
+  "autonomous-improvement": BrainCircuit,
   studio: WandSparkles,
   "site-builder": Globe2,
   "executive-alerts": BellRing,
