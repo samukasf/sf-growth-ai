@@ -160,9 +160,9 @@ function toSeverity(priority: string | null): HrInsightItem["severity"] {
 
 function resolveInput(input: HrExecutiveInput) {
   return {
-    members: input.members?.length ? input.members : MOCK_MEMBERS,
-    profiles: input.profiles?.length ? input.profiles : MOCK_PROFILES,
-    insights: input.insights?.length ? input.insights : MOCK_INSIGHTS,
+    members: input.members === undefined ? MOCK_MEMBERS : input.members,
+    profiles: input.profiles === undefined ? MOCK_PROFILES : input.profiles,
+    insights: input.insights === undefined ? MOCK_INSIGHTS : input.insights,
     employeeCount: input.employeeCount ?? null,
     companyName: input.companyName ?? "Empresa",
   };

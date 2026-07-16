@@ -220,9 +220,13 @@ export function buildStudioPrompt(input: SamuelStudioGenerateRequest) {
     "- /App.js deve importar ./styles.css e exportar default;",
     "- sempre devolva /data.js; use uma string vazia quando ele não for necessário;",
     "- crie uma experiência visual premium, tecnológica, acessível e mobile-first;",
-    "- inclua interações reais com estado local quando forem úteis;",
+    "- o resultado será aberto primeiro como produto navegável, não como bloco de código;",
+    "- todos os menus, separadores, botões, CTAs e formulários visíveis devem responder de verdade; não crie controlos mortos;",
+    "- sites devem navegar entre secções ou páginas visíveis; aplicativos devem ter pelo menos três áreas acessíveis por menu ou abas;",
+    "- use estado React e persistência local quando necessário para criar, editar, concluir, filtrar e remover itens;",
+    "- formulários sem backend devem validar os campos e guardar o rascunho localmente, sem alegar envio externo;",
     "- não use fetch, WebSocket, EventSource, XMLHttpRequest, cookies, eval, window.parent/top/opener nem recursos remotos;",
-    "- não invente integrações, pagamentos ou envio real de formulários; sinalize ações demonstrativas na própria interface;",
+    "- não invente integrações, pagamentos ou envio externo de formulários; identifique claramente ações que funcionam apenas no estado local;",
     "- mantenha o total compacto o suficiente para caber em 6.000 tokens.",
   ];
 
@@ -257,6 +261,7 @@ import "./styles.css";
 export default function App() {
   const [items, setItems] = useState(["Definir a primeira prioridade", "Revisar o projeto com Samuel"]);
   const [draft, setDraft] = useState("");
+  const [view, setView] = useState("overview");
   const completed = useMemo(() => Math.max(12, 100 - items.length * 14), [items.length]);
   function addItem(event) {
     event.preventDefault();
@@ -265,9 +270,10 @@ export default function App() {
     setDraft("");
   }
   return <main className="app-shell">
-    <header><span>SAMUEL STUDIO</span><strong>ONLINE</strong></header>
-    <section className="hero"><p>APLICATIVO GERADO</p><h1>${name}</h1><div className="brief">{${briefLiteral}}</div></section>
-    <section className="dashboard"><article className="score"><b>{completed}%</b><span>progresso atual</span></article><article className="workspace"><h2>Plano de execução</h2><form onSubmit={addItem}><input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Nova etapa"/><button>Adicionar</button></form><ul>{items.map((item, index) => <li key={item}><span>{String(index + 1).padStart(2, "0")}</span>{item}<button onClick={() => setItems((current) => current.filter((entry) => entry !== item))}>Concluir</button></li>)}</ul></article></section>
+    <header><span>SAMUEL STUDIO</span><nav>{[["overview","Visão"],["plan","Plano"],["settings","Definições"]].map(([id,label]) => <button key={id} className={view === id ? "active" : ""} onClick={() => setView(id)}>{label}</button>)}</nav><strong>ONLINE</strong></header>
+    {view === "overview" && <><section className="hero"><p>APLICATIVO EXECUTÁVEL</p><h1>${name}</h1><div className="brief">{${briefLiteral}}</div><button className="cta" onClick={() => setView("plan")}>Abrir plano</button></section><section className="dashboard"><article className="score"><b>{completed}%</b><span>progresso atual</span></article><article className="workspace"><h2>Resumo</h2><p>O aplicativo está navegável e pronto para receber os dados e integrações do projeto.</p></article></section></>}
+    {view === "plan" && <section className="dashboard"><article className="score"><b>{items.length}</b><span>etapas abertas</span></article><article className="workspace"><h2>Plano de execução</h2><form onSubmit={addItem}><input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Nova etapa"/><button>Adicionar</button></form><ul>{items.map((item, index) => <li key={item}><span>{String(index + 1).padStart(2, "0")}</span>{item}<button onClick={() => setItems((current) => current.filter((entry) => entry !== item))}>Concluir</button></li>)}</ul></article></section>}
+    {view === "settings" && <section className="hero"><p>DEFINIÇÕES</p><h1>Personalize a operação.</h1><div className="brief">As preferências deste protótipo permanecem no estado local durante a navegação.</div><button className="cta" onClick={() => setView("overview")}>Voltar à visão geral</button></section>}
   </main>;
 }`
     : `import "./styles.css";
@@ -277,7 +283,7 @@ export default function App() {
     <nav><span className="brand">${name}</span><div><a href="#solucao">Solução</a><a href="#contato">Contato</a></div></nav>
     <section className="hero"><p>SITE CRIADO PELO SAMUEL STUDIO</p><h1>Transforme uma ideia em uma experiência digital marcante.</h1><div className="brief">{${briefLiteral}}</div><a className="cta" href="#solucao">Conhecer a solução</a></section>
     <section id="solucao" className="features">{["Estratégia clara", "Design responsivo", "Experiência objetiva"].map((item, index) => <article key={item}><span>0{index + 1}</span><h2>{item}</h2><p>Uma base profissional pronta para ser personalizada e publicada.</p></article>)}</section>
-    <footer id="contato"><strong>${name}</strong><span>Projeto demonstrativo · Samuel Studio</span></footer>
+    <footer id="contato"><strong>${name}</strong><span>Projeto navegável · Samuel Studio</span></footer>
   </main>;
 }`;
 
@@ -291,7 +297,7 @@ export default function App() {
     createdAt: input.createdAt,
     files: {
       "/App.js": appCode,
-      "/styles.css": `*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font-family:Inter,ui-sans-serif,system-ui,sans-serif;color:#eaf6ff;background:#030916}.app-shell{min-height:100vh;background:radial-gradient(circle at 80% 0,#123a8a88,transparent 34%),linear-gradient(145deg,#030916,#071936)}nav,header,footer{display:flex;align-items:center;justify-content:space-between;padding:24px clamp(20px,6vw,84px);border-bottom:1px solid #80eaff22}.brand,header span{font-weight:800;letter-spacing:.12em}nav div{display:flex;gap:24px}a{color:#b9d8ff;text-decoration:none}.hero{padding:clamp(70px,12vw,150px) clamp(20px,8vw,120px);max-width:1150px}.hero>p{color:#69e7ff;font-size:12px;letter-spacing:.18em}.hero h1{max-width:850px;margin:16px 0;font-size:clamp(42px,8vw,92px);line-height:.94;background:linear-gradient(90deg,#fff,#7ee8ff,#799cff);background-clip:text;color:transparent}.brief{max-width:720px;color:#a9c5e8;line-height:1.7}.cta,form button{display:inline-flex;margin-top:28px;border:0;border-radius:999px;padding:14px 22px;color:#031027;background:linear-gradient(90deg,#72edff,#7795ff);font-weight:800}.features,.dashboard{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;padding:30px clamp(20px,8vw,120px) 90px}.features article,.score,.workspace{border:1px solid #7ee8ff2c;border-radius:24px;padding:28px;background:#ffffff09;box-shadow:inset 0 1px #ffffff16}.features span{color:#6ee7ff}.features p,footer span{color:#91abd0}.dashboard{grid-template-columns:minmax(180px,.35fr) 1fr}.score{display:flex;flex-direction:column;justify-content:center;align-items:center}.score b{font-size:64px;color:#7be9ff}.score span{color:#90abd2}.workspace h2{margin-top:0}.workspace form{display:flex;gap:10px}.workspace input{flex:1;min-width:0;border:1px solid #73e6ff33;border-radius:12px;padding:13px;color:#fff;background:#07152d}.workspace form button{margin:0;border-radius:12px}.workspace ul{display:grid;gap:10px;padding:0;list-style:none}.workspace li{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;border-top:1px solid #ffffff14;padding:14px 0}.workspace li span{color:#66e4ff}.workspace li button{border:1px solid #6feaff30;border-radius:999px;padding:7px 10px;color:#8deeff;background:transparent}footer{border-top:1px solid #80eaff22;border-bottom:0}@media(max-width:700px){nav div{display:none}.features,.dashboard{grid-template-columns:1fr}.hero{padding-top:84px}.workspace form{flex-direction:column}.workspace form button{width:100%}}`,
+      "/styles.css": `*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font-family:Inter,ui-sans-serif,system-ui,sans-serif;color:#eaf6ff;background:#030916}.app-shell{min-height:100vh;background:radial-gradient(circle at 80% 0,#123a8a88,transparent 34%),linear-gradient(145deg,#030916,#071936)}nav,header,footer{display:flex;align-items:center;justify-content:space-between;padding:24px clamp(20px,6vw,84px);border-bottom:1px solid #80eaff22}.brand,header span{font-weight:800;letter-spacing:.12em}nav{gap:8px;padding:0;border:0}nav div{display:flex;gap:24px}nav button{border:1px solid #7ee8ff22;border-radius:999px;padding:9px 14px;color:#91abd0;background:transparent}nav button.active{color:#031027;background:#72edff}a{color:#b9d8ff;text-decoration:none}.hero{padding:clamp(70px,12vw,150px) clamp(20px,8vw,120px);max-width:1150px}.hero>p{color:#69e7ff;font-size:12px;letter-spacing:.18em}.hero h1{max-width:850px;margin:16px 0;font-size:clamp(42px,8vw,92px);line-height:.94;background:linear-gradient(90deg,#fff,#7ee8ff,#799cff);background-clip:text;color:transparent}.brief{max-width:720px;color:#a9c5e8;line-height:1.7}.cta,form button{display:inline-flex;margin-top:28px;border:0;border-radius:999px;padding:14px 22px;color:#031027;background:linear-gradient(90deg,#72edff,#7795ff);font-weight:800}.features,.dashboard{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;padding:30px clamp(20px,8vw,120px) 90px}.features article,.score,.workspace{border:1px solid #7ee8ff2c;border-radius:24px;padding:28px;background:#ffffff09;box-shadow:inset 0 1px #ffffff16}.features span{color:#6ee7ff}.features p,footer span,.workspace p{color:#91abd0;line-height:1.7}.dashboard{grid-template-columns:minmax(180px,.35fr) 1fr}.score{display:flex;flex-direction:column;justify-content:center;align-items:center}.score b{font-size:64px;color:#7be9ff}.score span{color:#90abd2}.workspace h2{margin-top:0}.workspace form{display:flex;gap:10px}.workspace input{flex:1;min-width:0;border:1px solid #73e6ff33;border-radius:12px;padding:13px;color:#fff;background:#07152d}.workspace form button{margin:0;border-radius:12px}.workspace ul{display:grid;gap:10px;padding:0;list-style:none}.workspace li{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;border-top:1px solid #ffffff14;padding:14px 0}.workspace li span{color:#66e4ff}.workspace li button{border:1px solid #6feaff30;border-radius:999px;padding:7px 10px;color:#8deeff;background:transparent}footer{border-top:1px solid #80eaff22;border-bottom:0}@media(max-width:700px){header{align-items:flex-start;gap:14px;flex-wrap:wrap}header nav{order:3;width:100%;overflow:auto}header nav button{flex:1}.features,.dashboard{grid-template-columns:1fr}.hero{padding-top:84px}.workspace form{flex-direction:column}.workspace form button{width:100%}}`,
     },
   };
 }

@@ -44,7 +44,7 @@ const StudioPreview = dynamic(
 const HISTORY_KEY = "sf-growth-ai:samuel-studio:projects";
 
 const PROMPT_SUGGESTIONS = [
-  "Site premium para uma consultoria de inteligência artificial com formulário demonstrativo",
+  "Site premium para uma consultoria de inteligência artificial com navegação completa e formulário local validado",
   "Aplicativo de CRM para acompanhar leads, etapas e próximas ações",
   "Landing page tecnológica para lançamento de um serviço executivo",
 ];
@@ -202,12 +202,12 @@ export function SamuelStudio() {
           <span><WandSparkles aria-hidden="true" /> Samuel Studio</span>
           <h2>Crie sites e aplicativos com o Samuel.</h2>
           <p>
-            Descreva a ideia. O Gateway gera o código, o editor executa uma prévia segura e você pode melhorar ou baixar o projeto completo.
+            Descreva a ideia. O Gateway entrega uma experiência navegável, executada no celular, que você pode testar em tela cheia, melhorar e baixar.
           </p>
           <div className="samuel-studio-hero__badges">
             <span><Check /> Gateway no servidor</span>
             <span><ShieldCheck /> Prévia isolada</span>
-            <span><Code2 /> Código editável</span>
+            <span><MonitorPlay /> Navegação funcional</span>
           </div>
         </div>
         <div className="samuel-studio-orb" aria-hidden="true">

@@ -450,7 +450,7 @@ export class MetaClient {
       type: "post" as const,
     }));
 
-    return { posts: posts.length > 0 ? posts : getMockPosts().posts };
+    return { posts };
   }
 
   async getInsights(): Promise<MetaInsightsResponse> {
@@ -468,12 +468,20 @@ export class MetaClient {
 
   async getReach(): Promise<MetaReachResponse> {
     if (this.useMock) return getMockReach();
-    return this.fetchPageInsightMetrics(["page_impressions_unique"], getMockReach());
+    return this.fetchPageInsightMetrics(["page_impressions_unique"], {
+      facebookReach: 0,
+      instagramReach: 0,
+      totalReach: 0,
+    });
   }
 
   async getImpressions(): Promise<MetaImpressionsResponse> {
     if (this.useMock) return getMockImpressions();
-    return this.fetchPageInsightMetrics(["page_impressions"], getMockImpressions());
+    return this.fetchPageInsightMetrics(["page_impressions"], {
+      facebookImpressions: 0,
+      instagramImpressions: 0,
+      totalImpressions: 0,
+    });
   }
 
   async getEngagement(): Promise<MetaEngagementResponse> {
@@ -500,10 +508,17 @@ export class MetaClient {
         shares: Math.round(totalEngagement * 0.08),
         saves: Math.round(totalEngagement * 0.05),
         facebookEngagementRate,
-        instagramEngagementRate: getMockEngagement().instagramEngagementRate,
+        instagramEngagementRate: 0,
       };
     } catch {
-      return getMockEngagement();
+      return {
+        totalEngagement: 0,
+        comments: 0,
+        shares: 0,
+        saves: 0,
+        facebookEngagementRate: 0,
+        instagramEngagementRate: 0,
+      };
     }
   }
 
@@ -531,13 +546,13 @@ export class MetaClient {
       facebookFollowers: page.followers,
       instagramFollowers,
       totalFollowers: page.followers + instagramFollowers,
-      growthPercent: getMockFollowers().growthPercent,
+      growthPercent: 0,
     };
   }
 
   async getStories(): Promise<MetaStoriesResponse> {
     if (this.useMock) return getMockStories();
-    return getMockStories();
+    return { stories: [], totalReach: 0 };
   }
 
   async getReels(): Promise<MetaReelsResponse> {
@@ -546,19 +561,19 @@ export class MetaClient {
     const reels = posts.posts.filter((post) => post.type === "reel");
     return reels.length > 0
       ? { reels, totalReach: reels.reduce((sum, reel) => sum + reel.reach, 0) }
-      : getMockReels();
+      : { reels: [], totalReach: 0 };
   }
 
   async getAdsSummary(): Promise<MetaAdsSummaryResponse> {
     if (this.useMock) return getMockAdsSummary();
-    return this.fetchAdInsights(getMockAdsSummary());
+    return this.fetchAdInsights({ spend: 0, revenue: 0, impressions: 0, reach: 0, clicks: 0 });
   }
 
   async getCampaigns(): Promise<MetaCampaignsResponse> {
     if (this.useMock) return getMockCampaigns();
 
     const config = this.requireConfig();
-    if (!config.adAccountId) return getMockCampaigns();
+    if (!config.adAccountId) return { campaigns: [] };
 
     const accountId = config.adAccountId.startsWith("act_")
       ? config.adAccountId
@@ -585,17 +600,17 @@ export class MetaClient {
       spend: Number.parseFloat(campaign.spend ?? "0") || 0,
     }));
 
-    return campaigns.length > 0 ? { campaigns } : getMockCampaigns();
+    return { campaigns };
   }
 
   async getAdSets(): Promise<MetaAdSetsResponse> {
     if (this.useMock) return getMockAdSets();
-    return getMockAdSets();
+    return { adSets: [] };
   }
 
   async getAds(): Promise<MetaAdsResponse> {
     if (this.useMock) return getMockAds();
-    return getMockAds();
+    return { ads: [] };
   }
 
   async getROAS(): Promise<MetaRoasResponse> {
@@ -617,7 +632,7 @@ export class MetaClient {
       summary.impressions > 0
         ? Math.round((summary.clicks / summary.impressions) * 10000) / 100
         : 0;
-    return { ctr: ctr || getMockCtr().ctr };
+    return { ctr };
   }
 
   async getCPM(): Promise<MetaCpmResponse> {
@@ -627,7 +642,7 @@ export class MetaClient {
       summary.impressions > 0
         ? Math.round((summary.spend / summary.impressions) * 1000 * 100) / 100
         : 0;
-    return { cpm: cpm || getMockCpm().cpm };
+    return { cpm };
   }
 
   async getCPC(): Promise<MetaCpcResponse> {
@@ -637,12 +652,12 @@ export class MetaClient {
       summary.clicks > 0
         ? Math.round((summary.spend / summary.clicks) * 100) / 100
         : 0;
-    return { cpc: cpc || getMockCpc().cpc };
+    return { cpc };
   }
 
   async getConversions(): Promise<MetaConversionsResponse> {
     if (this.useMock) return getMockConversions();
-    return getMockConversions();
+    return { conversions: 0, conversionRate: 0 };
   }
 
   private requireConfig(): MetaClientConfig {
@@ -679,15 +694,15 @@ export class MetaClient {
       if (metrics[0]?.includes("impressions") && !metrics[0]?.includes("unique")) {
         return {
           facebookImpressions: facebookValue,
-          instagramImpressions: getMockImpressions().instagramImpressions,
-          totalImpressions: facebookValue + getMockImpressions().instagramImpressions,
+          instagramImpressions: 0,
+          totalImpressions: facebookValue,
         } as T;
       }
 
       return {
         facebookReach: facebookValue,
-        instagramReach: getMockReach().instagramReach,
-        totalReach: facebookValue + getMockReach().instagramReach,
+        instagramReach: 0,
+        totalReach: facebookValue,
       } as T;
     } catch {
       return fallback;
@@ -722,7 +737,7 @@ export class MetaClient {
       const spend = Number.parseFloat(row.spend ?? "0") || 0;
       const purchaseValue =
         row.action_values?.find((action) => action.action_type === "purchase")?.value ?? "0";
-      const revenue = Number.parseFloat(purchaseValue) || spend * getMockRoas().roas;
+      const revenue = Number.parseFloat(purchaseValue) || 0;
 
       return {
         spend,

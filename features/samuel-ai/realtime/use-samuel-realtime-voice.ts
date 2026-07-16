@@ -113,18 +113,51 @@ export function useSamuelRealtimeVoice({
   }, [setMuted]);
 
   const attachAudioAnalyser = useCallback((stream: MediaStream, channel: "input" | "output") => {
-    if (typeof AudioContext === "undefined") return;
+    if (typeof AudioContext === "undefined") return false;
 
     const cleanupRef = channel === "input"
       ? inputAnalyserCleanupRef
       : outputAnalyserCleanupRef;
     cleanupRef.current?.();
-    const audioContext = new AudioContext();
+    const audioContext = new AudioContext({ latencyHint: "interactive" });
     void audioContext.resume();
     const analyser = audioContext.createAnalyser();
     analyser.fftSize = 128;
+    analyser.smoothingTimeConstant = 0.7;
     const source = audioContext.createMediaStreamSource(stream);
-    source.connect(analyser);
+    const processingNodes: AudioNode[] = [];
+
+    if (channel === "output") {
+      const lowShelf = audioContext.createBiquadFilter();
+      lowShelf.type = "lowshelf";
+      lowShelf.frequency.value = 165;
+      lowShelf.gain.value = 5.5;
+      const body = audioContext.createBiquadFilter();
+      body.type = "peaking";
+      body.frequency.value = 300;
+      body.Q.value = 0.78;
+      body.gain.value = 2.8;
+      const soften = audioContext.createBiquadFilter();
+      soften.type = "highshelf";
+      soften.frequency.value = 3_100;
+      soften.gain.value = -1.8;
+      const compressor = audioContext.createDynamicsCompressor();
+      compressor.threshold.value = -24;
+      compressor.knee.value = 16;
+      compressor.ratio.value = 2.8;
+      compressor.attack.value = 0.01;
+      compressor.release.value = 0.2;
+
+      source.connect(lowShelf);
+      lowShelf.connect(body);
+      body.connect(soften);
+      soften.connect(compressor);
+      compressor.connect(analyser);
+      analyser.connect(audioContext.destination);
+      processingNodes.push(lowShelf, body, soften, compressor);
+    } else {
+      source.connect(analyser);
+    }
     const data = new Uint8Array(analyser.frequencyBinCount);
     let frame = 0;
     let stopped = false;
@@ -145,8 +178,10 @@ export function useSamuelRealtimeVoice({
       stopped = true;
       cancelAnimationFrame(frame);
       source.disconnect();
+      processingNodes.forEach((node) => node.disconnect());
       void audioContext.close();
     };
+    return true;
   }, []);
 
   const handleServerEvent = useCallback(
@@ -241,7 +276,10 @@ export function useSamuelRealtimeVoice({
       audioRef.current = audio;
       peer.ontrack = (event) => {
         audio.srcObject = event.streams[0];
-        if (event.streams[0]) attachAudioAnalyser(event.streams[0], "output");
+        const processed = event.streams[0]
+          ? attachAudioAnalyser(event.streams[0], "output")
+          : false;
+        audio.muted = processed;
         void audio.play().catch(() => {
           // Mobile Safari may wait for the next explicit user interaction.
         });

@@ -180,8 +180,8 @@ function isUnpaidContract(status: string | null): boolean {
 
 function resolveInput(input: LegalExecutiveInput) {
   return {
-    insights: input.insights?.length ? input.insights : MOCK_INSIGHTS,
-    contracts: input.contracts?.length ? input.contracts : MOCK_CONTRACTS,
+    insights: input.insights === undefined ? MOCK_INSIGHTS : input.insights,
+    contracts: input.contracts === undefined ? MOCK_CONTRACTS : input.contracts,
     legalTwin: input.legalTwin ?? null,
     companyName: input.companyName ?? "Empresa",
   };

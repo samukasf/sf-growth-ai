@@ -292,8 +292,8 @@ export function useSamuelSpeech({ enabled = true }: UseSamuelSpeechInput = {}) {
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.voice = voice;
     utterance.lang = voice.lang;
-    utterance.rate = 0.92;
-    utterance.pitch = 0.82;
+    utterance.rate = 0.88;
+    utterance.pitch = 0.62;
     utterance.volume = 1;
     boundaryDetectedRef.current = false;
     setEngine("browser-male");
@@ -398,7 +398,7 @@ export function useSamuelSpeech({ enabled = true }: UseSamuelSpeechInput = {}) {
   ) => {
     setStatus("preparing");
     setEngine("piper-local");
-    setVoiceLabel("Piper · Faber pt-BR");
+    setVoiceLabel("Piper · Faber Grave pt-BR");
     setLoadProgress(0);
 
     try {
@@ -415,6 +415,9 @@ export function useSamuelSpeech({ enabled = true }: UseSamuelSpeechInput = {}) {
       const url = URL.createObjectURL(audioBlob);
       const audio = new Audio(url);
       audio.preload = "auto";
+      audio.playbackRate = 0.9;
+      audio.preservesPitch = false;
+      (audio as HTMLAudioElement & { webkitPreservesPitch?: boolean }).webkitPreservesPitch = false;
       localAudioRef.current = audio;
       localAudioUrlRef.current = url;
       setLoadProgress(1);
@@ -422,10 +425,33 @@ export function useSamuelSpeech({ enabled = true }: UseSamuelSpeechInput = {}) {
       try {
         const context = new AudioContext();
         const source = context.createMediaElementSource(audio);
+        const lowShelf = context.createBiquadFilter();
+        lowShelf.type = "lowshelf";
+        lowShelf.frequency.value = 170;
+        lowShelf.gain.value = 6.5;
+        const body = context.createBiquadFilter();
+        body.type = "peaking";
+        body.frequency.value = 310;
+        body.Q.value = 0.82;
+        body.gain.value = 3.2;
+        const soften = context.createBiquadFilter();
+        soften.type = "highshelf";
+        soften.frequency.value = 2_800;
+        soften.gain.value = -2.4;
+        const compressor = context.createDynamicsCompressor();
+        compressor.threshold.value = -22;
+        compressor.knee.value = 18;
+        compressor.ratio.value = 3.2;
+        compressor.attack.value = 0.012;
+        compressor.release.value = 0.22;
         const analyser = context.createAnalyser();
         analyser.fftSize = 256;
         analyser.smoothingTimeConstant = 0.72;
-        source.connect(analyser);
+        source.connect(lowShelf);
+        lowShelf.connect(body);
+        body.connect(soften);
+        soften.connect(compressor);
+        compressor.connect(analyser);
         analyser.connect(context.destination);
         audioContextRef.current = context;
         analyserRef.current = analyser;

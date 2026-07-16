@@ -3,28 +3,29 @@ import type { Metadata } from "next";
 import { samuelAi } from "@/features";
 import {
   buildCrmExecutive,
-  buildCrmExecutiveForCompany,
+  fetchCrmExecutiveInput,
+  type CrmExecutive,
 } from "@/features/crm/services/crm-executive.service";
 import {
   buildMarketingExecutive,
-  buildMarketingExecutiveForCompany,
+  fetchMarketingExecutiveInput,
+  type MarketingExecutive,
 } from "@/features/marketing/services/marketing-executive.service";
-import { buildLinkedInExecutive } from "@/features/linkedin/services/linkedin-executive.service";
-import { buildMetaExecutive } from "@/features/meta/services/meta-executive.service";
+import type { MetaExecutive } from "@/features/meta/services/meta-executive.service";
 import {
   buildMetaExecutiveForCompany,
   enrichIntelligenceWithMeta,
   enrichMarketingWithMeta,
 } from "@/integrations/meta";
-import { buildGoogleBusinessExecutive } from "@/features/google-business/services/google-business-executive.service";
+import type { GoogleBusinessExecutive } from "@/features/google-business/services/google-business-executive.service";
 import { buildGoogleBusinessExecutiveForCompany } from "@/features/google-business/api/google-business.adapter";
-import { buildGoogleAnalyticsExecutive } from "@/features/google-analytics/services/google-analytics-executive.service";
+import type { GoogleAnalyticsExecutive } from "@/features/google-analytics/services/google-analytics-executive.service";
 import {
   buildGoogleAnalyticsExecutiveForCompany,
   enrichIntelligenceWithAnalytics,
   enrichMarketingWithAnalytics,
 } from "@/integrations/google-analytics";
-import { buildSearchConsoleExecutive } from "@/features/search-console/services/search-console-executive.service";
+import type { SearchConsoleExecutive } from "@/features/search-console/services/search-console-executive.service";
 import {
   buildSearchConsoleExecutiveForCompany,
   enrichIntelligenceWithSearchConsole,
@@ -32,27 +33,31 @@ import {
 } from "@/integrations/google-search-console";
 import {
   buildLegalExecutive,
-  buildLegalExecutiveForCompany,
+  fetchLegalExecutiveInput,
+  type LegalExecutive,
 } from "@/features/legal/services/legal-executive.service";
 import {
   buildHrExecutive,
-  buildHrExecutiveForCompany,
+  fetchHrExecutiveInput,
+  type HrExecutive,
 } from "@/features/hr/services/hr-executive.service";
 import {
   buildOperationsExecutive,
-  buildOperationsExecutiveForCompany,
+  fetchOperationsExecutiveInput,
+  type OperationsExecutive,
 } from "@/features/operations/services/operations-executive.service";
 import {
   buildFinanceExecutive,
-  buildFinanceExecutiveForCompany,
+  fetchFinanceExecutiveInput,
+  type FinanceExecutive,
 } from "@/features/finance/services/finance-executive.service";
 import {
   buildSalesExecutive,
-  buildSalesExecutiveForCompany,
+  fetchSalesExecutiveInput,
+  type SalesExecutive,
 } from "@/features/sales/services/sales-executive.service";
 import { buildExecutiveAction } from "@/features/samuel-ai/services/executive-action.service";
 import { buildExecutiveCEO } from "@/features/samuel-ai/services/executive-ceo.service";
-import { buildExecutiveCompetitor } from "@/features/samuel-ai/services/executive-competitor.service";
 import { buildExecutiveDecisions } from "@/features/samuel-ai/services/executive-decision.service";
 import { buildExecutionPlan } from "@/features/samuel-ai/services/executive-execution-planner.service";
 import { buildExecutiveForecast } from "@/features/samuel-ai/services/executive-forecast.service";
@@ -64,20 +69,23 @@ import { buildExecutiveRecommendation } from "@/features/samuel-ai/services/exec
 import { buildExecutiveStrategy } from "@/features/samuel-ai/services/executive-strategy.service";
 import { buildExecutiveBriefing } from "@/features/samuel-ai/executive-brain";
 import {
+  hasCrmSourceData,
+  hasFinanceSourceData,
+  hasHrSourceData,
+  hasLegalSourceData,
+  hasMarketingSourceData,
+  hasOperationsSourceData,
+  hasSalesSourceData,
+} from "@/features/samuel-ai/services/real-data-gates";
+import {
   buildExecutiveContext,
   getFirstCompany,
   type ExecutiveContext,
 } from "@/services/executive-context.service";
 import {
-  buildCombinedWatcherExecutive,
-  enrichIntelligenceWithMarketWatcher,
   enrichIntelligenceWithSeoWatcher,
-  enrichIntelligenceWithWatchers,
   enrichMarketingWithSeoWatcher,
-  enrichMemoriesWithMarketWatcher,
   enrichMemoriesWithSeoWatcher,
-  enrichMemoriesWithWatchers,
-  mergeSeoWatcherWithExecutive,
   runSeoWatcher,
 } from "@/features/watchers";
 
@@ -133,7 +141,9 @@ export default async function SamuelAiRoute() {
     learning: executiveLearning,
   });
 
-  const executiveCompetitor = buildExecutiveCompetitor();
+  // Competitor intelligence is intentionally absent until a live provider is
+  // configured. Production must never promote the legacy sample dataset.
+  const executiveCompetitor = null;
 
   const executiveStrategy = buildExecutiveStrategy({
     context: executiveContext,
@@ -173,24 +183,21 @@ export default async function SamuelAiRoute() {
     learning: executiveLearning,
   });
 
-  let crmExecutive = buildCrmExecutive({
-    companyName: executiveContext?.company.name,
-  });
+  let crmExecutive: CrmExecutive | null = null;
 
   try {
     if (executiveContext?.company.id) {
-      crmExecutive = await buildCrmExecutiveForCompany(
+      const crmInput = await fetchCrmExecutiveInput(
         executiveContext.company.id,
         executiveContext.company.name,
       );
+
+      if (hasCrmSourceData(crmInput)) {
+        crmExecutive = buildCrmExecutive(crmInput);
+      }
     }
   } catch {
-    crmExecutive = buildCrmExecutive({
-      contacts: [],
-      leads: [],
-      deals: [],
-      companyName: executiveContext?.company.name,
-    });
+    crmExecutive = null;
   }
 
   const marketingEngines = {
@@ -201,35 +208,27 @@ export default async function SamuelAiRoute() {
     crmExecutive,
   };
 
-  let marketingExecutive = buildMarketingExecutive({
-    companyName: executiveContext?.company.name,
-    ...marketingEngines,
-  });
+  let marketingExecutive: MarketingExecutive | null = null;
 
   try {
     if (executiveContext?.company.id) {
-      marketingExecutive = await buildMarketingExecutiveForCompany(
+      const marketingInput = await fetchMarketingExecutiveInput(
         executiveContext.company.id,
         executiveContext.company.name,
-        marketingEngines,
       );
+
+      if (hasMarketingSourceData(marketingInput)) {
+        marketingExecutive = buildMarketingExecutive({
+          ...marketingInput,
+          ...marketingEngines,
+        });
+      }
     }
   } catch {
-    marketingExecutive = buildMarketingExecutive({
-      companyName: executiveContext?.company.name,
-      ...marketingEngines,
-    });
+    marketingExecutive = null;
   }
 
-  const googleAnalyticsEngines = {
-    companyName: executiveContext?.company.name,
-    strategy: executiveStrategy,
-    intelligence: executiveIntelligence,
-    competitor: executiveCompetitor,
-    marketingExecutive,
-  };
-
-  let googleAnalyticsExecutive = buildGoogleAnalyticsExecutive(googleAnalyticsEngines);
+  let googleAnalyticsExecutive: GoogleAnalyticsExecutive | null = null;
 
   try {
     if (executiveContext?.company.id) {
@@ -245,7 +244,7 @@ export default async function SamuelAiRoute() {
       );
     }
   } catch {
-    googleAnalyticsExecutive = buildGoogleAnalyticsExecutive(googleAnalyticsEngines);
+    googleAnalyticsExecutive = null;
   }
 
   const marketingExecutiveWithAnalytics =
@@ -255,15 +254,7 @@ export default async function SamuelAiRoute() {
     enrichIntelligenceWithAnalytics(executiveIntelligence, googleAnalyticsExecutive) ??
     executiveIntelligence;
 
-  const searchConsoleEngines = {
-    companyName: executiveContext?.company.name,
-    strategy: executiveStrategy,
-    intelligence: executiveIntelligence,
-    competitor: executiveCompetitor,
-    marketingExecutive,
-  };
-
-  let searchConsoleExecutive = buildSearchConsoleExecutive(searchConsoleEngines);
+  let searchConsoleExecutive: SearchConsoleExecutive | null = null;
 
   try {
     if (executiveContext?.company.id) {
@@ -279,18 +270,10 @@ export default async function SamuelAiRoute() {
       );
     }
   } catch {
-    searchConsoleExecutive = buildSearchConsoleExecutive(searchConsoleEngines);
+    searchConsoleExecutive = null;
   }
 
-  const metaEngines = {
-    companyName: executiveContext?.company.name,
-    strategy: executiveStrategy,
-    intelligence: executiveIntelligence,
-    competitor: executiveCompetitor,
-    marketingExecutive,
-  };
-
-  let metaExecutive = buildMetaExecutive(metaEngines);
+  let metaExecutive: MetaExecutive | null = null;
 
   try {
     if (executiveContext?.company.id) {
@@ -306,7 +289,7 @@ export default async function SamuelAiRoute() {
       );
     }
   } catch {
-    metaExecutive = buildMetaExecutive(metaEngines);
+    metaExecutive = null;
   }
 
   const marketingExecutiveWithIntegrations =
@@ -332,24 +315,21 @@ export default async function SamuelAiRoute() {
     marketingExecutive,
   };
 
-  let salesExecutive = buildSalesExecutive({
-    companyName: executiveContext?.company.name,
-    ...salesEngines,
-  });
+  let salesExecutive: SalesExecutive | null = null;
 
   try {
     if (executiveContext?.company.id) {
-      salesExecutive = await buildSalesExecutiveForCompany(
+      const salesInput = await fetchSalesExecutiveInput(
         executiveContext.company.id,
         executiveContext.company.name,
-        salesEngines,
       );
+
+      if (hasSalesSourceData(salesInput)) {
+        salesExecutive = buildSalesExecutive({ ...salesInput, ...salesEngines });
+      }
     }
   } catch {
-    salesExecutive = buildSalesExecutive({
-      companyName: executiveContext?.company.name,
-      ...salesEngines,
-    });
+    salesExecutive = null;
   }
 
   const financeEngines = {
@@ -362,24 +342,21 @@ export default async function SamuelAiRoute() {
     salesExecutive,
   };
 
-  let financeExecutive = buildFinanceExecutive({
-    companyName: executiveContext?.company.name,
-    ...financeEngines,
-  });
+  let financeExecutive: FinanceExecutive | null = null;
 
   try {
     if (executiveContext?.company.id) {
-      financeExecutive = await buildFinanceExecutiveForCompany(
+      const financeInput = await fetchFinanceExecutiveInput(
         executiveContext.company.id,
         executiveContext.company.name,
-        financeEngines,
       );
+
+      if (hasFinanceSourceData(financeInput)) {
+        financeExecutive = buildFinanceExecutive({ ...financeInput, ...financeEngines });
+      }
     }
   } catch {
-    financeExecutive = buildFinanceExecutive({
-      companyName: executiveContext?.company.name,
-      ...financeEngines,
-    });
+    financeExecutive = null;
   }
 
   const operationsEngines = {
@@ -398,24 +375,24 @@ export default async function SamuelAiRoute() {
     financeExecutive,
   };
 
-  let operationsExecutive = buildOperationsExecutive({
-    companyName: executiveContext?.company.name,
-    ...operationsEngines,
-  });
+  let operationsExecutive: OperationsExecutive | null = null;
 
   try {
     if (executiveContext?.company.id) {
-      operationsExecutive = await buildOperationsExecutiveForCompany(
+      const operationsInput = await fetchOperationsExecutiveInput(
         executiveContext.company.id,
         executiveContext.company.name,
-        operationsEngines,
       );
+
+      if (hasOperationsSourceData(operationsInput)) {
+        operationsExecutive = buildOperationsExecutive({
+          ...operationsInput,
+          ...operationsEngines,
+        });
+      }
     }
   } catch {
-    operationsExecutive = buildOperationsExecutive({
-      companyName: executiveContext?.company.name,
-      ...operationsEngines,
-    });
+    operationsExecutive = null;
   }
 
   const hrEngines = {
@@ -433,24 +410,21 @@ export default async function SamuelAiRoute() {
     financeExecutive,
   };
 
-  let hrExecutive = buildHrExecutive({
-    companyName: executiveContext?.company.name,
-    ...hrEngines,
-  });
+  let hrExecutive: HrExecutive | null = null;
 
   try {
     if (executiveContext?.company.id) {
-      hrExecutive = await buildHrExecutiveForCompany(
+      const hrInput = await fetchHrExecutiveInput(
         executiveContext.company.id,
         executiveContext.company.name,
-        hrEngines,
       );
+
+      if (hasHrSourceData(hrInput)) {
+        hrExecutive = buildHrExecutive({ ...hrInput, ...hrEngines });
+      }
     }
   } catch {
-    hrExecutive = buildHrExecutive({
-      companyName: executiveContext?.company.name,
-      ...hrEngines,
-    });
+    hrExecutive = null;
   }
 
   const legalEngines = {
@@ -468,35 +442,24 @@ export default async function SamuelAiRoute() {
     hrExecutive,
   };
 
-  let legalExecutive = buildLegalExecutive({
-    companyName: executiveContext?.company.name,
-    ...legalEngines,
-  });
+  let legalExecutive: LegalExecutive | null = null;
 
   try {
     if (executiveContext?.company.id) {
-      legalExecutive = await buildLegalExecutiveForCompany(
+      const legalInput = await fetchLegalExecutiveInput(
         executiveContext.company.id,
         executiveContext.company.name,
-        legalEngines,
       );
+
+      if (hasLegalSourceData(legalInput)) {
+        legalExecutive = buildLegalExecutive({ ...legalInput, ...legalEngines });
+      }
     }
   } catch {
-    legalExecutive = buildLegalExecutive({
-      companyName: executiveContext?.company.name,
-      ...legalEngines,
-    });
+    legalExecutive = null;
   }
 
-  const googleBusinessEngines = {
-    companyName: executiveContext?.company.name,
-    strategy: executiveStrategy,
-    intelligence: executiveIntelligence,
-    competitor: executiveCompetitor,
-    marketingExecutive,
-  };
-
-  let googleBusinessExecutive = buildGoogleBusinessExecutive(googleBusinessEngines);
+  let googleBusinessExecutive: GoogleBusinessExecutive | null = null;
 
   try {
     if (executiveContext?.company.id) {
@@ -512,32 +475,21 @@ export default async function SamuelAiRoute() {
       );
     }
   } catch {
-    googleBusinessExecutive = buildGoogleBusinessExecutive(googleBusinessEngines);
+    googleBusinessExecutive = null;
   }
 
-  const linkedInExecutive = buildLinkedInExecutive({
-    companyName: executiveContext?.company.name,
-    strategy: executiveStrategy,
-    intelligence: executiveIntelligence,
-    competitor: executiveCompetitor,
-    marketingExecutive,
-    crmExecutive,
-    salesExecutive,
-  });
-
-  const { watcherExecutive: watcherWithMarket, marketWatcher } = buildCombinedWatcherExecutive({
-    companyId: executiveContext?.company.id,
-    companyName: executiveContext?.company.name,
-  });
-
-  const seoWatcher = runSeoWatcher({
-    companyId: executiveContext?.company.id,
-    companyName: executiveContext?.company.name,
-    searchConsoleExecutive,
-    marketingExecutive: marketingExecutiveWithIntegrations,
-  });
-
-  const watcherExecutive = mergeSeoWatcherWithExecutive(watcherWithMarket, seoWatcher);
+  // LinkedIn and market watching do not yet have a validated live provider.
+  const linkedInExecutive = null;
+  const marketWatcher = null;
+  const watcherExecutive = null;
+  const seoWatcher = searchConsoleExecutive
+    ? runSeoWatcher({
+        companyId: executiveContext?.company.id,
+        companyName: executiveContext?.company.name,
+        searchConsoleExecutive,
+        marketingExecutive: marketingExecutiveWithIntegrations,
+      })
+    : null;
 
   const marketingExecutiveFinal =
     enrichMarketingWithSeoWatcher(
@@ -547,21 +499,8 @@ export default async function SamuelAiRoute() {
 
   const executiveIntelligenceFinal =
     enrichIntelligenceWithSeoWatcher(
-      enrichIntelligenceWithMarketWatcher(
-        enrichIntelligenceWithWatchers(
-          executiveIntelligenceWithIntegrations,
-          watcherExecutive,
-        ),
-        marketWatcher,
-      ),
+      executiveIntelligenceWithIntegrations,
       seoWatcher,
-    ) ??
-    enrichIntelligenceWithMarketWatcher(
-      enrichIntelligenceWithWatchers(
-        executiveIntelligenceWithIntegrations,
-        watcherExecutive,
-      ),
-      marketWatcher,
     ) ??
     executiveIntelligenceWithIntegrations;
 
@@ -569,13 +508,7 @@ export default async function SamuelAiRoute() {
     ? {
         ...executiveContext,
         memories: enrichMemoriesWithSeoWatcher(
-          enrichMemoriesWithMarketWatcher(
-            enrichMemoriesWithWatchers(
-              executiveContext.memories,
-              watcherExecutive,
-            ),
-            marketWatcher,
-          ),
+          executiveContext.memories,
           seoWatcher,
         ),
       }
