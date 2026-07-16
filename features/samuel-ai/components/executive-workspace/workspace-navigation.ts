@@ -2,6 +2,7 @@ export type WorkspaceSection =
   | "executive-inbox"
   | "dashboard"
   | "samuel-ai"
+  | "autonomous-improvement"
   | "studio"
   | "site-builder"
   | "executive-alerts"
@@ -34,6 +35,7 @@ export type WorkspaceNavItem = {
 export const WORKSPACE_NAV_ITEMS: WorkspaceNavItem[] = [
   { id: "dashboard", label: "Início", group: "core" },
   { id: "samuel-ai", label: "Conversar com Samuel", group: "core" },
+  { id: "autonomous-improvement", label: "Autoevolução", group: "core" },
   { id: "studio", label: "Samuel Studio", group: "core" },
   { id: "site-builder", label: "Criador de Sites", group: "core" },
   { id: "executive-inbox", label: "Executive Inbox", group: "core" },

@@ -20,6 +20,7 @@ import { SeoWatcherSection } from "@/features/watchers/seo/components/seo-watche
 import { ExecutiveAlertCenter } from "@/features/watchers/components/executive-alert-center";
 import { ExecutiveInbox } from "@/features/executive-inbox";
 import { SamuelStudio } from "@/features/samuel-ai/studio";
+import { AutonomousImprovementPanel } from "@/features/samuel-ai/autonomous-improvement";
 
 import { ExecutiveExperience } from "../executive-experience";
 import { ChatPanel } from "../chat-panel";
@@ -296,6 +297,9 @@ export function ExecutiveWorkspaceCenter({
 
       case "samuel-ai":
         return <SamuelAiWorkspace data={data} handlers={handlers} />;
+
+      case "autonomous-improvement":
+        return <AutonomousImprovementPanel />;
 
       case "studio":
         return <SamuelStudio />;

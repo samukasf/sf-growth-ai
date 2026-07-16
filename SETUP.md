@@ -60,6 +60,22 @@ npm run dev
 6. **Importante:** se a conta já estava ligada antes do scope `gmail.modify`, clique **Reconectar Google** para o Samuel poder arquivar, apagar e organizar e-mails.
 7. No chat do Samuel, peça por exemplo:
    - “Mostra meus e-mails”
+
+## 4. Autoevolução multiagente
+
+O Samuel possui um motor de melhoria contínua supervisionada em
+`/api/samuel-ai/autonomous-improvement` e um painel em **Samuel > Autoevolução**.
+
+1. A Vercel executa o diagnóstico automaticamente a cada hora via `vercel.json`.
+2. O sistema carrega um catálogo interno com mais de 60 agentes especializados.
+3. Ruflo pode ser ligado como worker externo, sem executar código pesado no runtime público:
+   - `AGENT_CATALOG_REPOSITORY_URL=https://github.com/ruvnet/ruflo`
+   - `RUFLO_REPOSITORY_URL=https://github.com/ruvnet/ruflo`
+   - `RUFLO_ENABLED=true`
+   - `RUFLO_MCP_COMMAND=npx ruflo@latest mcp start`
+4. Configure `SAMUEL_AUTONOMY_CRON_SECRET` antes de habilitar qualquer ação manual com escrita.
+5. Regra de segurança: o motor pode diagnosticar e propor melhorias sozinho; alterações de código,
+   integrações externas e ações destrutivas devem virar plano, teste e PR revisável.
    - “Envia e-mail para nome@empresa.com assunto: Olá”
    - “Apaga o email id:XXXX”
    - Ações de escrita/apagar pedem **confirmação** no cartão antes de executar.
