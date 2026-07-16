@@ -15,6 +15,7 @@ export const initialSamuelRealtimeSession: SamuelRealtimeSession = {
   userTranscript: "",
   assistantTranscript: "",
   audioLevel: 0,
+  outputAudioLevel: 0,
 };
 
 export function samuelRealtimeReducer(
@@ -33,9 +34,19 @@ export function samuelRealtimeReducer(
         expiresAt: action.now + action.maxDurationMs,
         userTranscript: "",
         assistantTranscript: "",
+        audioLevel: 0,
+        outputAudioLevel: 0,
       };
     case "listening":
+      return { ...state, state: "listening", error: null, outputAudioLevel: 0 };
     case "processing":
+      return {
+        ...state,
+        state: "processing",
+        error: null,
+        assistantTranscript: "",
+        outputAudioLevel: 0,
+      };
     case "speaking":
     case "paused":
       return { ...state, state: action.type, error: null };
@@ -45,6 +56,11 @@ export function samuelRealtimeReducer(
       return { ...state, textMode: action.textMode };
     case "set_audio_level":
       return { ...state, audioLevel: Math.max(0, Math.min(1, action.audioLevel)) };
+    case "set_output_audio_level":
+      return {
+        ...state,
+        outputAudioLevel: Math.max(0, Math.min(1, action.audioLevel)),
+      };
     case "user_transcript":
       return {
         ...state,
@@ -60,7 +76,13 @@ export function samuelRealtimeReducer(
           : `${state.assistantTranscript}${action.content}`,
       };
     case "error":
-      return { ...state, state: "error", error: action.error, audioLevel: 0 };
+      return {
+        ...state,
+        state: "error",
+        error: action.error,
+        audioLevel: 0,
+        outputAudioLevel: 0,
+      };
     case "reset":
       return initialSamuelRealtimeSession;
     default:

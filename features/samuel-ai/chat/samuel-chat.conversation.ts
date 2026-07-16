@@ -47,15 +47,22 @@ export function buildSamuelFallbackAnswer(
   const normalized = normalize(query);
 
   if (/^(oi|ola|boas|bom dia|boa tarde|boa noite)\b/.test(normalized)) {
-    return "Olá! Sou o Samuel AI. Posso ajudar com estratégia, tecnologia, ideias, escrita e muitos outros temas. Sobre o que gostaria de conversar?";
+    const greeting = normalized.startsWith("bom dia")
+      ? "Bom dia"
+      : normalized.startsWith("boa tarde")
+        ? "Boa tarde"
+        : normalized.startsWith("boa noite")
+          ? "Boa noite"
+          : "Olá";
+    return `${greeting}, senhor. Sou o Samuel AI. Estou atento ao seu contexto e pronto para responder de forma objetiva e completa.`;
   }
 
   if (/^(obrigad|valeu|agradecid)/.test(normalized)) {
-    return "Por nada! Quando quiser, podemos continuar a conversa.";
+    return "À disposição, senhor. Continuarei atento ao contexto relevante.";
   }
 
   if (/(quem e voce|quem es tu|o que voce faz|o que fazes)/.test(normalized)) {
-    return "Sou o Samuel AI, a inteligência conversacional do SF Growth AI. Posso conversar sobre temas gerais e, quando for útil, usar o contexto empresarial do Samuel Runtime para apoiar decisões.";
+    return "Sou o Samuel AI, seu assistente executivo no SF Growth AI. Posso conversar sobre temas gerais e, quando houver dados reais no Samuel Runtime, antecipar prioridades e apoiar suas decisões, senhor.";
   }
 
   const businessIntents = new Set([

@@ -26,9 +26,13 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/cn";
 
 import { loadSamuelChatHistory } from "../chat/samuel-chat.client";
-import { SamuelHologram } from "./samuel-hologram";
+import {
+  SamuelHologram,
+  type SamuelHologramState,
+} from "./samuel-hologram";
 import { useSamuelRealtimeVoice } from "../realtime/use-samuel-realtime-voice";
 import { useSamuelSpeech } from "../voice/use-samuel-speech";
+import { useSamuelIdlePresence } from "../voice/use-samuel-idle-presence";
 import type {
   SamuelChatSendOptions,
   SamuelChatSendResult,
@@ -130,7 +134,42 @@ function readLocalHistory(companyId: string): LocalHistory | null {
   }
 }
 
-function ExecutiveMessage({ message }: { message: ChatMessage }) {
+function SpokenMessageText({
+  content,
+  wordIndex,
+}: {
+  content: string;
+  wordIndex: number;
+}) {
+  let currentWord = -1;
+
+  return content.split(/(\s+)/).map((part, index) => {
+    if (/^\s+$/.test(part)) return part;
+    currentWord += 1;
+    return (
+      <span
+        key={`${index}-${part}`}
+        className={cn(
+          "samuel-message__spoken-word",
+          currentWord < wordIndex && "is-complete",
+          currentWord === wordIndex && "is-active",
+        )}
+      >
+        {part}
+      </span>
+    );
+  });
+}
+
+function ExecutiveMessage({
+  message,
+  speaking = false,
+  spokenWordIndex = -1,
+}: {
+  message: ChatMessage;
+  speaking?: boolean;
+  spokenWordIndex?: number;
+}) {
   const isUser = message.role === "user";
 
   if (isUser) {
@@ -154,6 +193,8 @@ function ExecutiveMessage({ message }: { message: ChatMessage }) {
       <div
         className={cn(
           "samuel-message samuel-message--assistant",
+          message.status === "streaming" && "samuel-message--streaming",
+          speaking && "samuel-message--speaking",
           message.status === "error" && "samuel-message--error",
         )}
       >
@@ -164,7 +205,9 @@ function ExecutiveMessage({ message }: { message: ChatMessage }) {
           <div>
             <p className="samuel-message__name">Samuel AI™</p>
             <p className="samuel-message__status">
-              {message.status === "streaming"
+              {speaking
+                ? "Samuel está falando"
+                : message.status === "streaming"
                 ? "A construir sua resposta…"
                 : message.status === "cancelled"
                   ? "Resposta cancelada"
@@ -177,8 +220,16 @@ function ExecutiveMessage({ message }: { message: ChatMessage }) {
             <span className="samuel-message__thinking" aria-label="Samuel está respondendo" />
           )}
         </div>
-        <div className="samuel-message__content">
-          {message.content || "A preparar a resposta com o contexto disponível…"}
+        <div className={cn("samuel-message__content", message.status === "streaming" && "samuel-message__content--typing")}>
+          {message.content ? (
+            speaking ? (
+              <SpokenMessageText content={message.content} wordIndex={spokenWordIndex} />
+            ) : (
+              message.content
+            )
+          ) : (
+            "A preparar a resposta com o contexto disponível…"
+          )}
         </div>
       </div>
       <span className="samuel-message__time">{formatTime(message.timestamp)}</span>
@@ -207,17 +258,24 @@ export function ChatPanel({
   const [voiceAutoSend, setVoiceAutoSend] = useState(true);
   const [voiceReplyEnabled, setVoiceReplyEnabled] = useState(true);
   const [voiceConsoleOpen, setVoiceConsoleOpen] = useState(false);
+  const presenceSleeping = useSamuelIdlePresence();
+  const [activeBrowserMessageId, setActiveBrowserMessageId] = useState<string | null>(null);
+  const [activeRealtimeMessageId, setActiveRealtimeMessageId] = useState<string | null>(null);
   const {
     blocked: browserSpeechBlocked,
     cancel: cancelBrowserSpeech,
+    mouthLevel: browserMouthLevel,
+    progress: browserSpeechProgress,
     speak: speakBrowserSpeech,
     speaking: browserSpeaking,
     supported: browserSpeechSupported,
+    wordIndex: browserSpeechWordIndex,
   } = useSamuelSpeech({ enabled: voiceReplyEnabled });
   const abortRef = useRef<AbortController | null>(null);
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const spokenAssistantRef = useRef<string | null>(null);
+  const realtimeAssistantMessageRef = useRef<string | null>(null);
   const hasEngaged = messages.length > 0;
   const busy = sending || isProcessing;
   useEffect(() => {
@@ -275,14 +333,19 @@ export function ChatPanel({
     [cancelBrowserSpeech],
   );
 
-  const speakSamuel = useCallback((content: string) => {
+  const speakSamuel = useCallback((content: string, messageId: string, force = false) => {
     if (!voiceReplyEnabled) return;
     const trimmed = content.trim();
     if (!trimmed) return;
-    if (spokenAssistantRef.current === trimmed) return;
+    if (!force && spokenAssistantRef.current === trimmed) return;
 
     spokenAssistantRef.current = trimmed;
-    speakBrowserSpeech(trimmed);
+    setActiveBrowserMessageId(messageId);
+    const launched = speakBrowserSpeech(trimmed, {
+      onEnd: () => setActiveBrowserMessageId((current) => current === messageId ? null : current),
+      onError: () => setActiveBrowserMessageId((current) => current === messageId ? null : current),
+    });
+    if (!launched) setActiveBrowserMessageId(null);
   }, [speakBrowserSpeech, voiceReplyEnabled]);
 
   const appendVoiceTranscript = useCallback(
@@ -295,20 +358,56 @@ export function ChatPanel({
       content: string;
       final: boolean;
     }) => {
-      if (!final || !content.trim()) return;
-      setMessages((current) => [
-        ...current,
-        {
-          id: createMessageId(role),
-          role,
-          content: content.trim(),
-          timestamp: new Date().toISOString(),
-          status: "complete",
-        },
-      ]);
-      if (role === "assistant") speakSamuel(content);
+      if (!content || (final && !content.trim())) return;
+
+      if (role === "user") {
+        if (!final) return;
+        realtimeAssistantMessageRef.current = null;
+        setMessages((current) => [
+          ...current,
+          {
+            id: createMessageId(role),
+            role,
+            content: content.trim(),
+            timestamp: new Date().toISOString(),
+            status: "complete",
+          },
+        ]);
+        return;
+      }
+
+      let messageId = realtimeAssistantMessageRef.current;
+      if (!messageId) {
+        if (!content.trim()) return;
+        const createdMessageId = createMessageId("assistant");
+        messageId = createdMessageId;
+        realtimeAssistantMessageRef.current = createdMessageId;
+        setActiveRealtimeMessageId(createdMessageId);
+        setMessages((current) => [
+          ...current,
+          {
+            id: createdMessageId,
+            role: "assistant",
+            content: final ? content.trim() : content,
+            timestamp: new Date().toISOString(),
+            status: final ? "complete" : "streaming",
+          },
+        ]);
+        return;
+      }
+
+      setActiveRealtimeMessageId(messageId);
+      setMessages((current) => current.map((message) =>
+        message.id === messageId
+          ? {
+              ...message,
+              content: final ? content.trim() : `${message.content}${content}`,
+              status: final ? "complete" : "streaming",
+            }
+          : message,
+      ));
     },
-    [speakSamuel],
+    [],
   );
   const realtimeVoice = useSamuelRealtimeVoice({
     companyId,
@@ -317,9 +416,45 @@ export function ChatPanel({
       "Samuel AI deve usar o contexto empresarial do workspace, a memória sincronizada e a identidade executiva preservada pelo SF Growth AI.",
     onTranscript: appendVoiceTranscript,
   });
+
   const realtimeActive = !["idle", "error"].includes(realtimeVoice.session.state);
   const samuelSpeaking =
     browserSpeaking || realtimeVoice.session.state === "speaking";
+  const realtimeSpeechWordIndex = useMemo(
+    () => Math.max(0, realtimeVoice.session.assistantTranscript.trim().split(/\s+/).length - 1),
+    [realtimeVoice.session.assistantTranscript],
+  );
+  const activeSpokenMessageId = browserSpeaking
+    ? activeBrowserMessageId
+    : realtimeVoice.session.state === "speaking"
+      ? activeRealtimeMessageId
+      : null;
+  const activeSpokenWordIndex = browserSpeaking
+    ? browserSpeechWordIndex
+    : realtimeSpeechWordIndex;
+  const hologramAudioLevel = browserSpeaking
+    ? browserMouthLevel
+    : realtimeVoice.session.state === "speaking"
+      ? Math.min(1, Math.max(0.24, realtimeVoice.session.outputAudioLevel * 3.2))
+      : 0;
+  const hologramSpeechProgress = browserSpeaking
+    ? browserSpeechProgress
+    : realtimeVoice.session.state === "speaking"
+      ? (realtimeSpeechWordIndex % 24) / 24
+      : 0;
+  const hologramState: SamuelHologramState = samuelSpeaking
+    ? "speaking"
+    : realtimeVoice.session.state === "error"
+      ? "error"
+      : listening || realtimeVoice.session.state === "listening"
+        ? "listening"
+        : busy || realtimeVoice.session.state === "processing"
+          ? "processing"
+          : realtimeVoice.session.state === "requesting_permission"
+            ? "executing"
+            : presenceSleeping
+              ? "sleeping"
+              : "resting";
   const lastAssistantMessage = useMemo(
     () =>
       [...messages]
@@ -412,7 +547,7 @@ export function ChatPanel({
                 ),
               );
               setConversationId(event.conversationId);
-              speakSamuel(event.message.content);
+              speakSamuel(event.message.content, event.message.id);
             }
           },
         });
@@ -428,7 +563,7 @@ export function ChatPanel({
               : message,
           ),
         );
-        speakSamuel(result.content);
+        speakSamuel(result.content, assistantId);
       } catch (sendError) {
         const cancelled =
           controller.signal.aborted ||
@@ -565,8 +700,9 @@ export function ChatPanel({
         <div className={cn("samuel-chat-presence", samuelSpeaking && "samuel-chat-presence--speaking")}>
           <SamuelHologram
             compact
-            active={busy || realtimeActive || samuelSpeaking}
-            speaking={samuelSpeaking}
+            state={hologramState}
+            audioLevel={hologramAudioLevel}
+            speechProgress={hologramSpeechProgress}
           />
           <div className="samuel-chat-presence__copy">
             <span>Samuel AI · presença executiva</span>
@@ -598,9 +734,17 @@ export function ChatPanel({
           </div>
         )}
 
-        {messages.map((message) => (
-          <ExecutiveMessage key={message.id} message={message} />
-        ))}
+        {messages.map((message) => {
+          const speakingMessage = message.id === activeSpokenMessageId;
+          return (
+            <ExecutiveMessage
+              key={message.id}
+              message={message}
+              speaking={speakingMessage}
+              spokenWordIndex={speakingMessage ? activeSpokenWordIndex : -1}
+            />
+          );
+        })}
 
         {warning && (
           <div className="samuel-chat-notice samuel-chat-notice--warning">
@@ -671,7 +815,7 @@ export function ChatPanel({
                 <span
                   key={weight}
                   style={{
-                    height: `${8 + Math.round(realtimeVoice.session.audioLevel * weight * 28)}px`,
+                    height: `${8 + Math.round((realtimeVoice.session.state === "speaking" ? realtimeVoice.session.outputAudioLevel : realtimeVoice.session.audioLevel) * weight * 28)}px`,
                     opacity: realtimeActive ? 1 : 0.35 + index * 0.08,
                   }}
                 />
@@ -783,8 +927,7 @@ export function ChatPanel({
             type="button"
             onClick={() => {
               if (lastAssistantMessage) {
-                spokenAssistantRef.current = null;
-                speakBrowserSpeech(lastAssistantMessage.content);
+                speakSamuel(lastAssistantMessage.content, lastAssistantMessage.id, true);
               }
             }}
             disabled={!lastAssistantMessage || !browserSpeechSupported}

@@ -18,7 +18,10 @@ import type {
   GoogleWorkspaceSummary,
 } from "./google-workspace.types";
 
-type Props = { companyId?: string };
+type Props = {
+  companyId?: string;
+  onSummaryChange?: (summary: GoogleWorkspaceSummary | null) => void;
+};
 
 async function fetchWorkspaceSummary(companyId: string): Promise<GoogleWorkspaceSummary> {
   const response = await fetch(
@@ -80,7 +83,7 @@ function ServiceRow({
   );
 }
 
-export function GoogleWorkspacePanel({ companyId }: Props) {
+export function GoogleWorkspacePanel({ companyId, onSummaryChange }: Props) {
   const [summary, setSummary] = useState<GoogleWorkspaceSummary | null>(null);
   const [loading, setLoading] = useState(Boolean(companyId));
   const [error, setError] = useState<string | null>(null);
@@ -90,13 +93,15 @@ export function GoogleWorkspacePanel({ companyId }: Props) {
     setLoading(true);
     setError(null);
     try {
-      setSummary(await fetchWorkspaceSummary(companyId));
+      const payload = await fetchWorkspaceSummary(companyId);
+      setSummary(payload);
+      onSummaryChange?.(payload);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Falha ao sincronizar");
     } finally {
       setLoading(false);
     }
-  }, [companyId]);
+  }, [companyId, onSummaryChange]);
 
   useEffect(() => {
     if (!companyId) return;
@@ -104,7 +109,10 @@ export function GoogleWorkspacePanel({ companyId }: Props) {
 
     void fetchWorkspaceSummary(companyId)
       .then((payload) => {
-        if (!cancelled) setSummary(payload);
+        if (!cancelled) {
+          setSummary(payload);
+          onSummaryChange?.(payload);
+        }
       })
       .catch((caught: unknown) => {
         if (!cancelled) setError(caught instanceof Error ? caught.message : "Falha ao sincronizar");
@@ -113,10 +121,26 @@ export function GoogleWorkspacePanel({ companyId }: Props) {
         if (!cancelled) setLoading(false);
       });
 
+    const interval = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      void fetchWorkspaceSummary(companyId)
+        .then((payload) => {
+          if (!cancelled) {
+            setSummary(payload);
+            setError(null);
+            onSummaryChange?.(payload);
+          }
+        })
+        .catch((caught: unknown) => {
+          if (!cancelled) setError(caught instanceof Error ? caught.message : "Falha ao sincronizar");
+        });
+    }, 5 * 60 * 1000);
+
     return () => {
       cancelled = true;
+      window.clearInterval(interval);
     };
-  }, [companyId]);
+  }, [companyId, onSummaryChange]);
 
   if (!companyId) {
     return <p className="rounded-xl border border-dashed border-blue-200 p-4 text-xs text-slate-500">Crie a empresa para ativar o Google Workspace.</p>;

@@ -15,12 +15,31 @@ export type SamuelSpeechStatus =
   | "blocked"
   | "unsupported";
 
-type SpeakOptions = {
+export type SpeakOptions = {
   automatic?: boolean;
+  onStart?: () => void;
+  onEnd?: () => void;
+  onError?: () => void;
 };
 
 type UseSamuelSpeechInput = {
   enabled?: boolean;
+};
+
+type SamuelSpeechPlayback = {
+  text: string;
+  charIndex: number;
+  wordIndex: number;
+  progress: number;
+  mouthLevel: number;
+};
+
+const EMPTY_PLAYBACK: SamuelSpeechPlayback = {
+  text: "",
+  charIndex: 0,
+  wordIndex: -1,
+  progress: 0,
+  mouthLevel: 0,
 };
 
 const MALE_VOICE_HINTS = [
@@ -120,6 +139,7 @@ function getServerSpeechSupportSnapshot() {
 
 export function useSamuelSpeech({ enabled = true }: UseSamuelSpeechInput = {}) {
   const [status, setStatus] = useState<SamuelSpeechStatus>("idle");
+  const [playback, setPlayback] = useState<SamuelSpeechPlayback>(EMPTY_PLAYBACK);
   const supported = useSyncExternalStore(
     subscribeToSpeechSupport,
     getSpeechSupportSnapshot,
@@ -128,8 +148,10 @@ export function useSamuelSpeech({ enabled = true }: UseSamuelSpeechInput = {}) {
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const autoplayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const voiceReadyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const progressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const voicesChangedRef = useRef<(() => void) | null>(null);
   const speechRequestRef = useRef(0);
+  const boundaryDetectedRef = useRef(false);
 
   const clearAutoplayTimer = useCallback(() => {
     if (autoplayTimerRef.current) clearTimeout(autoplayTimerRef.current);
@@ -152,16 +174,23 @@ export function useSamuelSpeech({ enabled = true }: UseSamuelSpeechInput = {}) {
     voicesChangedRef.current = null;
   }, []);
 
+  const clearProgressTimer = useCallback(() => {
+    if (progressTimerRef.current) clearInterval(progressTimerRef.current);
+    progressTimerRef.current = null;
+  }, []);
+
   const cancel = useCallback(() => {
     speechRequestRef.current += 1;
     clearAutoplayTimer();
     clearVoiceLoader();
+    clearProgressTimer();
     utteranceRef.current = null;
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       window.speechSynthesis.cancel();
     }
     setStatus("idle");
-  }, [clearAutoplayTimer, clearVoiceLoader]);
+    setPlayback(EMPTY_PLAYBACK);
+  }, [clearAutoplayTimer, clearProgressTimer, clearVoiceLoader]);
 
   const speak = useCallback(
     (content: string, options: SpeakOptions = {}) => {
@@ -178,7 +207,10 @@ export function useSamuelSpeech({ enabled = true }: UseSamuelSpeechInput = {}) {
       speechRequestRef.current = requestId;
       clearAutoplayTimer();
       clearVoiceLoader();
+      clearProgressTimer();
       window.speechSynthesis.cancel();
+      boundaryDetectedRef.current = false;
+      setPlayback({ ...EMPTY_PLAYBACK, text });
 
       let launched = false;
       const launch = () => {
@@ -195,28 +227,85 @@ export function useSamuelSpeech({ enabled = true }: UseSamuelSpeechInput = {}) {
         utterance.pitch = voice ? 0.88 : 0.72;
         utterance.volume = 1;
 
+        const words = [...text.matchAll(/\S+/g)].map((match) => ({
+          index: match.index ?? 0,
+          value: match[0],
+        }));
+        const estimatedDuration = Math.max(1_700, words.length * 355);
+
         let started = false;
         utterance.onstart = () => {
           if (speechRequestRef.current !== requestId) return;
           started = true;
           clearAutoplayTimer();
           setStatus("speaking");
+          options.onStart?.();
+
+          const startedAt = performance.now();
+          progressTimerRef.current = setInterval(() => {
+            if (speechRequestRef.current !== requestId) return;
+            const elapsed = performance.now() - startedAt;
+            const mouthLevel = 0.26 + Math.abs(Math.sin(elapsed / 92)) * 0.7;
+
+            setPlayback((current) => {
+              if (boundaryDetectedRef.current) {
+                return { ...current, mouthLevel };
+              }
+
+              const progress = Math.min(0.985, elapsed / estimatedDuration);
+              const wordIndex = Math.min(
+                Math.max(0, words.length - 1),
+                Math.floor(progress * Math.max(1, words.length)),
+              );
+              const charIndex = words[wordIndex]?.index ?? 0;
+              return { text, charIndex, wordIndex, progress, mouthLevel };
+            });
+          }, 90);
+        };
+        utterance.onboundary = (event) => {
+          if (speechRequestRef.current !== requestId) return;
+          if (event.name && event.name !== "word") return;
+          boundaryDetectedRef.current = true;
+          const charIndex = Math.max(0, Math.min(text.length, event.charIndex));
+          const wordIndex = Math.max(
+            0,
+            words.findLastIndex((word) => word.index <= charIndex),
+          );
+          setPlayback((current) => ({
+            ...current,
+            text,
+            charIndex,
+            wordIndex,
+            progress: text.length > 0 ? charIndex / text.length : 0,
+          }));
         };
         utterance.onend = () => {
           if (speechRequestRef.current !== requestId) return;
           clearAutoplayTimer();
+          clearProgressTimer();
           utteranceRef.current = null;
+          setPlayback({
+            text,
+            charIndex: text.length,
+            wordIndex: Math.max(-1, words.length - 1),
+            progress: 1,
+            mouthLevel: 0,
+          });
           setStatus("idle");
+          options.onEnd?.();
         };
         utterance.onerror = (event) => {
           if (speechRequestRef.current !== requestId) return;
           clearAutoplayTimer();
+          clearProgressTimer();
           utteranceRef.current = null;
+          setPlayback(EMPTY_PLAYBACK);
           setStatus(
             event.error === "not-allowed" || event.error === "audio-busy"
               ? "blocked"
               : "idle",
           );
+          options.onError?.();
         };
 
         utteranceRef.current = utterance;
@@ -249,20 +338,21 @@ export function useSamuelSpeech({ enabled = true }: UseSamuelSpeechInput = {}) {
 
       return true;
     },
-    [clearAutoplayTimer, clearVoiceLoader, enabled],
+    [clearAutoplayTimer, clearProgressTimer, clearVoiceLoader, enabled],
   );
 
   useEffect(
     () => () => {
       clearAutoplayTimer();
       clearVoiceLoader();
+      clearProgressTimer();
       speechRequestRef.current += 1;
       utteranceRef.current = null;
       if (typeof window !== "undefined" && "speechSynthesis" in window) {
         window.speechSynthesis.cancel();
       }
     },
-    [clearAutoplayTimer, clearVoiceLoader],
+    [clearAutoplayTimer, clearProgressTimer, clearVoiceLoader],
   );
 
   return {
@@ -270,6 +360,11 @@ export function useSamuelSpeech({ enabled = true }: UseSamuelSpeechInput = {}) {
     speaking: status === "speaking",
     blocked: status === "blocked",
     supported,
+    activeText: playback.text,
+    charIndex: playback.charIndex,
+    wordIndex: playback.wordIndex,
+    progress: playback.progress,
+    mouthLevel: playback.mouthLevel,
     speak,
     cancel,
   };

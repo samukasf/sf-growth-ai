@@ -62,7 +62,7 @@ describe("buildSamuelFallbackAnswer", () => {
   it("responds naturally to a greeting without forcing an executive format", () => {
     const answer = buildSamuelFallbackAnswer("Olá, tudo bem?", runtimeSummary);
 
-    expect(answer).toContain("Olá!");
+    expect(answer).toContain("senhor");
     expect(answer).not.toContain("Diagnóstico");
   });
 
