@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     const id = randomUUID();
     const createdAt = new Date().toISOString();
     const provider = createConfiguredResponsesProvider({
-      maxOutputTokens: 8_000,
+      maxOutputTokens: 6_000,
       reasoningEffort: "low",
       textFormat: SAMUEL_STUDIO_TEXT_FORMAT,
     });
@@ -115,7 +115,7 @@ export async function POST(request: Request) {
     }
 
     const plainProvider = createConfiguredResponsesProvider({
-      maxOutputTokens: 8_000,
+      maxOutputTokens: 6_000,
       reasoningEffort: "low",
     });
     let plainFailure: unknown;
