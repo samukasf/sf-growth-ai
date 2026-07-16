@@ -63,6 +63,13 @@ describe("samuelRealtimeReducer", () => {
         audioLevel: 2,
       }).audioLevel,
     ).toBe(1);
+
+    expect(
+      samuelRealtimeReducer(withAssistantTranscript, {
+        type: "set_output_audio_level",
+        audioLevel: 0.65,
+      }).outputAudioLevel,
+    ).toBe(0.65);
   });
 
   it("handles interruption, errors and cleanup reset", () => {

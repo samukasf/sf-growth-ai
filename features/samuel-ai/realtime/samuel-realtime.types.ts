@@ -27,6 +27,7 @@ export type SamuelRealtimeSession = {
   userTranscript: string;
   assistantTranscript: string;
   audioLevel: number;
+  outputAudioLevel: number;
 };
 
 export type SamuelRealtimeAction =
@@ -39,6 +40,7 @@ export type SamuelRealtimeAction =
   | { type: "set_muted"; muted: boolean }
   | { type: "set_text_mode"; textMode: boolean }
   | { type: "set_audio_level"; audioLevel: number }
+  | { type: "set_output_audio_level"; audioLevel: number }
   | { type: "user_transcript"; content: string; final?: boolean }
   | { type: "assistant_transcript"; content: string; final?: boolean }
   | { type: "error"; error: string }

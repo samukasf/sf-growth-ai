@@ -56,7 +56,8 @@ export function useSamuelRealtimeVoice({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const analyserCleanupRef = useRef<(() => void) | null>(null);
+  const inputAnalyserCleanupRef = useRef<(() => void) | null>(null);
+  const outputAnalyserCleanupRef = useRef<(() => void) | null>(null);
 
   const cleanup = useCallback(() => {
     abortRef.current?.abort();
@@ -68,8 +69,10 @@ export function useSamuelRealtimeVoice({
     peerRef.current = null;
     stopStream(localStreamRef.current);
     localStreamRef.current = null;
-    analyserCleanupRef.current?.();
-    analyserCleanupRef.current = null;
+    inputAnalyserCleanupRef.current?.();
+    inputAnalyserCleanupRef.current = null;
+    outputAnalyserCleanupRef.current?.();
+    outputAnalyserCleanupRef.current = null;
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.srcObject = null;
@@ -109,10 +112,15 @@ export function useSamuelRealtimeVoice({
     dispatch({ type: "set_text_mode", textMode });
   }, [setMuted]);
 
-  const attachAudioAnalyser = useCallback((stream: MediaStream) => {
+  const attachAudioAnalyser = useCallback((stream: MediaStream, channel: "input" | "output") => {
     if (typeof AudioContext === "undefined") return;
 
+    const cleanupRef = channel === "input"
+      ? inputAnalyserCleanupRef
+      : outputAnalyserCleanupRef;
+    cleanupRef.current?.();
     const audioContext = new AudioContext();
+    void audioContext.resume();
     const analyser = audioContext.createAnalyser();
     analyser.fftSize = 128;
     const source = audioContext.createMediaStreamSource(stream);
@@ -125,12 +133,15 @@ export function useSamuelRealtimeVoice({
       if (stopped) return;
       analyser.getByteFrequencyData(data);
       const average = data.reduce((sum, value) => sum + value, 0) / data.length;
-      dispatch({ type: "set_audio_level", audioLevel: average / 255 });
+      dispatch({
+        type: channel === "input" ? "set_audio_level" : "set_output_audio_level",
+        audioLevel: average / 255,
+      });
       frame = requestAnimationFrame(tick);
     };
 
     tick();
-    analyserCleanupRef.current = () => {
+    cleanupRef.current = () => {
       stopped = true;
       cancelAnimationFrame(frame);
       source.disconnect();
@@ -153,6 +164,7 @@ export function useSamuelRealtimeVoice({
           break;
         case "response.audio.done":
         case "response.output_audio.done":
+          dispatch({ type: "set_output_audio_level", audioLevel: 0 });
           dispatch({ type: "listening" });
           break;
         case "response.done":
@@ -170,6 +182,7 @@ export function useSamuelRealtimeVoice({
           if (event.delta) {
             dispatch({ type: "speaking" });
             dispatch({ type: "assistant_transcript", content: event.delta });
+            onTranscript?.({ role: "assistant", content: event.delta, final: false });
           }
           break;
         case "response.output_audio_transcript.done": {
@@ -216,7 +229,7 @@ export function useSamuelRealtimeVoice({
         },
       });
       localStreamRef.current = stream;
-      attachAudioAnalyser(stream);
+      attachAudioAnalyser(stream, "input");
 
       const peer = new RTCPeerConnection();
       peerRef.current = peer;
@@ -228,6 +241,7 @@ export function useSamuelRealtimeVoice({
       audioRef.current = audio;
       peer.ontrack = (event) => {
         audio.srcObject = event.streams[0];
+        if (event.streams[0]) attachAudioAnalyser(event.streams[0], "output");
         void audio.play().catch(() => {
           // Mobile Safari may wait for the next explicit user interaction.
         });

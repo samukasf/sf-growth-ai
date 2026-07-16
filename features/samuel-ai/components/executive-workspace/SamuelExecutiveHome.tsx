@@ -2,7 +2,7 @@
 
 import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Activity,
   ArrowRight,
@@ -32,11 +32,19 @@ import {
 
 import { buildExecutiveInbox } from "@/features/executive-inbox";
 import { GoogleWorkspacePanel } from "@/features/google-workspace/GoogleWorkspacePanel";
-import { buildProactiveSamuelGreeting } from "@/features/samuel-ai/proactive/proactive-samuel";
+import type { GoogleWorkspaceSummary } from "@/features/google-workspace/google-workspace.types";
+import {
+  buildProactiveSamuelGreeting,
+  type SamuelInitiativeSignal,
+} from "@/features/samuel-ai/proactive/proactive-samuel";
 import { useSamuelSpeech } from "@/features/samuel-ai/voice/use-samuel-speech";
+import { useSamuelIdlePresence } from "@/features/samuel-ai/voice/use-samuel-idle-presence";
 import { cn } from "@/utils/cn";
 
-import { SamuelHologram } from "../samuel-hologram";
+import {
+  SamuelHologram,
+  type SamuelHologramState,
+} from "../samuel-hologram";
 import type {
   ExecutiveWorkspaceData,
   ExecutiveWorkspaceHandlers,
@@ -231,11 +239,45 @@ function SectionTitle({
   );
 }
 
+function ProactiveMessageText({
+  text,
+  active,
+  wordIndex,
+}: {
+  text: string;
+  active: boolean;
+  wordIndex: number;
+}) {
+  if (!active) return text;
+  let currentWord = -1;
+
+  return text.split(/(\s+)/).map((part, index) => {
+    if (/^\s+$/.test(part)) return part;
+    currentWord += 1;
+    return (
+      <span
+        key={`${index}-${part}`}
+        className={cn(
+          "samuel-proactive-card__word",
+          currentWord < wordIndex && "is-complete",
+          currentWord === wordIndex && "is-active",
+        )}
+      >
+        {part}
+      </span>
+    );
+  });
+}
+
 export function SamuelExecutiveHome({
   data,
   handlers,
   onNavigate,
 }: SamuelExecutiveHomeProps) {
+  const [googleWorkspaceSummary, setGoogleWorkspaceSummary] = useState<GoogleWorkspaceSummary | null>(null);
+  const presenceSleeping = useSamuelIdlePresence();
+  const [celebrating, setCelebrating] = useState(false);
+  const lastCompletedAnalysisRef = useRef(data.analysisCompletedAt);
   const companyName = data.executiveContext?.company.name ?? data.briefing.companyName ?? "A sua empresa";
   const companyHealth = data.executiveCeo?.companyHealth;
   const healthScore = companyHealth?.score ?? data.executiveCeo?.executiveScore ?? 0;
@@ -312,26 +354,145 @@ export function SamuelExecutiveHome({
         deadline: index === 0 ? "Hoje" : "Próximo ciclo",
         status: "pending" as const,
       }));
+
+  const initiativeSignals: SamuelInitiativeSignal[] = [
+    ...(data.executiveMonitoring?.alerts ?? []).map((alert) => ({
+      id: `executive-alert-${alert.id}`,
+      kind: "system" as const,
+      priority: alert.severity,
+      title: alert.title,
+      detail: alert.message,
+      source: "monitorização executiva",
+      actionLabel: "Rever alerta",
+    })),
+    ...(data.marketingExecutive?.marketingRisks ?? []).slice(0, 3).map((risk) => ({
+      id: `marketing-risk-${risk.id}`,
+      kind: "campaign" as const,
+      priority: risk.severity,
+      title: risk.title,
+      detail: risk.description,
+      source: "Marketing Runtime",
+      actionLabel: "Rever campanha",
+    })),
+  ];
+
+  if (googleWorkspaceSummary?.connected) {
+    const calendarCount = googleWorkspaceSummary.calendar.count ?? 0;
+    const unreadCount = googleWorkspaceSummary.gmail.count ?? 0;
+
+    if (calendarCount > 0) {
+      initiativeSignals.push({
+        id: `google-calendar-${calendarCount}`,
+        kind: "calendar",
+        priority: "high",
+        title: `Sua agenda contém ${calendarCount} ${calendarCount === 1 ? "compromisso" : "compromissos"} hoje`,
+        source: "Google Agenda",
+        actionLabel: "Abrir agenda",
+        occurredAt: googleWorkspaceSummary.updatedAt,
+      });
+    }
+
+    if (unreadCount > 0) {
+      initiativeSignals.push({
+        id: `gmail-unread-${unreadCount}`,
+        kind: "email",
+        priority: unreadCount >= 10 ? "high" : "medium",
+        title: `O Gmail possui ${unreadCount} ${unreadCount === 1 ? "mensagem não lida" : "mensagens não lidas"}`,
+        source: "Gmail",
+        actionLabel: "Rever e-mails",
+        occurredAt: googleWorkspaceSummary.updatedAt,
+      });
+    }
+
+    (["gmail", "calendar", "drive", "contacts"] as const).forEach((service) => {
+      const status = googleWorkspaceSummary[service];
+      if (!status.error) return;
+      initiativeSignals.push({
+        id: `google-error-${service}-${status.error}`,
+        kind: "system",
+        priority: "high",
+        title: `A integração ${service} precisa de atenção`,
+        detail: status.error,
+        source: "Google Workspace",
+        actionLabel: "Ver integração",
+      });
+    });
+  }
+
   const proactiveGreeting = buildProactiveSamuelGreeting({
     companyName,
     urgentActions,
     pendingTasks,
     topPriority: priorities[0],
+    signals: initiativeSignals,
   });
   const [proactiveVisible, setProactiveVisible] = useState(false);
   const [proactiveDismissed, setProactiveDismissed] = useState(false);
+  const lastAutomaticSpeechRef = useRef(0);
   const {
     blocked: speechBlocked,
     cancel: cancelSpeech,
+    mouthLevel: speechMouthLevel,
+    progress: speechProgress,
     speak,
     speaking: samuelSpeaking,
     supported: speechSupported,
+    wordIndex: speechWordIndex,
   } = useSamuelSpeech();
 
+  const proactivePrefix = proactiveGreeting.spokenMessage.slice(
+    0,
+    proactiveGreeting.spokenMessage.indexOf(proactiveGreeting.message),
+  );
+  const proactiveWordOffset = proactivePrefix.trim()
+    ? proactivePrefix.trim().split(/\s+/).length
+    : 0;
+  const homeHologramState: SamuelHologramState = samuelSpeaking
+    ? "speaking"
+    : handlers.isProcessing
+      ? "executing"
+      : celebrating
+        ? "celebrating"
+      : proactiveVisible && !proactiveDismissed && proactiveGreeting.visualState === "alert"
+        ? "alert"
+        : presenceSleeping
+          ? "sleeping"
+          : "resting";
+
   useEffect(() => {
-    const visualTimer = setTimeout(() => setProactiveVisible(true), 550);
+    const completedAt = data.analysisCompletedAt;
+    if (!completedAt || completedAt === lastCompletedAnalysisRef.current) return;
+    lastCompletedAnalysisRef.current = completedAt;
+
+    const startTimer = setTimeout(() => setCelebrating(true), 0);
+    const endTimer = setTimeout(() => setCelebrating(false), 1_650);
+    return () => {
+      clearTimeout(startTimer);
+      clearTimeout(endTimer);
+    };
+  }, [data.analysisCompletedAt]);
+
+  function handleInitiativeAction() {
+    switch (proactiveGreeting.signal?.kind) {
+      case "calendar":
+        onNavigate("executive-agenda");
+        break;
+      case "campaign":
+        onNavigate("marketing");
+        break;
+      default:
+        onNavigate("samuel-ai");
+    }
+  }
+
+  useEffect(() => {
+    const visualTimer = setTimeout(() => {
+      setProactiveDismissed(false);
+      setProactiveVisible(true);
+    }, 550);
     const companyKey = data.executiveContext?.company.id ?? companyName;
-    const storageKey = `sf-growth-ai:samuel-proactive:${companyKey}`;
+    const dayKey = new Date().toISOString().slice(0, 10);
+    const storageKey = `sf-growth-ai:samuel-proactive:${companyKey}:${dayKey}:${proactiveGreeting.id}`;
     const speechTimer = setTimeout(() => {
       try {
         if (sessionStorage.getItem(storageKey)) return;
@@ -339,15 +500,17 @@ export function SamuelExecutiveHome({
       } catch {
         // Browsers with private storage disabled can still receive the greeting.
       }
+      if (Date.now() - lastAutomaticSpeechRef.current < 30_000) return;
+      lastAutomaticSpeechRef.current = Date.now();
       speak(proactiveGreeting.spokenMessage, { automatic: true });
-    }, 1_050);
+    }, 1_650);
 
     return () => {
       clearTimeout(visualTimer);
       clearTimeout(speechTimer);
       cancelSpeech();
     };
-  }, [cancelSpeech, companyName, data.executiveContext?.company.id, proactiveGreeting.spokenMessage, speak]);
+  }, [cancelSpeech, companyName, data.executiveContext?.company.id, proactiveGreeting.id, proactiveGreeting.spokenMessage, speak]);
 
   return (
     <div className="samuel-home flex flex-col gap-4 pb-20 lg:pb-4">
@@ -378,8 +541,9 @@ export function SamuelExecutiveHome({
                 <span className="samuel-demo-badge">Dados de demonstração</span>
               )}
               <SamuelHologram
-                active={handlers.isProcessing || samuelSpeaking}
-                speaking={samuelSpeaking}
+                state={homeHologramState}
+                audioLevel={speechMouthLevel}
+                speechProgress={speechProgress}
               />
               {proactiveVisible && !proactiveDismissed && (
                 <div
@@ -404,15 +568,24 @@ export function SamuelExecutiveHome({
                     <span className="samuel-proactive-card__signal" aria-hidden="true" />
                     <p>{samuelSpeaking ? "Samuel está falando" : proactiveGreeting.eyebrow}</p>
                   </div>
-                  <p className="samuel-proactive-card__message">{proactiveGreeting.message}</p>
+                  <p className="samuel-proactive-card__source">
+                    {proactiveGreeting.hasConcreteSignal ? "Sinal real" : "Estado atual"} · {proactiveGreeting.sourceLabel}
+                  </p>
+                  <p className="samuel-proactive-card__message">
+                    <ProactiveMessageText
+                      text={proactiveGreeting.message}
+                      active={samuelSpeaking}
+                      wordIndex={Math.max(-1, speechWordIndex - proactiveWordOffset)}
+                    />
+                  </p>
                   {speechBlocked && (
                     <p className="samuel-proactive-card__notice">
                       O celular bloqueou o áudio automático. Toque em “Ouvir Samuel”.
                     </p>
                   )}
                   <div className="samuel-proactive-card__actions">
-                    <button type="button" onClick={() => onNavigate("samuel-ai")}>
-                      <MessageSquareText aria-hidden="true" /> Conversar agora
+                    <button type="button" onClick={handleInitiativeAction}>
+                      <MessageSquareText aria-hidden="true" /> {proactiveGreeting.actionLabel ?? "Conversar agora"}
                     </button>
                     <button
                       type="button"
@@ -634,7 +807,10 @@ export function SamuelExecutiveHome({
             title="Ecossistema conectado"
             action={{ label: "Gerir", onClick: () => onNavigate("google-analytics") }}
           />
-          <GoogleWorkspacePanel companyId={data.executiveContext?.company.id} />
+          <GoogleWorkspacePanel
+            companyId={data.executiveContext?.company.id}
+            onSummaryChange={setGoogleWorkspaceSummary}
+          />
           <div className="samuel-other-integrations">
             {[
               { label: "Analytics", connected: Boolean(data.googleAnalyticsExecutive), icon: BarChart3 },
