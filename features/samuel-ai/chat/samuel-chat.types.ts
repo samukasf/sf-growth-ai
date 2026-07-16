@@ -1,4 +1,5 @@
 import type { PipelineStep } from "@/apps/web/src/core/orchestrator";
+import type { GmailActionPlan, GmailToolResult } from "@/features/gmail/gmail.types";
 import type { ExecutiveContext } from "@/services/executive-context.service";
 
 import type { ChatMessage } from "../types";
@@ -43,6 +44,14 @@ export type SamuelChatStreamEvent =
   | { type: "warning"; code: string; message: string }
   | { type: "delta"; delta: string }
   | {
+      type: "action_proposal";
+      action: GmailActionPlan;
+    }
+  | {
+      type: "action_result";
+      result: GmailToolResult;
+    }
+  | {
       type: "complete";
       conversationId: string;
       message: ChatMessage;
@@ -50,6 +59,7 @@ export type SamuelChatStreamEvent =
       provider: string;
       model: string | null;
       persistence: "supabase" | "client";
+      pendingAction?: GmailActionPlan | null;
     }
   | {
       type: "cancelled";

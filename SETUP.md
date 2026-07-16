@@ -57,6 +57,12 @@ npm run dev
    - `GOOGLE_OAUTH_REDIRECT_URI=http://localhost:3000/api/integrations/google/oauth/callback`
 4. Abra `/integrations/google/connect?companyId=<uuid>` e clique **Conectar Google**.
 5. No Samuel, o painel Google Workspace deve mostrar contas ligadas.
+6. **Importante:** se a conta já estava ligada antes do scope `gmail.modify`, clique **Reconectar Google** para o Samuel poder arquivar, apagar e organizar e-mails.
+7. No chat do Samuel, peça por exemplo:
+   - “Mostra meus e-mails”
+   - “Envia e-mail para nome@empresa.com assunto: Olá”
+   - “Apaga o email id:XXXX”
+   - Ações de escrita/apagar pedem **confirmação** no cartão antes de executar.
 
 ---
 

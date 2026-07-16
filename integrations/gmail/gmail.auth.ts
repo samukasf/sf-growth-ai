@@ -7,13 +7,15 @@ const GOOGLE_OAUTH_AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth
 const GOOGLE_OAUTH_TOKEN_URL = "https://oauth2.googleapis.com/token";
 
 /**
- * Scopes desta Sprint: leitura, criação de rascunhos e envio. Não inclui
- * `gmail.modify`/`gmail.labels` — fora do escopo solicitado.
+ * Scopes Gmail completos para o Samuel operar a caixa:
+ * ler, redigir, enviar, arquivar, apagar (trash), labels e marcar lido.
+ * Contas já ligadas precisam reconectar para conceder `gmail.modify`.
  */
 export const GMAIL_OAUTH_SCOPES = [
   "https://www.googleapis.com/auth/gmail.readonly",
   "https://www.googleapis.com/auth/gmail.compose",
   "https://www.googleapis.com/auth/gmail.send",
+  "https://www.googleapis.com/auth/gmail.modify",
   "https://www.googleapis.com/auth/calendar",
   "https://www.googleapis.com/auth/contacts.readonly",
   "https://www.googleapis.com/auth/drive.readonly",

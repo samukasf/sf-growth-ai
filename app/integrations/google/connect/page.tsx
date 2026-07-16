@@ -46,7 +46,8 @@ export default async function GoogleConnectPage({ searchParams }: ConnectPagePro
           Google Workspace
         </h1>
         <p className="mt-2 text-sm text-zinc-400">
-          Conecte Gmail, Agenda, Drive e Contatos para o Samuel usar dados reais da empresa.
+          Conecte Gmail, Agenda, Drive e Contatos. Com Gmail, o Samuel pode ler, enviar,
+          arquivar, organizar e apagar e-mails (com a sua confirmação).
         </p>
       </div>
 

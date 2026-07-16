@@ -319,6 +319,62 @@ export class GmailClient {
     });
     return { messageId: sent.id, threadId: sent.threadId };
   }
+
+  async modifyLabels(
+    messageId: string,
+    options: { addLabelIds?: string[]; removeLabelIds?: string[] },
+  ): Promise<void> {
+    await this.request(`/messages/${messageId}/modify`, {
+      method: "POST",
+      body: {
+        addLabelIds: options.addLabelIds ?? [],
+        removeLabelIds: options.removeLabelIds ?? [],
+      },
+    });
+  }
+
+  async archiveMessage(messageId: string): Promise<void> {
+    await this.modifyLabels(messageId, { removeLabelIds: ["INBOX"] });
+  }
+
+  async markAsRead(messageId: string): Promise<void> {
+    await this.modifyLabels(messageId, { removeLabelIds: ["UNREAD"] });
+  }
+
+  async markAsUnread(messageId: string): Promise<void> {
+    await this.modifyLabels(messageId, { addLabelIds: ["UNREAD"] });
+  }
+
+  async starMessage(messageId: string): Promise<void> {
+    await this.modifyLabels(messageId, { addLabelIds: ["STARRED"] });
+  }
+
+  async unstarMessage(messageId: string): Promise<void> {
+    await this.modifyLabels(messageId, { removeLabelIds: ["STARRED"] });
+  }
+
+  async trashMessage(messageId: string): Promise<void> {
+    await this.request(`/messages/${messageId}/trash`, { method: "POST" });
+  }
+
+  async untrashMessage(messageId: string): Promise<void> {
+    await this.request(`/messages/${messageId}/untrash`, { method: "POST" });
+  }
+
+  async listLabels(): Promise<Array<{ id: string; name: string; type?: string }>> {
+    const data = await this.request<{
+      labels?: Array<{ id: string; name: string; type?: string }>;
+    }>("/labels");
+    return data.labels ?? [];
+  }
+
+  async applyLabel(messageId: string, labelId: string): Promise<void> {
+    await this.modifyLabels(messageId, { addLabelIds: [labelId] });
+  }
+
+  async removeLabel(messageId: string, labelId: string): Promise<void> {
+    await this.modifyLabels(messageId, { removeLabelIds: [labelId] });
+  }
 }
 
 /** Factory principal: resolve o token da empresa e devolve um client autenticado. */
