@@ -147,8 +147,13 @@ export function useSamuelRealtimeVoice({
         case "input_audio_buffer.speech_stopped":
           dispatch({ type: "processing" });
           break;
+        case "response.audio.delta":
         case "response.output_audio.delta":
           dispatch({ type: "speaking" });
+          break;
+        case "response.audio.done":
+        case "response.output_audio.done":
+          dispatch({ type: "listening" });
           break;
         case "response.done":
           dispatch({ type: "listening" });
@@ -163,6 +168,7 @@ export function useSamuelRealtimeVoice({
         }
         case "response.output_audio_transcript.delta":
           if (event.delta) {
+            dispatch({ type: "speaking" });
             dispatch({ type: "assistant_transcript", content: event.delta });
           }
           break;

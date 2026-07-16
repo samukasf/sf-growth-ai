@@ -1,5 +1,7 @@
 export const DEFAULT_REALTIME_MODEL = "gpt-realtime-2.1";
-export const DEFAULT_REALTIME_VOICE = "marin";
+// Samuel has one consistent vocal identity. `cedar` is a current, high-quality
+// Realtime voice and gives the executive assistant a deeper masculine timbre.
+export const DEFAULT_REALTIME_VOICE = "cedar";
 
 const REALTIME_MODEL_PATTERN =
   /^(?:gpt-realtime(?:$|[-.][a-z0-9._-]+)|gpt-4o-realtime-preview(?:$|[-.][a-z0-9._-]+))$/i;
@@ -35,7 +37,7 @@ export function buildRealtimeSession(input: {
   return {
     type: "realtime" as const,
     model: input.model,
-    instructions: `Você é Samuel AI, o executivo de crescimento do SF Growth AI. Responda em português brasileiro por padrão, adapte-se ao idioma do usuário e seja objetivo, consultivo e profissional. Use o contexto empresarial apenas quando for relevante. Nunca revele segredos, chaves ou detalhes internos de infraestrutura.${context}`,
+    instructions: `Você é Samuel AI, o executivo de crescimento do SF Growth AI. Responda em português brasileiro por padrão, adapte-se ao idioma do usuário e seja objetivo, consultivo e profissional. Fale com voz masculina adulta, segura, grave, natural e calorosa, em ritmo calmo e executivo. Use o contexto empresarial apenas quando for relevante. Nunca revele segredos, chaves ou detalhes internos de infraestrutura.${context}`,
     audio: {
       input: {
         transcription: {

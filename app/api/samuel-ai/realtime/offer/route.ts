@@ -98,8 +98,13 @@ export async function POST(request: Request) {
     return jsonError("Oferta SDP inválida.", 400, "SDP_INVALID");
   }
 
-  const voice = process.env.OPENAI_REALTIME_VOICE?.trim() || DEFAULT_REALTIME_VOICE;
-  const session = buildRealtimeSession({ model, voice, contextSummary });
+  // Keep Samuel's identity stable across deployments. A legacy Vercel value
+  // must not silently switch him back to a different vocal identity.
+  const session = buildRealtimeSession({
+    model,
+    voice: DEFAULT_REALTIME_VOICE,
+    contextSummary,
+  });
   const formData = new FormData();
   formData.set("sdp", sdp);
   formData.set("session", JSON.stringify(session));
