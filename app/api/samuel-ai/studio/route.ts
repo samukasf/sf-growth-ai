@@ -5,6 +5,7 @@ import {
   buildStudioPrompt,
   createStarterStudioProject,
   parseGeneratedStudioProject,
+  SAMUEL_STUDIO_TEXT_FORMAT,
   validateStudioRequest,
 } from "@/features/samuel-ai/studio/samuel-studio.server";
 import type {
@@ -65,7 +66,11 @@ export async function POST(request: Request) {
     const input = validateStudioRequest(await request.json());
     const id = randomUUID();
     const createdAt = new Date().toISOString();
-    const provider = createConfiguredResponsesProvider({ maxOutputTokens: 6_000 });
+    const provider = createConfiguredResponsesProvider({
+      maxOutputTokens: 8_000,
+      reasoningEffort: "low",
+      textFormat: SAMUEL_STUDIO_TEXT_FORMAT,
+    });
 
     if (!provider) {
       const response: SamuelStudioGenerateResponse = {
