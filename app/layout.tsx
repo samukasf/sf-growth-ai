@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { APP_DESCRIPTION, APP_NAME } from "@/constants";
 
 import "@/styles/globals.css";
+import "@/styles/samuel-hologram-v3.css";
 
 export const metadata: Metadata = {
   title: APP_NAME,
