@@ -7,8 +7,11 @@ import {
   FileCode2,
   Globe2,
   LayoutTemplate,
+  MapPinned,
+  MessageCircle,
   Rocket,
   ShieldCheck,
+  Smartphone,
 } from "lucide-react";
 
 import { cn } from "@/utils/cn";
@@ -19,6 +22,7 @@ import {
   buildSiteBuilderFilename,
   buildSiteBuilderHtml,
   type SiteBuilderDraft,
+  type SiteBuilderMode,
   type SiteBuilderTone,
 } from "./site-builder-preview";
 
@@ -28,7 +32,20 @@ type SamuelSiteBuilderProps = {
   companyLocation?: string;
 };
 
-type PreviewPage = "home" | "services" | "contact";
+type PreviewPage = "home" | "services" | "proof" | "app" | "contact";
+
+const MODE_OPTIONS: Array<{ value: SiteBuilderMode; label: string; description: string }> = [
+  {
+    value: "website",
+    label: "Site",
+    description: "Landing page completa, responsiva e pronta para validação.",
+  },
+  {
+    value: "app",
+    label: "Mini-app",
+    description: "Preview navegável com painel interativo para produto digital.",
+  },
+];
 
 const TONE_OPTIONS: Array<{ value: SiteBuilderTone; label: string }> = [
   { value: "executive", label: "Tecnológico" },
@@ -39,6 +56,8 @@ const TONE_OPTIONS: Array<{ value: SiteBuilderTone; label: string }> = [
 const PREVIEW_PAGES: Array<{ id: PreviewPage; label: string; hash: string }> = [
   { id: "home", label: "Início", hash: "#home" },
   { id: "services", label: "Serviços", hash: "#services" },
+  { id: "proof", label: "Resultados", hash: "#proof" },
+  { id: "app", label: "App", hash: "#app" },
   { id: "contact", label: "Contato", hash: "#contact" },
 ];
 
@@ -75,18 +94,25 @@ export function SamuelSiteBuilder({
   companyLocation = "Portugal",
 }: SamuelSiteBuilderProps) {
   const [draft, setDraft] = useState<SiteBuilderDraft>({
+    mode: "website",
     businessName: companyName,
     segment: companySegment,
     offer: "Presença digital profissional para vender mais",
     goal: "receber pedidos de orçamento qualificados",
     location: companyLocation,
     cta: "Pedir orçamento",
+    whatsapp: "",
+    mapsQuery: companyLocation,
     tone: "executive",
   });
   const [previewPage, setPreviewPage] = useState<PreviewPage>("home");
 
   const html = useMemo(() => buildSiteBuilderHtml(draft), [draft]);
   const filename = useMemo(() => buildSiteBuilderFilename(draft), [draft]);
+  const previewPages = useMemo(
+    () => PREVIEW_PAGES.filter((page) => draft.mode === "app" || page.id !== "app"),
+    [draft.mode],
+  );
   const srcDoc = useMemo(() => makeSrcDoc(html, previewPage), [html, previewPage]);
 
   const updateDraft = <Key extends keyof SiteBuilderDraft>(
@@ -103,12 +129,40 @@ export function SamuelSiteBuilder({
           <section className="border-b border-blue-950/10 bg-white/86 p-4 sm:p-5 xl:border-b-0 xl:border-r">
             <div className="mb-5 flex items-start justify-between gap-4">
               <SectionHeader
-                title="Criador de Sites"
-                description="Gere, visualize e exporte uma primeira versão navegável"
+                title="Criador de Sites e Apps"
+                description="Gere, visualize e exporte uma versão navegável com canais reais"
               />
               <span className="hidden rounded-2xl border border-cyan-300/20 bg-cyan-400/10 p-3 text-cyan-500 sm:flex">
                 <Globe2 className="size-5" />
               </span>
+            </div>
+
+            <div className="mb-4 grid gap-2 sm:grid-cols-2">
+              {MODE_OPTIONS.map((option) => {
+                const active = draft.mode === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => {
+                      updateDraft("mode", option.value);
+                      setPreviewPage(option.value === "app" ? "app" : "home");
+                    }}
+                    className={cn(
+                      "rounded-2xl border p-3 text-left transition",
+                      active
+                        ? "border-cyan-300 bg-cyan-300/12 text-blue-950 shadow-[0_16px_34px_rgba(14,165,233,.14)]"
+                        : "border-blue-950/10 bg-white text-blue-950/62 hover:border-blue-300",
+                    )}
+                  >
+                    <span className="flex items-center gap-2 text-sm font-bold">
+                      {option.value === "app" ? <Smartphone className="size-4" /> : <Globe2 className="size-4" />}
+                      {option.label}
+                    </span>
+                    <span className="mt-1 block text-xs leading-relaxed">{option.description}</span>
+                  </button>
+                );
+              })}
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
@@ -160,6 +214,24 @@ export function SamuelSiteBuilder({
                   onChange={(event) => updateDraft("cta", event.target.value)}
                 />
               </label>
+              <label className="flex flex-col gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-blue-950/45">
+                WhatsApp
+                <input
+                  className={fieldClass()}
+                  value={draft.whatsapp}
+                  placeholder="+351..."
+                  onChange={(event) => updateDraft("whatsapp", event.target.value)}
+                />
+              </label>
+              <label className="flex flex-col gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-blue-950/45">
+                Google Maps
+                <input
+                  className={fieldClass()}
+                  value={draft.mapsQuery}
+                  placeholder="Nome ou morada"
+                  onChange={(event) => updateDraft("mapsQuery", event.target.value)}
+                />
+              </label>
             </div>
 
             <div className="mt-4 flex flex-wrap gap-2">
@@ -204,8 +276,10 @@ export function SamuelSiteBuilder({
 
             <div className="mt-5 grid gap-2 text-xs text-blue-950/58">
               {[
-                { icon: LayoutTemplate, label: "Preview navegável", value: "Início, Serviços e Contato" },
+                { icon: LayoutTemplate, label: "Preview navegável", value: draft.mode === "app" ? "Site + mini-app interativo" : "Site completo responsivo" },
                 { icon: FileCode2, label: "Entrega", value: filename },
+                { icon: MessageCircle, label: "WhatsApp", value: draft.whatsapp ? "Link real configurado" : "Pronto para número oficial" },
+                { icon: MapPinned, label: "Maps", value: draft.mapsQuery ? "Pesquisa real configurada" : "Pronto para localização" },
                 { icon: ShieldCheck, label: "Segurança", value: "Texto isolado e sanitizado" },
               ].map((item) => (
                 <div key={item.label} className="flex items-center gap-3 rounded-2xl border border-blue-950/8 bg-blue-50/70 p-3">
@@ -230,7 +304,7 @@ export function SamuelSiteBuilder({
                 <h2 className="mt-1 text-base font-semibold text-white">Site navegável</h2>
               </div>
               <div className="flex rounded-full border border-white/10 bg-white/8 p-1">
-                {PREVIEW_PAGES.map((page) => (
+                {previewPages.map((page) => (
                   <button
                     key={page.id}
                     type="button"
@@ -248,7 +322,7 @@ export function SamuelSiteBuilder({
 
             <div className="relative min-h-0 flex-1 overflow-hidden rounded-[24px] border border-white/10 bg-white shadow-[0_28px_80px_rgba(0,0,0,.35)]">
               <iframe
-                key={`${previewPage}-${draft.tone}`}
+                key={`${previewPage}-${draft.tone}-${draft.mode}`}
                 title="Preview navegável do site"
                 srcDoc={srcDoc}
                 sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
