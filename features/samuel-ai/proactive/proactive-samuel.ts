@@ -87,7 +87,7 @@ function greetingForTime(now: Date) {
 function signalScore(signal: SamuelInitiativeSignal) {
   const timestamp = signal.occurredAt ? Date.parse(signal.occurredAt) : Number.NaN;
   const recency = Number.isFinite(timestamp)
-    ? Math.max(0, 20 - Math.floor((Date.now() - timestamp) / 3_600_000))
+    ? Math.min(20, Math.max(0, 20 - Math.floor((Date.now() - timestamp) / 3_600_000)))
     : 0;
   return PRIORITY_WEIGHT[signal.priority] + KIND_WEIGHT[signal.kind] + recency;
 }

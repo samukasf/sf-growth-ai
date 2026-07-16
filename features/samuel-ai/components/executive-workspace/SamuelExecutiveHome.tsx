@@ -39,6 +39,7 @@ import {
 } from "@/features/samuel-ai/proactive/proactive-samuel";
 import { useSamuelSpeech } from "@/features/samuel-ai/voice/use-samuel-speech";
 import { useSamuelIdlePresence } from "@/features/samuel-ai/voice/use-samuel-idle-presence";
+import { useVercelDeploymentStatus } from "@/features/vercel-deployment/use-vercel-deployment-status";
 import { cn } from "@/utils/cn";
 
 import {
@@ -269,12 +270,27 @@ function ProactiveMessageText({
   });
 }
 
+function calendarTime(start: string, allDay = false) {
+  if (allDay) return "Dia todo";
+  const parsed = new Date(start);
+  if (Number.isNaN(parsed.getTime())) return "Hoje";
+  return parsed.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
+
+function calendarPriority(start: string): SamuelInitiativeSignal["priority"] {
+  const timestamp = Date.parse(start);
+  if (!Number.isFinite(timestamp)) return "medium";
+  const minutes = (timestamp - Date.now()) / 60_000;
+  return minutes >= 0 && minutes <= 120 ? "high" : "medium";
+}
+
 export function SamuelExecutiveHome({
   data,
   handlers,
   onNavigate,
 }: SamuelExecutiveHomeProps) {
   const [googleWorkspaceSummary, setGoogleWorkspaceSummary] = useState<GoogleWorkspaceSummary | null>(null);
+  const vercelDeployment = useVercelDeploymentStatus();
   const presenceSleeping = useSamuelIdlePresence();
   const [celebrating, setCelebrating] = useState(false);
   const lastCompletedAnalysisRef = useRef(data.analysisCompletedAt);
@@ -346,12 +362,21 @@ export function SamuelExecutiveHome({
     { label: "Conteúdo", value: data.marketingExecutive?.topChannels.length ?? 0, icon: Music2, color: "text-slate-900 bg-slate-100" },
   ];
 
-  const calendarItems = timeline.length > 0
-    ? timeline
-    : (data.executiveCeo?.nextActions ?? []).slice(0, 4).map((action, index) => ({
+  const liveCalendarEvents = googleWorkspaceSummary?.calendar.events ?? [];
+  const calendarItems = liveCalendarEvents.length > 0
+    ? liveCalendarEvents.slice(0, 4).map((event) => ({
+        id: event.id,
+        label: event.title,
+        deadline: event.location ?? "Google Agenda",
+        timeLabel: calendarTime(event.start, event.allDay),
+      }))
+    : timeline.length > 0
+      ? timeline.map((item) => ({ ...item, timeLabel: item.deadline || "Hoje" }))
+      : (data.executiveCeo?.nextActions ?? []).slice(0, 4).map((action, index) => ({
         id: `calendar-action-${index}`,
         label: action,
         deadline: index === 0 ? "Hoje" : "Próximo ciclo",
+        timeLabel: index === 0 ? "Hoje" : "Plano",
         status: "pending" as const,
       }));
 
@@ -365,7 +390,13 @@ export function SamuelExecutiveHome({
       source: "monitorização executiva",
       actionLabel: "Rever alerta",
     })),
-    ...(data.marketingExecutive?.marketingRisks ?? []).slice(0, 3).map((risk) => ({
+    ...(
+      data.marketingExecutive &&
+      !data.marketingExecutive.usesDemoData &&
+      data.marketingExecutive.campaignPerformance.length > 0
+        ? data.marketingExecutive.marketingRisks
+        : []
+    ).slice(0, 3).map((risk) => ({
       id: `marketing-risk-${risk.id}`,
       kind: "campaign" as const,
       priority: risk.severity,
@@ -376,16 +407,59 @@ export function SamuelExecutiveHome({
     })),
   ];
 
+  if (vercelDeployment?.state === "failed") {
+    initiativeSignals.push({
+      id: `vercel-${vercelDeployment.commitSha ?? vercelDeployment.checkedAt}`,
+      kind: "deployment",
+      priority: "critical",
+      title: "O deploy da Vercel apresentou uma falha",
+      detail: vercelDeployment.description,
+      source: "Vercel",
+      actionLabel: "Inspecionar deploy",
+      occurredAt: vercelDeployment.checkedAt,
+    });
+  }
+
+  if (data.executiveContext && data.crmExecutive) {
+    data.crmExecutive.atRiskContacts.slice(0, 3).forEach((contact) => {
+      initiativeSignals.push({
+        id: `crm-risk-${contact.id}`,
+        kind: "lead",
+        priority: "high",
+        title: `${contact.name} precisa de acompanhamento comercial`,
+        detail: contact.reason,
+        source: "CRM",
+        actionLabel: "Abrir CRM",
+      });
+    });
+
+    data.crmExecutive.highPotentialContacts.slice(0, 2).forEach((contact) => {
+      initiativeSignals.push({
+        id: `crm-opportunity-${contact.id}`,
+        kind: "lead",
+        priority: "medium",
+        title: `${contact.name} apresenta alto potencial comercial`,
+        detail: contact.reason,
+        source: "CRM",
+        actionLabel: "Rever oportunidade",
+      });
+    });
+  }
+
   if (googleWorkspaceSummary?.connected) {
     const calendarCount = googleWorkspaceSummary.calendar.count ?? 0;
     const unreadCount = googleWorkspaceSummary.gmail.count ?? 0;
 
     if (calendarCount > 0) {
+      const nextEvent = googleWorkspaceSummary.calendar.nextEvent;
       initiativeSignals.push({
-        id: `google-calendar-${calendarCount}`,
+        id: `google-calendar-${nextEvent?.id ?? calendarCount}`,
         kind: "calendar",
-        priority: "high",
-        title: `Sua agenda contém ${calendarCount} ${calendarCount === 1 ? "compromisso" : "compromissos"} hoje`,
+        priority: nextEvent ? calendarPriority(nextEvent.start) : "medium",
+        title: nextEvent
+          ? `Seu próximo compromisso é ${nextEvent.title}, ${nextEvent.allDay ? "durante todo o dia" : `às ${calendarTime(nextEvent.start)}`}`
+          : `Sua agenda contém ${calendarCount} ${calendarCount === 1 ? "compromisso" : "compromissos"} hoje`,
+        detail: nextEvent?.location ? `Local: ${nextEvent.location}` : undefined,
         source: "Google Agenda",
         actionLabel: "Abrir agenda",
         occurredAt: googleWorkspaceSummary.updatedAt,
@@ -434,6 +508,7 @@ export function SamuelExecutiveHome({
     cancel: cancelSpeech,
     mouthLevel: speechMouthLevel,
     progress: speechProgress,
+    settling: speechSettling,
     speak,
     speaking: samuelSpeaking,
     supported: speechSupported,
@@ -449,6 +524,8 @@ export function SamuelExecutiveHome({
     : 0;
   const homeHologramState: SamuelHologramState = samuelSpeaking
     ? "speaking"
+    : speechSettling
+      ? "listening"
     : handlers.isProcessing
       ? "executing"
       : celebrating
@@ -472,10 +549,31 @@ export function SamuelExecutiveHome({
     };
   }, [data.analysisCompletedAt]);
 
+  function openAgenda() {
+    if (googleWorkspaceSummary?.calendar.connected) {
+      window.open("https://calendar.google.com/", "_blank", "noopener,noreferrer");
+    } else {
+      onNavigate("executive-agenda");
+    }
+  }
+
   function handleInitiativeAction() {
     switch (proactiveGreeting.signal?.kind) {
       case "calendar":
-        onNavigate("executive-agenda");
+        openAgenda();
+        break;
+      case "email":
+        window.open("https://mail.google.com/", "_blank", "noopener,noreferrer");
+        break;
+      case "deployment":
+        if (vercelDeployment?.targetUrl) {
+          window.open(vercelDeployment.targetUrl, "_blank", "noopener,noreferrer");
+        } else {
+          onNavigate("executive-alerts");
+        }
+        break;
+      case "lead":
+        onNavigate("sales");
         break;
       case "campaign":
         onNavigate("marketing");
@@ -544,6 +642,8 @@ export function SamuelExecutiveHome({
                 state={homeHologramState}
                 audioLevel={speechMouthLevel}
                 speechProgress={speechProgress}
+                taskProgress={handlers.isProcessing ? data.executiveMonitoring?.progress.overall ?? null : null}
+                smiling={speechSettling || celebrating}
               />
               {proactiveVisible && !proactiveDismissed && (
                 <div
@@ -785,12 +885,12 @@ export function SamuelExecutiveHome({
           <SectionTitle
             eyebrow="Calendário de hoje"
             title="Agenda executiva"
-            action={{ label: "Ver agenda", onClick: () => onNavigate("executive-agenda") }}
+            action={{ label: "Ver agenda", onClick: openAgenda }}
           />
           <div className="samuel-calendar-list">
-            {calendarItems.map((item, index) => (
-              <button key={item.id} type="button" onClick={() => onNavigate("executive-agenda")}>
-                <time>{index === 0 ? "10:00" : index === 1 ? "14:00" : index === 2 ? "16:30" : "18:00"}</time>
+            {calendarItems.map((item) => (
+              <button key={item.id} type="button" onClick={openAgenda}>
+                <time>{item.timeLabel}</time>
                 <i />
                 <span className="min-w-0">
                   <strong>{item.label}</strong>

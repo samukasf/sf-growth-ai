@@ -235,7 +235,12 @@ function resolveInput(input: CrmExecutiveInput): Required<CrmExecutiveInput> {
   const leads = input.leads ?? [];
   const deals = input.deals ?? [];
 
-  if (contacts.length === 0 && leads.length === 0 && deals.length === 0) {
+  const explicitlyLoaded =
+    input.contacts !== undefined ||
+    input.leads !== undefined ||
+    input.deals !== undefined;
+
+  if (!explicitlyLoaded) {
     return {
       contacts: MOCK_CONTACTS,
       leads: MOCK_LEADS,

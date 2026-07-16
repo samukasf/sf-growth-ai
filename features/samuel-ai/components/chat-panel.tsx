@@ -261,11 +261,14 @@ export function ChatPanel({
   const presenceSleeping = useSamuelIdlePresence();
   const [activeBrowserMessageId, setActiveBrowserMessageId] = useState<string | null>(null);
   const [activeRealtimeMessageId, setActiveRealtimeMessageId] = useState<string | null>(null);
+  const [realtimeSettling, setRealtimeSettling] = useState(false);
+  const previousRealtimeStateRef = useRef<string>("idle");
   const {
     blocked: browserSpeechBlocked,
     cancel: cancelBrowserSpeech,
     mouthLevel: browserMouthLevel,
     progress: browserSpeechProgress,
+    settling: browserSpeechSettling,
     speak: speakBrowserSpeech,
     speaking: browserSpeaking,
     supported: browserSpeechSupported,
@@ -417,6 +420,25 @@ export function ChatPanel({
     onTranscript: appendVoiceTranscript,
   });
 
+  useEffect(() => {
+    const previous = previousRealtimeStateRef.current;
+    const current = realtimeVoice.session.state;
+    previousRealtimeStateRef.current = current;
+
+    if (current === "speaking") {
+      const resetTimer = window.setTimeout(() => setRealtimeSettling(false), 0);
+      return () => window.clearTimeout(resetTimer);
+    }
+    if (previous !== "speaking") return;
+
+    const startTimer = window.setTimeout(() => setRealtimeSettling(true), 0);
+    const endTimer = window.setTimeout(() => setRealtimeSettling(false), 650);
+    return () => {
+      window.clearTimeout(startTimer);
+      window.clearTimeout(endTimer);
+    };
+  }, [realtimeVoice.session.state]);
+
   const realtimeActive = !["idle", "error"].includes(realtimeVoice.session.state);
   const samuelSpeaking =
     browserSpeaking || realtimeVoice.session.state === "speaking";
@@ -446,7 +468,7 @@ export function ChatPanel({
     ? "speaking"
     : realtimeVoice.session.state === "error"
       ? "error"
-      : listening || realtimeVoice.session.state === "listening"
+      : browserSpeechSettling || realtimeSettling || listening || realtimeVoice.session.state === "listening"
         ? "listening"
         : busy || realtimeVoice.session.state === "processing"
           ? "processing"
@@ -703,13 +725,14 @@ export function ChatPanel({
             state={hologramState}
             audioLevel={hologramAudioLevel}
             speechProgress={hologramSpeechProgress}
+            smiling={browserSpeechSettling || realtimeSettling}
           />
           <div className="samuel-chat-presence__copy">
             <span>Samuel AI · presença executiva</span>
             <strong>
               {samuelSpeaking
                 ? "Estou falando com você"
-                : realtimeVoice.session.state === "listening"
+                : browserSpeechSettling || realtimeSettling || realtimeVoice.session.state === "listening"
                   ? "Estou ouvindo"
                   : busy
                     ? "Estou analisando"

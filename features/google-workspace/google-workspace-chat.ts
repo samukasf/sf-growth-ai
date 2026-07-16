@@ -23,6 +23,25 @@ function serviceLabel(
   return `${label}: não conectado`;
 }
 
+function calendarLabel(summary: GoogleWorkspaceSummary) {
+  const status = summary.calendar;
+  if (!status.connected) {
+    return status.error
+      ? "Google Agenda: precisa de reautorização ou atenção"
+      : "Google Agenda: não conectado";
+  }
+
+  const count = status.count ?? 0;
+  const next = status.nextEvent;
+  if (!next) return `Google Agenda: ${count} compromisso(s) hoje`;
+
+  const start = new Date(next.start);
+  const time = next.allDay || Number.isNaN(start.getTime())
+    ? "durante todo o dia"
+    : `às ${start.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+  return `Google Agenda: ${count} compromisso(s) hoje; próximo: ${next.title}, ${time}`;
+}
+
 export function createGoogleWorkspaceChatSignal(
   query: string,
   summary: GoogleWorkspaceSummary | null,
@@ -51,7 +70,7 @@ export function createGoogleWorkspaceChatSignal(
       ? [serviceLabel("Gmail", summary.gmail, (count) => `${count ?? 0} e-mail(s) não lido(s)`)]
       : []),
     ...(asksCalendar || asksWorkspace
-      ? [serviceLabel("Google Agenda", summary.calendar, (count) => `${count ?? 0} compromisso(s) hoje`)]
+      ? [calendarLabel(summary)]
       : []),
     ...(asksDrive || asksWorkspace
       ? [serviceLabel("Google Drive", summary.drive, (count) => `${count ?? 0} arquivo(s) recente(s) sincronizado(s)`)]
