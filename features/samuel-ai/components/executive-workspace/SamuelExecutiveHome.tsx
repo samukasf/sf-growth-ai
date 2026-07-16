@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
   Activity,
+  AppWindow,
   ArrowRight,
   BarChart3,
   Bot,
@@ -26,7 +27,6 @@ import {
   UsersRound,
   Volume2,
   VolumeX,
-  Workflow,
   Zap,
 } from "lucide-react";
 
@@ -96,10 +96,10 @@ const QUICK_MODULES: QuickModule[] = [
     tone: "emerald",
   },
   {
-    label: "Automações",
-    description: "Fluxos e processos",
-    section: "operations",
-    icon: Workflow,
+    label: "Studio IA",
+    description: "Criar sites e apps",
+    section: "studio",
+    icon: AppWindow,
     tone: "amber",
   },
 ];
@@ -506,12 +506,15 @@ export function SamuelExecutiveHome({
   const {
     blocked: speechBlocked,
     cancel: cancelSpeech,
+    loadProgress: speechLoadProgress,
     mouthLevel: speechMouthLevel,
     progress: speechProgress,
     settling: speechSettling,
     speak,
     speaking: samuelSpeaking,
+    status: speechStatus,
     supported: speechSupported,
+    voiceLabel: speechVoiceLabel,
     wordIndex: speechWordIndex,
   } = useSamuelSpeech();
 
@@ -683,6 +686,11 @@ export function SamuelExecutiveHome({
                       O celular bloqueou o áudio automático. Toque em “Ouvir Samuel”.
                     </p>
                   )}
+                  {speechStatus === "preparing" && (
+                    <p className="samuel-proactive-card__notice">
+                      Preparando {speechVoiceLabel ?? "a voz neural masculina"} · {Math.round(speechLoadProgress * 100)}%
+                    </p>
+                  )}
                   <div className="samuel-proactive-card__actions">
                     <button type="button" onClick={handleInitiativeAction}>
                       <MessageSquareText aria-hidden="true" /> {proactiveGreeting.actionLabel ?? "Conversar agora"}
@@ -698,9 +706,11 @@ export function SamuelExecutiveHome({
                       {samuelSpeaking ? <VolumeX aria-hidden="true" /> : <Volume2 aria-hidden="true" />}
                       {samuelSpeaking
                         ? "Parar voz"
-                        : speechSupported
-                          ? "Ouvir Samuel"
-                          : "Voz indisponível"}
+                        : speechStatus === "preparing"
+                          ? `Carregando ${Math.round(speechLoadProgress * 100)}%`
+                          : speechSupported
+                            ? "Ouvir Samuel"
+                            : "Voz indisponível"}
                     </button>
                   </div>
                 </div>

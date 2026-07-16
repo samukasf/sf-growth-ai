@@ -63,13 +63,12 @@ export function SamuelHologram({
   const progress = clamp(speechProgress);
   const hasTaskProgress = typeof taskProgress === "number" && Number.isFinite(taskProgress);
   const normalizedTaskProgress = hasTaskProgress ? clamp(taskProgress / 100) : 0;
-  const syntheticMouth = isSpeaking
-    ? 0.34 + Math.abs(Math.sin(progress * 58 + 0.8)) * 0.58
-    : 0;
+  const measuredMouth = clamp(audioLevel);
+  const naturalCadence = 0.08 + Math.abs(Math.sin(progress * Math.PI * 15)) * 0.1;
   const mouthLevel = isSpeaking
-    ? Math.max(0.22, clamp(audioLevel), syntheticMouth)
+    ? Math.min(0.54, Math.max(naturalCadence, measuredMouth * 0.58))
     : 0;
-  const viseme = isSpeaking ? Math.floor((progress * 41 + mouthLevel * 5) % 5) : 0;
+  const viseme = isSpeaking ? Math.floor(progress * 17) % 3 : 0;
 
   const style = useMemo(
     () =>

@@ -266,12 +266,17 @@ export function ChatPanel({
   const {
     blocked: browserSpeechBlocked,
     cancel: cancelBrowserSpeech,
+    engine: browserSpeechEngine,
+    errorMessage: browserSpeechError,
+    loadProgress: browserVoiceLoadProgress,
     mouthLevel: browserMouthLevel,
     progress: browserSpeechProgress,
     settling: browserSpeechSettling,
     speak: speakBrowserSpeech,
     speaking: browserSpeaking,
+    status: browserSpeechStatus,
     supported: browserSpeechSupported,
+    voiceLabel: browserVoiceLabel,
     wordIndex: browserSpeechWordIndex,
   } = useSamuelSpeech({ enabled: voiceReplyEnabled });
   const abortRef = useRef<AbortController | null>(null);
@@ -775,9 +780,10 @@ export function ChatPanel({
           </div>
         )}
 
-        {(voiceNotice || browserSpeechBlocked) && (
+        {(voiceNotice || browserSpeechBlocked || browserSpeechError) && (
           <div className="samuel-chat-notice samuel-chat-notice--voice">
             {voiceNotice ||
+              browserSpeechError ||
               "O navegador bloqueou a reprodução automática. Use “Ouvir última resposta” para liberar a voz."}
           </div>
         )}
@@ -816,7 +822,7 @@ export function ChatPanel({
         <div
           className={cn(
             "samuel-voice-console",
-            realtimeActive && "samuel-voice-console--active",
+            (realtimeActive || browserSpeaking || browserSpeechStatus === "preparing") && "samuel-voice-console--active",
             samuelSpeaking && "samuel-voice-console--speaking",
             realtimeVoice.session.state === "error" && "samuel-voice-console--error",
           )}
@@ -826,7 +832,17 @@ export function ChatPanel({
               <span><Radio aria-hidden="true" /></span>
               <div>
                 <p>Samuel Voice · masculina</p>
-                <strong>{realtimeStateLabel(realtimeVoice.session.state)}</strong>
+                <strong>
+                  {browserSpeechStatus === "preparing"
+                    ? `Preparando voz local · ${Math.round(browserVoiceLoadProgress * 100)}%`
+                    : browserSpeaking
+                      ? `${browserVoiceLabel ?? "Piper pt-BR"} · falando`
+                      : realtimeActive
+                        ? realtimeStateLabel(realtimeVoice.session.state)
+                        : browserVoiceLabel
+                          ? `${browserVoiceLabel} · pronta`
+                          : "Voz neural local pronta"}
+                </strong>
               </div>
             </div>
             <div
@@ -838,8 +854,8 @@ export function ChatPanel({
                 <span
                   key={weight}
                   style={{
-                    height: `${8 + Math.round((realtimeVoice.session.state === "speaking" ? realtimeVoice.session.outputAudioLevel : realtimeVoice.session.audioLevel) * weight * 28)}px`,
-                    opacity: realtimeActive ? 1 : 0.35 + index * 0.08,
+                    height: `${8 + Math.round((browserSpeaking ? browserMouthLevel : realtimeVoice.session.state === "speaking" ? realtimeVoice.session.outputAudioLevel : realtimeVoice.session.audioLevel) * weight * 28)}px`,
+                    opacity: realtimeActive || browserSpeaking ? 1 : 0.35 + index * 0.08,
                   }}
                 />
               ))}
@@ -882,9 +898,13 @@ export function ChatPanel({
             <div className="samuel-voice-console__error" role="alert">
               <AlertTriangle aria-hidden="true" />
               <div>
-                <strong>A voz avançada não conectou</strong>
+                <strong>Realtime indisponível · fallback local disponível</strong>
                 <p>{realtimeVoice.session.error}</p>
-                <span>O chat e a leitura masculina das respostas continuam disponíveis.</span>
+                <span>
+                  {browserSpeechEngine === "piper-local"
+                    ? "A voz neural masculina pt-BR continua ativa neste aparelho."
+                    : "Toque em “Ouvir resposta” para carregar a voz neural masculina pt-BR."}
+                </span>
               </div>
             </div>
           )}
