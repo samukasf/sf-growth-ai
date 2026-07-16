@@ -69,6 +69,36 @@ export function studioFailureDiagnostic(error: unknown) {
     .slice(0, 240) || "Falha desconhecida.";
 }
 
+export function shouldRetryStudioWithoutSchema(error: unknown) {
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+  if (!message) return false;
+  if (
+    message.includes("rate limit") ||
+    message.includes("tokens per minute") ||
+    message.includes("request too large") ||
+    message.includes("capacidade externa")
+  ) {
+    return false;
+  }
+  return (
+    message.includes("unsupported") ||
+    message.includes("unknown parameter") ||
+    message.includes("text.format") ||
+    message.includes("json_schema") ||
+    message.includes("json válido") ||
+    message.includes("não contém arquivos") ||
+    message.includes("precisa conter") ||
+    message.includes("export default")
+  );
+}
+
+function sanitizeGeneratedCss(source: string) {
+  return source
+    .replace(/@import\s+[^;]+;?/gi, "")
+    .replace(/url\(\s*(["']?)https?:\/\/[^)]*\1\s*\)/gi, "none")
+    .trim();
+}
+
 function projectNameFromBrief(brief: string) {
   const words = brief
     .replace(/[^\p{L}\p{N}\s-]/gu, " ")
@@ -101,14 +131,15 @@ function normalizeFiles(value: unknown) {
   for (const [rawPath, rawCode] of Object.entries(value)) {
     const path = rawPath.startsWith("/") ? rawPath : `/${rawPath}`;
     if (!ALLOWED_FILES.has(path) || typeof rawCode !== "string") continue;
-    if (BLOCKED_SOURCE.some((pattern) => pattern.test(rawCode))) {
+    const code = path === "/styles.css" ? sanitizeGeneratedCss(rawCode) : rawCode;
+    if (BLOCKED_SOURCE.some((pattern) => pattern.test(code))) {
       throw new Error(`O arquivo ${path} tentou usar uma capacidade externa não permitida.`);
     }
-    totalSize += rawCode.length;
+    totalSize += code.length;
     if (totalSize > MAX_TOTAL_SOURCE_SIZE) {
       throw new Error("O projeto gerado excedeu o limite seguro de código.");
     }
-    files[path] = rawCode.trim();
+    files[path] = code.trim();
   }
 
   if (!files["/App.js"] || !files["/styles.css"]) {
