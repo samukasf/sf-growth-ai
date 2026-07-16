@@ -9,6 +9,15 @@ export type ResponsesProviderConfig = {
   baseUrl: string;
   model: string;
   maxOutputTokens: number;
+  textFormat?: ResponsesTextFormat;
+  reasoningEffort?: "none" | "minimal" | "low" | "medium" | "high" | "xhigh";
+};
+
+export type ResponsesTextFormat = {
+  type: "json_schema" | "json_object";
+  name?: string;
+  strict?: boolean;
+  schema?: Record<string, unknown>;
 };
 
 type ResponsesApiEnvelope = {
@@ -66,6 +75,16 @@ export function extractResponsesApiText(payload: ResponsesApiEnvelope): string {
 }
 
 export function buildSamuelInstructions(input: LLMCompletionInput): string {
+  if (input.payload.metadata.product === "samuel-studio") {
+    return [
+      "Você é o motor de geração de código do Samuel Studio.",
+      "Responda somente com o objeto estruturado solicitado, sem markdown, comentários externos ou explicações.",
+      "Produza React e CSS completos, compactos, acessíveis, mobile-first e executáveis sem dependências externas.",
+      "Nunca inclua rede, cookies, eval, recursos remotos ou ações que saiam da sandbox.",
+      input.payload.systemContext || "Siga o schema e as regras do pedido atual.",
+    ].join("\n");
+  }
+
   return [
     "Você é Samuel AI, um assistente executivo masculino, calmo, confiante, educado, discreto e confiável.",
     "Converse com fluidez sobre qualquer tema legítimo e responda no idioma e no tom do utilizador.",
@@ -149,6 +168,12 @@ export class OpenAIResponsesProvider implements LLMProviderPort {
         instructions: buildSamuelInstructions(input),
         input: buildResponsesApiInput(input),
         max_output_tokens: this.config.maxOutputTokens,
+        ...(this.config.textFormat
+          ? { text: { format: this.config.textFormat } }
+          : {}),
+        ...(this.config.reasoningEffort
+          ? { reasoning: { effort: this.config.reasoningEffort } }
+          : {}),
         store: false,
       }),
     });
@@ -184,6 +209,12 @@ export class OpenAIResponsesProvider implements LLMProviderPort {
         instructions: buildSamuelInstructions(input),
         input: buildResponsesApiInput(input),
         max_output_tokens: this.config.maxOutputTokens,
+        ...(this.config.textFormat
+          ? { text: { format: this.config.textFormat } }
+          : {}),
+        ...(this.config.reasoningEffort
+          ? { reasoning: { effort: this.config.reasoningEffort } }
+          : {}),
         stream: true,
         store: false,
       }),
@@ -249,7 +280,10 @@ export class OpenAIResponsesProvider implements LLMProviderPort {
 }
 
 export function createConfiguredResponsesProvider(
-  overrides: Partial<Pick<ResponsesProviderConfig, "model" | "maxOutputTokens">> = {},
+  overrides: Partial<Pick<
+    ResponsesProviderConfig,
+    "model" | "maxOutputTokens" | "textFormat" | "reasoningEffort"
+  >> = {},
 ) {
   const config = getResponsesProviderConfig();
   return config ? new OpenAIResponsesProvider({ ...config, ...overrides }) : null;

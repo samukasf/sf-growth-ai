@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildStudioPrompt,
   parseGeneratedStudioProject,
+  SAMUEL_STUDIO_TEXT_FORMAT,
   validateStudioRequest,
 } from "./samuel-studio.server";
 
@@ -38,5 +39,7 @@ describe("Samuel Studio", () => {
     const prompt = buildStudioPrompt(request);
     expect(prompt).toContain("aplicativo web responsivo");
     expect(prompt).toContain("não use fetch");
+    expect(prompt).toContain("sempre devolva /data.js");
+    expect(SAMUEL_STUDIO_TEXT_FORMAT.schema.required).toEqual(["name", "summary", "files"]);
   });
 });

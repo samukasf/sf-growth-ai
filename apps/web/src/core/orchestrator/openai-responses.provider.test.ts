@@ -74,6 +74,62 @@ describe("OpenAIResponsesProvider", () => {
     });
   });
 
+  it("uses dedicated instructions for Samuel Studio", () => {
+    const instructions = buildSamuelInstructions({
+      payload: {
+        ...completionInput.payload,
+        metadata: { intent: "creative", product: "samuel-studio" },
+      },
+    });
+
+    expect(instructions).toContain("motor de geração de código");
+    expect(instructions).toContain("objeto estruturado");
+    expect(instructions).not.toContain("assistente executivo masculino");
+  });
+
+  it("sends JSON schema and reasoning controls when configured", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(JSON.stringify({
+        output: [{ content: [{ type: "output_text", text: '{"ok":true}' }] }],
+      }), { status: 200 })),
+    );
+    const textFormat = {
+      type: "json_schema" as const,
+      name: "studio",
+      strict: true,
+      schema: {
+        type: "object",
+        properties: { ok: { type: "boolean" } },
+        required: ["ok"],
+        additionalProperties: false,
+      },
+    };
+    const provider = new OpenAIResponsesProvider({
+      apiKey: "test-key",
+      baseUrl: "https://ai-gateway.vercel.sh/v1",
+      model: "openai/gpt-oss-20b",
+      maxOutputTokens: 8000,
+      textFormat,
+      reasoningEffort: "low",
+    });
+
+    await provider.complete({
+      payload: {
+        ...completionInput.payload,
+        metadata: { intent: "creative", product: "samuel-studio" },
+      },
+    });
+
+    const request = vi.mocked(fetch).mock.calls[0]?.[1];
+    const requestBody = JSON.parse(String(request?.body)) as {
+      text?: { format?: unknown };
+      reasoning?: { effort?: string };
+    };
+    expect(requestBody.text?.format).toEqual(textFormat);
+    expect(requestBody.reasoning?.effort).toBe("low");
+  });
+
   it("injects live Google Workspace data even when the intent is general", () => {
     const input = buildResponsesApiInput({
       payload: {

@@ -20,6 +20,31 @@ const BLOCKED_SOURCE = [
   /https?:\/\//i,
 ];
 
+export const SAMUEL_STUDIO_TEXT_FORMAT = {
+  type: "json_schema",
+  name: "samuel_studio_project",
+  strict: true,
+  schema: {
+    type: "object",
+    properties: {
+      name: { type: "string" },
+      summary: { type: "string" },
+      files: {
+        type: "object",
+        properties: {
+          "/App.js": { type: "string" },
+          "/styles.css": { type: "string" },
+          "/data.js": { type: "string" },
+        },
+        required: ["/App.js", "/styles.css", "/data.js"],
+        additionalProperties: false,
+      },
+    },
+    required: ["name", "summary", "files"],
+    additionalProperties: false,
+  },
+} as const;
+
 type GeneratedPayload = {
   name?: unknown;
   summary?: unknown;
@@ -146,10 +171,11 @@ export function buildStudioPrompt(input: SamuelStudioGenerateRequest) {
     `Crie um ${input.type === "site" ? "site responsivo" : "aplicativo web responsivo"} executável em React.`,
     `Brief do usuário: ${input.brief}`,
     "Entregue SOMENTE JSON válido, sem markdown, no formato:",
-    '{"name":"Nome curto","summary":"Resumo curto","files":{"/App.js":"código","/styles.css":"css","/data.js":"opcional"}}',
+    '{"name":"Nome curto","summary":"Resumo curto","files":{"/App.js":"código","/styles.css":"css","/data.js":""}}',
     "Regras obrigatórias:",
     "- use React puro e CSS, sem TypeScript e sem dependências externas;",
     "- /App.js deve importar ./styles.css e exportar default;",
+    "- sempre devolva /data.js; use uma string vazia quando ele não for necessário;",
     "- crie uma experiência visual premium, tecnológica, acessível e mobile-first;",
     "- inclua interações reais com estado local quando forem úteis;",
     "- não use fetch, WebSocket, EventSource, XMLHttpRequest, cookies, eval, window.parent/top/opener nem recursos remotos;",
