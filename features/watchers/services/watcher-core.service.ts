@@ -172,7 +172,8 @@ export function runAllWatchers(
 
 export function buildWatcherExecutive(input: WatcherCoreInput = {}): WatcherExecutive {
   const companyName = input.companyName ?? "Empresa";
-  const { watchers, alerts } = runAllWatchers(MOCK_EXECUTIVE_WATCHERS);
+  const sourceWatchers = input.watchers ?? [];
+  const { watchers, alerts } = runAllWatchers(sourceWatchers);
   const activeWatchers = getActiveWatchers(watchers);
   const recentAlerts = sortAlertsByPriority(alerts).slice(0, 12);
   const summary = getWatcherSummary(watchers, recentAlerts, companyName);

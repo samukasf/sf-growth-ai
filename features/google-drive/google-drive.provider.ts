@@ -330,7 +330,7 @@ export async function getGoogleDriveProviderForCompany(
     if (message.includes("Nenhuma conta Gmail conectada") || message.includes("NOT_CONNECTED")) {
       throw new DriveApiError(
         "NOT_CONNECTED",
-        `Nenhuma conta Google conectada para a empresa "${companyId}". Conecte em /debug/gmail-connect.`,
+        `Nenhuma conta Google conectada para a empresa "${companyId}". Conecte em /integrations/google/connect.`,
       );
     }
     if (message.includes("não configurada") || message.includes("NOT_CONFIGURED")) {

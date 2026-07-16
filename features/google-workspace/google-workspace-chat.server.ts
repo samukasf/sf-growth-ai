@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getFirstCompany } from "@/services/executive-context.service";
+import { getCompanyById } from "@/services/executive-context.service";
 
 import { createGoogleWorkspaceChatSignal } from "./google-workspace-chat";
 import { buildGoogleWorkspaceSummary } from "./google-workspace-summary.server";
@@ -10,8 +10,8 @@ export async function loadGoogleWorkspaceChatSignal(query: string, companyId: st
   if (!empty.relevant) return empty;
 
   try {
-    const company = await getFirstCompany();
-    if (!company || company.id !== companyId) return empty;
+    const company = await getCompanyById(companyId);
+    if (!company) return empty;
     const summary = await buildGoogleWorkspaceSummary(companyId);
     return createGoogleWorkspaceChatSignal(query, summary);
   } catch {

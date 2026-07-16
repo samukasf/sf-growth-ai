@@ -12,7 +12,7 @@ import type {
   WatcherSeverity,
   WatcherSignal,
 } from "../types/watcher.types";
-import { fetchMarketWatcherMockData } from "./market-watcher.provider";
+import type { MarketWatcherProviderData } from "./market-watcher.provider";
 import type {
   MarketAlert,
   MarketSeverity,
@@ -119,9 +119,13 @@ function marketAlertToCoreAlert(
 }
 
 export function runMarketWatcher(
-  input: MarketWatcherInput = {},
-): MarketWatcherRunResult {
-  const providerData = fetchMarketWatcherMockData(input);
+  input: MarketWatcherInput & { providerData?: MarketWatcherProviderData | null } = {},
+): MarketWatcherRunResult | null {
+  const providerData = input.providerData;
+  if (!providerData || providerData.signals.length + providerData.alerts.length === 0) {
+    return null;
+  }
+
   const watcher = buildMarketExecutiveWatcher(providerData.signals);
   const { alerts: metricAlerts } = runWatcher(watcher);
   const providerAlerts = providerData.alerts.map((alert) =>
@@ -199,14 +203,18 @@ export function mergeMarketWatcherWithExecutive(
 }
 
 export function buildCombinedWatcherExecutive(
-  input: WatcherCoreInput & MarketWatcherInput = {},
+  input: WatcherCoreInput & MarketWatcherInput & {
+    providerData?: MarketWatcherProviderData | null;
+  } = {},
 ): {
   watcherExecutive: WatcherExecutive;
-  marketWatcher: MarketWatcherRunResult;
+  marketWatcher: MarketWatcherRunResult | null;
 } {
   const core = buildWatcherExecutive(input);
   const marketWatcher = runMarketWatcher(input);
-  const watcherExecutive = mergeMarketWatcherWithExecutive(core, marketWatcher);
+  const watcherExecutive = marketWatcher
+    ? mergeMarketWatcherWithExecutive(core, marketWatcher)
+    : core;
 
   return { watcherExecutive, marketWatcher };
 }

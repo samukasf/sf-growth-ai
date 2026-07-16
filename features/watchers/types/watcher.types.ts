@@ -116,4 +116,6 @@ export type RunWatcherResult = {
 export type WatcherCoreInput = {
   companyId?: string;
   companyName?: string;
+  /** When omitted, starts empty — never injects the legacy mock watchers. */
+  watchers?: ExecutiveWatcher[];
 };

@@ -22,6 +22,12 @@ import type {
 } from "@/features/samuel-ai/chat/samuel-chat.types";
 import { loadGoogleWorkspaceChatSignal } from "@/features/google-workspace/google-workspace-chat.server";
 import type { GoogleWorkspaceChatSignal } from "@/features/google-workspace/google-workspace-chat";
+import {
+  buildGmailActionPlan,
+  executeGmailTool,
+  gmailResultToFragment,
+  type GmailActionPlan,
+} from "@/features/gmail";
 import { SamuelConversationRepository } from "@/features/samuel-ai/server/samuel-conversation.repository";
 import { getWorkspaceSessionIdentity } from "@/features/samuel-ai/server/workspace-session";
 import type { ChatMessage } from "@/features/samuel-ai/types";
@@ -93,8 +99,19 @@ function buildCompletionInput(
   runtimeResult: Awaited<ReturnType<typeof runSamuelRuntime>>,
   history: ChatMessage[],
   workspaceSignal?: GoogleWorkspaceChatSignal,
+  gmailFragments: string[] = [],
+  pendingAction?: GmailActionPlan | null,
 ): LLMCompletionInput {
   const response = runtimeResult.response;
+  const actionHint = pendingAction
+    ? [
+        `[GMAIL — AÇÃO PENDENTE] ${pendingAction.title}: ${pendingAction.preview}`,
+        "[GMAIL — REGRAS] Não diga que a ação já foi executada. Peça confirmação explícita no cartão de confirmação da UI.",
+      ]
+    : [
+        "[GMAIL — REGRAS] Só afirme envio/apagamento/arquivo se existir fragmento [GMAIL — EXECUTADO]. Caso contrário, proponha e aguarde confirmação.",
+      ];
+
   return {
     payload: {
       ...response.runtime.llmPayload,
@@ -107,6 +124,8 @@ function buildCompletionInput(
         `[RUNTIME] Próximo passo: ${response.nextStep}`,
         `[RUNTIME] Evidências consolidadas: ${runtimeResult.evidenceCount}`,
         ...(workspaceSignal?.fragments ?? []),
+        ...gmailFragments,
+        ...actionHint,
       ],
     },
   };
@@ -222,6 +241,40 @@ export async function POST(request: Request) {
           chatRequest.query,
           chatRequest.companyId,
         );
+
+        const gmailPlan = buildGmailActionPlan(
+          chatRequest.query,
+          chatRequest.companyId,
+        );
+        const gmailFragments: string[] = [];
+        let pendingAction: GmailActionPlan | null = null;
+
+        if (gmailPlan) {
+          if (gmailPlan.requiresConfirmation) {
+            pendingAction = gmailPlan;
+            send({ type: "action_proposal", action: gmailPlan });
+            gmailFragments.push(
+              `[GMAIL — PROPOSTA] ${gmailPlan.title}: ${gmailPlan.preview}`,
+            );
+          } else {
+            const result = await executeGmailTool(
+              chatRequest.companyId,
+              gmailPlan.actionId,
+              gmailPlan.args,
+            );
+            send({ type: "action_result", result });
+            gmailFragments.push(gmailResultToFragment(result));
+            if (!result.ok && /não conectada|NOT_CONNECTED|NOT_CONFIGURED/i.test(result.summary)) {
+              send({
+                type: "warning",
+                code: "GMAIL_NOT_CONNECTED",
+                message:
+                  "Gmail não está conectado. Abra /integrations/google/connect e autorize novamente (inclui permissões de organizar/apagar).",
+              });
+            }
+          }
+        }
+
         const runtimeResult = await runSamuelRuntime({
           query: chatRequest.query,
           tenantId: `workspace-${chatRequest.companyId}`,
@@ -253,6 +306,8 @@ export async function POST(request: Request) {
                 runtimeResult,
                 chatRequest.history ?? [],
                 workspaceSignal,
+                gmailFragments,
+                pendingAction,
               ),
               (delta) => {
                 content += delta;
@@ -282,10 +337,15 @@ export async function POST(request: Request) {
         }
 
         if (!content) {
-          content = workspaceSignal.fallbackAnswer ??
+          content =
+            gmailFragments.map((line) => line.replace(/^\[.*?\]\s*/, "")).join("\n\n") ||
+            workspaceSignal.fallbackAnswer ||
             buildSamuelFallbackAnswer(chatRequest.query, runtimeSummary, {
               providerConfigured: Boolean(provider),
             });
+          if (pendingAction) {
+            content = `${content}\n\nProposta: ${pendingAction.title}. Confirme no cartão abaixo para eu executar no Gmail.`;
+          }
           send({ type: "provider", provider: providerId, model });
           send({ type: "delta", delta: content });
         }
@@ -324,6 +384,7 @@ export async function POST(request: Request) {
           provider: providerId,
           model,
           persistence,
+          pendingAction,
         });
       } catch (error) {
         if (request.signal.aborted) {

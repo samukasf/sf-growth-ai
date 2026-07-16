@@ -49,7 +49,7 @@ export async function resolveGmailAccessToken(companyId: string): Promise<string
   if (!connection) {
     throw new GmailApiError(
       "NOT_CONNECTED",
-      `Nenhuma conta Gmail conectada para a empresa "${companyId}". Conecte em /debug/gmail-connect.`,
+      `Nenhuma conta Gmail conectada para a empresa "${companyId}". Conecte em /integrations/google/connect.`,
     );
   }
 
@@ -318,6 +318,62 @@ export class GmailClient {
       body: { raw, threadId: original.threadId },
     });
     return { messageId: sent.id, threadId: sent.threadId };
+  }
+
+  async modifyLabels(
+    messageId: string,
+    options: { addLabelIds?: string[]; removeLabelIds?: string[] },
+  ): Promise<void> {
+    await this.request(`/messages/${messageId}/modify`, {
+      method: "POST",
+      body: {
+        addLabelIds: options.addLabelIds ?? [],
+        removeLabelIds: options.removeLabelIds ?? [],
+      },
+    });
+  }
+
+  async archiveMessage(messageId: string): Promise<void> {
+    await this.modifyLabels(messageId, { removeLabelIds: ["INBOX"] });
+  }
+
+  async markAsRead(messageId: string): Promise<void> {
+    await this.modifyLabels(messageId, { removeLabelIds: ["UNREAD"] });
+  }
+
+  async markAsUnread(messageId: string): Promise<void> {
+    await this.modifyLabels(messageId, { addLabelIds: ["UNREAD"] });
+  }
+
+  async starMessage(messageId: string): Promise<void> {
+    await this.modifyLabels(messageId, { addLabelIds: ["STARRED"] });
+  }
+
+  async unstarMessage(messageId: string): Promise<void> {
+    await this.modifyLabels(messageId, { removeLabelIds: ["STARRED"] });
+  }
+
+  async trashMessage(messageId: string): Promise<void> {
+    await this.request(`/messages/${messageId}/trash`, { method: "POST" });
+  }
+
+  async untrashMessage(messageId: string): Promise<void> {
+    await this.request(`/messages/${messageId}/untrash`, { method: "POST" });
+  }
+
+  async listLabels(): Promise<Array<{ id: string; name: string; type?: string }>> {
+    const data = await this.request<{
+      labels?: Array<{ id: string; name: string; type?: string }>;
+    }>("/labels");
+    return data.labels ?? [];
+  }
+
+  async applyLabel(messageId: string, labelId: string): Promise<void> {
+    await this.modifyLabels(messageId, { addLabelIds: [labelId] });
+  }
+
+  async removeLabel(messageId: string, labelId: string): Promise<void> {
+    await this.modifyLabels(messageId, { removeLabelIds: [labelId] });
   }
 }
 

@@ -25,6 +25,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/cn";
 
+import type { GmailActionPlan, GmailToolResult } from "@/features/gmail/gmail.types";
+
 import { loadSamuelChatHistory } from "../chat/samuel-chat.client";
 import {
   SamuelHologram,
@@ -249,6 +251,9 @@ export function ChatPanel({
   const [input, setInput] = useState("");
   const [hydrated, setHydrated] = useState(false);
   const [sending, setSending] = useState(false);
+  const [confirmingAction, setConfirmingAction] = useState(false);
+  const [pendingAction, setPendingAction] = useState<GmailActionPlan | null>(null);
+  const [actionResult, setActionResult] = useState<GmailToolResult | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastFailedQuery, setLastFailedQuery] = useState<string | null>(null);
@@ -541,6 +546,8 @@ export function ChatPanel({
       setWarning(null);
       setProviderLabel(null);
       setLastFailedQuery(null);
+      setPendingAction(null);
+      setActionResult(null);
 
       const controller = new AbortController();
       abortRef.current = controller;
@@ -558,6 +565,12 @@ export function ChatPanel({
                 event.model ? `${event.provider} · ${event.model}` : event.provider,
               );
             }
+            if (event.type === "action_proposal") {
+              setPendingAction(event.action);
+            }
+            if (event.type === "action_result") {
+              setActionResult(event.result);
+            }
             if (event.type === "delta") {
               setMessages((current) =>
                 current.map((message) =>
@@ -574,6 +587,7 @@ export function ChatPanel({
                 ),
               );
               setConversationId(event.conversationId);
+              if (event.pendingAction) setPendingAction(event.pendingAction);
               speakSamuel(event.message.content, event.message.id);
             }
           },
@@ -716,6 +730,50 @@ export function ChatPanel({
     }
   }
 
+  async function confirmPendingGmailAction() {
+    if (!pendingAction?.confirmationToken || confirmingAction) return;
+    setConfirmingAction(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/samuel-ai/gmail/actions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          companyId,
+          actionId: pendingAction.actionId,
+          args: pendingAction.args,
+          confirmationToken: pendingAction.confirmationToken,
+          confirm: true,
+        }),
+      });
+      const payload = (await response.json()) as GmailToolResult & { error?: string };
+      if (!response.ok && !payload.summary) {
+        throw new Error(payload.error || "Falha ao confirmar ação no Gmail.");
+      }
+      setActionResult(payload);
+      setPendingAction(null);
+      setMessages((current) => [
+        ...current,
+        {
+          id:
+            typeof crypto !== "undefined" && "randomUUID" in crypto
+              ? crypto.randomUUID()
+              : `gmail-${Date.now()}`,
+          role: "assistant",
+          content: payload.ok
+            ? `✅ Ação executada no Gmail.\n\n${payload.summary}`
+            : `❌ Não consegui executar no Gmail.\n\n${payload.summary || payload.error}`,
+          timestamp: new Date().toISOString(),
+          status: "complete",
+        },
+      ]);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Falha ao confirmar ação Gmail.");
+    } finally {
+      setConfirmingAction(false);
+    }
+  }
+
   return (
     <div className="samuel-chat-shell">
       <div
@@ -804,6 +862,53 @@ export function ChatPanel({
             )}
           </div>
         )}
+
+        {pendingAction ? (
+          <div className="rounded-2xl border border-amber-300/50 bg-amber-50 px-4 py-3 text-sm text-amber-950 shadow-sm">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700">
+              Confirmação Gmail
+            </p>
+            <p className="mt-1 font-semibold">{pendingAction.title}</p>
+            <p className="mt-1 text-xs leading-relaxed text-amber-900/80">
+              {pendingAction.preview}
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button
+                type="button"
+                className="h-9 px-3 text-xs"
+                disabled={confirmingAction || busy}
+                onClick={() => void confirmPendingGmailAction()}
+              >
+                {confirmingAction ? "A executar…" : "Confirmar e executar"}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                className="h-9 px-3 text-xs"
+                disabled={confirmingAction}
+                onClick={() => setPendingAction(null)}
+              >
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
+        {actionResult && !pendingAction ? (
+          <div
+            className={cn(
+              "rounded-2xl border px-4 py-3 text-xs",
+              actionResult.ok
+                ? "border-emerald-300/50 bg-emerald-50 text-emerald-950"
+                : "border-rose-300/50 bg-rose-50 text-rose-950",
+            )}
+          >
+            <p className="font-semibold">
+              {actionResult.ok ? "Gmail atualizado" : "Falha no Gmail"}
+            </p>
+            <p className="mt-1 whitespace-pre-wrap">{actionResult.summary}</p>
+          </div>
+        ) : null}
 
         <div ref={bottomRef} />
       </div>

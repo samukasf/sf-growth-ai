@@ -1,4 +1,5 @@
-/**
- * Feature: Onboarding — fluxo de entrada e configuração inicial.
- */
-export {};
+export { OnboardingForm } from "./components/OnboardingForm";
+export {
+  completeOnboardingAction,
+  type OnboardingFormState,
+} from "./actions/onboarding.actions";

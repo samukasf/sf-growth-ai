@@ -12,6 +12,7 @@ import { HrExecutiveSummarySection } from "@/features/hr/components/hr-executive
 import { OperationsExecutiveSummarySection } from "@/features/operations/components/operations-executive-summary-section";
 import { FinanceExecutiveSummarySection } from "@/features/finance/components/finance-executive-summary-section";
 import { SalesExecutiveSummarySection } from "@/features/sales/components/sales-executive-summary-section";
+import { CrmExecutiveSummarySection } from "@/features/crm/components/crm-executive-summary-section";
 import { MarketingExecutiveSummarySection } from "@/features/marketing/components/marketing-executive-summary-section";
 import { ExecutiveWatchersSection } from "@/features/watchers/components/executive-watchers-section";
 import { MarketWatcherSection } from "@/features/watchers/market/components/market-watcher-section";
@@ -398,6 +399,13 @@ export function ExecutiveWorkspaceCenter({
         return (
           <CommandPanel className="p-4 sm:p-5" accent>
             <MarketingExecutiveSummarySection marketing={data.marketingExecutive ?? null} />
+          </CommandPanel>
+        );
+
+      case "crm":
+        return (
+          <CommandPanel className="p-4 sm:p-5" accent>
+            <CrmExecutiveSummarySection crm={data.crmExecutive ?? null} />
           </CommandPanel>
         );
 

@@ -79,15 +79,22 @@ import {
 } from "@/features/samuel-ai/services/real-data-gates";
 import {
   buildExecutiveContext,
-  getFirstCompany,
+  resolveActiveCompany,
   type ExecutiveContext,
 } from "@/services/executive-context.service";
 import {
+  buildCombinedWatcherExecutive,
+  enrichIntelligenceWithMarketWatcher,
   enrichIntelligenceWithSeoWatcher,
   enrichMarketingWithSeoWatcher,
+  enrichMemoriesWithMarketWatcher,
   enrichMemoriesWithSeoWatcher,
+  fetchMarketWatcherLiveData,
   runSeoWatcher,
 } from "@/features/watchers";
+import { buildLinkedInExecutiveForCompany } from "@/integrations/linkedin";
+import type { LinkedInExecutive } from "@/features/linkedin/services/linkedin-executive.service";
+import { buildExecutiveCompetitorFromContext } from "@/features/samuel-ai/services/executive-competitor.live";
 
 export const metadata: Metadata = {
   title: "Samuel AI™ | SF Growth AI",
@@ -97,11 +104,18 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export default async function SamuelAiRoute() {
+type SamuelAiRouteProps = {
+  searchParams?: Promise<{ companyId?: string }> | { companyId?: string };
+};
+
+export default async function SamuelAiRoute({ searchParams }: SamuelAiRouteProps) {
+  const resolvedSearchParams = await Promise.resolve(searchParams ?? {});
+  const requestedCompanyId = resolvedSearchParams.companyId?.trim() || null;
+
   let executiveContext: ExecutiveContext | null = null;
 
   try {
-    const company = await getFirstCompany();
+    const company = await resolveActiveCompany(requestedCompanyId);
 
     if (company) {
       executiveContext = await buildExecutiveContext(company.id);
@@ -141,9 +155,11 @@ export default async function SamuelAiRoute() {
     learning: executiveLearning,
   });
 
-  // Competitor intelligence is intentionally absent until a live provider is
-  // configured. Production must never promote the legacy sample dataset.
-  const executiveCompetitor = null;
+  // Competitor intelligence only from real company context/memories — never the legacy mock set.
+  const executiveCompetitor = buildExecutiveCompetitorFromContext({
+    context: executiveContext,
+    intelligence: executiveIntelligence,
+  });
 
   const executiveStrategy = buildExecutiveStrategy({
     context: executiveContext,
@@ -478,10 +494,51 @@ export default async function SamuelAiRoute() {
     googleBusinessExecutive = null;
   }
 
-  // LinkedIn and market watching do not yet have a validated live provider.
-  const linkedInExecutive = null;
-  const marketWatcher = null;
-  const watcherExecutive = null;
+  let linkedInExecutive: LinkedInExecutive | null = null;
+  try {
+    if (executiveContext?.company.id) {
+      linkedInExecutive = await buildLinkedInExecutiveForCompany(
+        executiveContext.company.id,
+        executiveContext.company.name,
+        {
+          strategy: executiveStrategy,
+          intelligence: executiveIntelligenceWithIntegrations,
+          competitor: executiveCompetitor,
+          marketingExecutive: marketingExecutiveWithIntegrations,
+          crmExecutive,
+          salesExecutive,
+        },
+      );
+    }
+  } catch {
+    linkedInExecutive = null;
+  }
+
+  const marketIndustry =
+    executiveContext?.businessProfile?.segment ??
+    executiveContext?.company.industry ??
+    undefined;
+
+  const marketProviderData = executiveContext
+    ? await fetchMarketWatcherLiveData({
+        companyId: executiveContext.company.id,
+        companyName: executiveContext.company.name,
+        industry: marketIndustry,
+        memories: executiveContext.memories,
+        intelligence: executiveIntelligenceWithIntegrations,
+        competitor: executiveCompetitor,
+      })
+    : null;
+
+  const { watcherExecutive, marketWatcher } = executiveContext
+    ? buildCombinedWatcherExecutive({
+        companyId: executiveContext.company.id,
+        companyName: executiveContext.company.name,
+        industry: marketIndustry,
+        providerData: marketProviderData,
+      })
+    : { watcherExecutive: null, marketWatcher: null };
+
   const seoWatcher = searchConsoleExecutive
     ? runSeoWatcher({
         companyId: executiveContext?.company.id,
@@ -497,18 +554,26 @@ export default async function SamuelAiRoute() {
       seoWatcher,
     ) ?? marketingExecutiveWithIntegrations;
 
+  const executiveIntelligenceWithMarket =
+    enrichIntelligenceWithMarketWatcher(
+      executiveIntelligenceWithIntegrations,
+      marketWatcher,
+    ) ?? executiveIntelligenceWithIntegrations;
+
   const executiveIntelligenceFinal =
     enrichIntelligenceWithSeoWatcher(
-      executiveIntelligenceWithIntegrations,
+      executiveIntelligenceWithMarket,
       seoWatcher,
-    ) ??
-    executiveIntelligenceWithIntegrations;
+    ) ?? executiveIntelligenceWithMarket;
 
   const executiveContextWithWatchers = executiveContext
     ? {
         ...executiveContext,
         memories: enrichMemoriesWithSeoWatcher(
-          executiveContext.memories,
+          enrichMemoriesWithMarketWatcher(
+            executiveContext.memories,
+            marketWatcher,
+          ),
           seoWatcher,
         ),
       }

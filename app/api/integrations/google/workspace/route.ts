@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { buildGoogleWorkspaceSummary } from "@/features/google-workspace/google-workspace-summary.server";
-import { getFirstCompany } from "@/services/executive-context.service";
+import { getCompanyById } from "@/services/executive-context.service";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -15,9 +15,9 @@ export async function GET(request: Request) {
   }
 
   try {
-    const company = await getFirstCompany();
-    if (!company || company.id !== companyId) {
-      return NextResponse.json({ error: "Empresa não autorizada" }, { status: 403 });
+    const company = await getCompanyById(companyId);
+    if (!company) {
+      return NextResponse.json({ error: "Empresa não encontrada" }, { status: 404 });
     }
 
     const summary = await buildGoogleWorkspaceSummary(companyId);

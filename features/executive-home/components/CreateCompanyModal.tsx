@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { DsButton, DsInput, DsTextarea } from "@/components/design-system";
@@ -32,6 +33,7 @@ type CreateCompanyModalProps = {
 };
 
 export function CreateCompanyModal({ open, onClose, onSaved }: CreateCompanyModalProps) {
+  const router = useRouter();
   const [form, setForm] = useState<CreateCompanyInput>(EMPTY_FORM);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -54,10 +56,13 @@ export function CreateCompanyModal({ open, onClose, onSaved }: CreateCompanyModa
 
     startTransition(async () => {
       try {
-        await createPortfolioCompanyAction(form);
+        const created = await createPortfolioCompanyAction(form);
         setForm(EMPTY_FORM);
         onSaved();
         onClose();
+        if (created.operational_company_id) {
+          router.push(`/samuel-ai?companyId=${created.operational_company_id}`);
+        }
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : "Não foi possível salvar a empresa.");
       }

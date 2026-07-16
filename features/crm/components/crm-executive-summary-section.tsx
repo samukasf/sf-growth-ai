@@ -1,5 +1,6 @@
 import { cn } from "@/utils/cn";
 
+import { IntegrationEmptyState } from "@/components/integrations/IntegrationEmptyState";
 import type { CrmExecutive } from "../services/crm-executive.service";
 import { StatusBadge } from "@/features/samuel-ai/components/shared/status-badge";
 import { SectionHeader } from "@/features/samuel-ai/components/section-header";
@@ -57,7 +58,13 @@ export function CrmExecutiveSummarySection({ crm }: CrmExecutiveSummarySectionPr
           title="CRM Executive Summary"
           description="Inteligência comercial integrada ao Samuel AI™"
         />
-        <p className="text-sm text-muted">Dados de CRM indisponíveis.</p>
+        <IntegrationEmptyState
+          title="Dados de CRM indisponíveis"
+          description="Cadastre contacts, leads ou deals no Supabase para a empresa ativa. O CRM só aparece com dados reais."
+          docsNote="Tabelas: contacts, leads, deals — migration 002_crm.sql."
+          connectHref="/onboarding"
+          connectLabel="Configurar empresa"
+        />
       </section>
     );
   }

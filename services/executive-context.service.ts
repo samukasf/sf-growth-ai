@@ -5,7 +5,11 @@ import {
   type CompanyMemoryRecord,
 } from "./executive-memory.service";
 
-export { getFirstCompany } from "./executive-memory.service";
+export {
+  getFirstCompany,
+  getCompanyById,
+  resolveActiveCompany,
+} from "./executive-memory.service";
 
 export type CompanyRecord = {
   id: string;

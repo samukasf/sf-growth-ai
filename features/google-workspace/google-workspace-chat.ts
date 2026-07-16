@@ -80,14 +80,9 @@ export function createGoogleWorkspaceChatSignal(
       : []),
   ];
 
-  const asksToAct = /\b(envi|respond|apag|exclu|cri|marc|agend|mov|edit)/.test(normalized);
-  const safety = asksToAct
-    ? " Posso consultar o estado, mas nenhuma ação externa foi executada sem confirmação explícita."
-    : "";
-
   return {
     relevant: true,
     fragments: lines.map((line) => `[GOOGLE WORKSPACE — DADO AO VIVO] ${line}`),
-    fallbackAnswer: `${lines.join("\n")}.${safety}`,
+    fallbackAnswer: `${lines.join("\n")}.`,
   };
 }

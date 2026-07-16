@@ -1,5 +1,6 @@
 import { cn } from "@/utils/cn";
 
+import { IntegrationEmptyState } from "@/components/integrations/IntegrationEmptyState";
 import type { MetaExecutive } from "../services/meta-executive.service";
 import { StatusBadge } from "@/features/samuel-ai/components/shared/status-badge";
 import { SectionHeader } from "@/features/samuel-ai/components/section-header";
@@ -109,7 +110,14 @@ export function MetaExecutiveSummarySection({ meta }: MetaExecutiveSummarySectio
           title="Meta Executive Summary"
           description="Inteligência Meta (Facebook & Instagram) integrada ao Samuel AI™"
         />
-        <p className="text-sm text-muted">Dados Meta indisponíveis.</p>
+        <IntegrationEmptyState
+          title="Dados Meta indisponíveis"
+          description="Conecte uma Facebook Page via OAuth ou defina tokens no servidor para ativar Facebook, Instagram e Ads."
+          envVars={["META_APP_ID", "META_APP_SECRET", "META_OAUTH_REDIRECT_URI"]}
+          connectHref="/integrations/meta/connect"
+          connectLabel="Conectar Meta"
+          docsNote="Também aceita META_ACCESS_TOKEN + META_PAGE_ID como alternativa sem OAuth."
+        />
       </section>
     );
   }

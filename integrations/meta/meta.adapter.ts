@@ -8,7 +8,7 @@ import {
   type MetaExecutive,
 } from "@/features/meta/services/meta-executive.service";
 import { MetaClient } from "./meta.client";
-import { resolveMetaPageId } from "./meta.auth";
+import { resolveMetaClientConfigForCompany } from "./meta.auth";
 import { mapSnapshotToMetrics } from "./meta.mapper";
 import type { MetaApiSnapshot } from "./meta.types";
 import { MetaApiError } from "./meta.types";
@@ -21,8 +21,19 @@ export type MetaExecutiveEngines = {
 };
 
 export async function fetchMetaApiSnapshot(companyId?: string): Promise<MetaApiSnapshot> {
-  const pageId = resolveMetaPageId(companyId);
-  const client = new MetaClient({ pageId });
+  if (!companyId) {
+    throw new MetaApiError("NOT_CONFIGURED", "companyId é obrigatório para a Meta API.");
+  }
+
+  const config = await resolveMetaClientConfigForCompany(companyId);
+  if (!config) {
+    throw new MetaApiError(
+      "NOT_CONFIGURED",
+      "Integração Meta sem token (env ou OAuth) para esta empresa.",
+    );
+  }
+
+  const client = new MetaClient(config);
 
   const connection = await client.connect();
   if (connection.mode !== "live") {

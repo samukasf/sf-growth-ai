@@ -56,9 +56,11 @@ describe("createGoogleWorkspaceChatSignal", () => {
     expect(signal.fallbackAnswer).toContain("próximo");
   });
 
-  it("never claims a requested external action was executed", () => {
+  it("keeps workspace signal as live status only for action-like asks", () => {
     const signal = createGoogleWorkspaceChatSignal("Responda meus e-mails", summary);
 
-    expect(signal.fallbackAnswer).toContain("nenhuma ação externa foi executada");
+    expect(signal.relevant).toBe(true);
+    expect(signal.fallbackAnswer).toContain("23 e-mail(s) não lido(s)");
+    expect(signal.fallbackAnswer).not.toMatch(/enviado|apagado|executad/i);
   });
 });

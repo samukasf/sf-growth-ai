@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { cn } from "@/utils/cn";
 
+import { IntegrationEmptyState } from "@/components/integrations/IntegrationEmptyState";
 import type {
   SearchConsoleCoreWebVital,
   SearchConsoleExecutive,
@@ -78,7 +79,15 @@ export function SearchConsoleExecutiveSummarySection({
           title="Google Search Console Executive Summary"
           description="Inteligência SEO orgânica integrada ao Samuel AI™"
         />
-        <p className="text-sm text-muted">Dados do Search Console indisponíveis.</p>
+        <IntegrationEmptyState
+          title="Dados do Search Console indisponíveis"
+          description="Defina o access token e a site URL do Search Console no servidor para ativar SEO orgânico."
+          envVars={[
+            "GOOGLE_SEARCH_CONSOLE_ACCESS_TOKEN",
+            "GOOGLE_SEARCH_CONSOLE_SITE_URL",
+          ]}
+          docsNote="GOOGLE_SEARCH_CONSOLE_SITE_MAP mapeia site por empresa."
+        />
       </section>
     );
   }
