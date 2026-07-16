@@ -64,6 +64,8 @@ export type {
 export {
   MARKET_WATCHER_ID,
   fetchMarketWatcherMockData,
+  fetchMarketWatcherLiveData,
+  isMarketNewsConfigured,
   runMarketWatcher,
   mergeMarketWatcherWithExecutive,
   buildCombinedWatcherExecutive,

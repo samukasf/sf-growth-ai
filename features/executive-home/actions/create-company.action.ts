@@ -73,11 +73,14 @@ export async function createPortfolioCompanyAction(
   }
 
   const supabase = createServerSupabase();
+  const companyName = input.companyName.trim();
+  const industry = input.segment.trim();
+
   const { data, error } = await supabase
     .from("portfolio_companies")
     .insert({
-      name: input.companyName.trim(),
-      industry: input.segment.trim(),
+      name: companyName,
+      industry,
       responsible_name: input.responsibleName.trim() || null,
       email: input.email.trim() || null,
       phone: input.phone.trim() || null,
@@ -97,7 +100,49 @@ export async function createPortfolioCompanyAction(
     throw new Error(error.message);
   }
 
+  // Mirror into operational `companies` so Samuel AI / integrations resolve the same firm.
+  try {
+    const slugBase = companyName
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 50);
+    const slug = `${slugBase || "empresa"}-${Math.random().toString(36).slice(2, 7)}`;
+
+    const { data: operational } = await supabase
+      .from("companies")
+      .insert({
+        name: companyName,
+        slug,
+        industry,
+        website: input.website.trim() || null,
+        instagram: input.instagram.trim() || null,
+        city: input.city.trim() || null,
+        country: input.country.trim() || null,
+        description: input.notes.trim() || input.mainObjective.trim() || null,
+      })
+      .select("id")
+      .single();
+
+    if (operational?.id) {
+      await supabase.from("business_profiles").upsert(
+        {
+          company_id: operational.id,
+          industry,
+          business_model: input.mainObjective.trim() || `Empresa de ${industry}`,
+          goals: input.mainObjective.trim() || "Crescimento",
+        },
+        { onConflict: "company_id" },
+      );
+    }
+  } catch {
+    // Portfolio creation remains valid even if operational mirror fails.
+  }
+
   revalidatePath("/");
   revalidatePath("/empresas");
+  revalidatePath("/samuel-ai");
   return data as PortfolioCompanyRecord;
 }

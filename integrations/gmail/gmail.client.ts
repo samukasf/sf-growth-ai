@@ -49,7 +49,7 @@ export async function resolveGmailAccessToken(companyId: string): Promise<string
   if (!connection) {
     throw new GmailApiError(
       "NOT_CONNECTED",
-      `Nenhuma conta Gmail conectada para a empresa "${companyId}". Conecte em /debug/gmail-connect.`,
+      `Nenhuma conta Gmail conectada para a empresa "${companyId}". Conecte em /integrations/google/connect.`,
     );
   }
 

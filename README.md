@@ -16,14 +16,17 @@ A aplicação fica disponível em [http://localhost:3000/samuel-ai](http://local
 
 ## Configuração
 
-Preencha em `.env.local`:
+Preencha em `.env.local` (ver `.env.example` completo):
 
 - `OPENAI_API_KEY` para conversas geradas por IA e para a voz Realtime. `OPENAI_MODEL` é configurável (`gpt-5.4-mini` por padrão).
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` e `SUPABASE_SERVICE_ROLE_KEY` para dados e histórico persistente.
 - `AI_GATEWAY_API_KEY`, `AI_GATEWAY_BASE_URL` e `AI_GATEWAY_MODEL` somente para o chat textual. O gateway pode manter uma IA aberta como provedora principal do texto, mas nunca controla a voz Realtime.
 - `OPENAI_REALTIME_MODEL` exclusivamente para a voz; a identidade vocal do Samuel usa `cedar`.
+- Integrações opcionais: `GOOGLE_*` (OAuth Workspace, Analytics, Business, Search Console), `META_*`, `LINKEDIN_*`, `NEWS_API_KEY` (Market Watcher).
 
-Sem uma chave de IA, o chat informa claramente a limitação e continua funcional para análises empresariais com a resposta determinística do Samuel Runtime. Sem a configuração administrativa do Supabase, o histórico fica isolado no navegador. Nenhuma destas degradações impede o build.
+Sem uma chave de IA, o chat informa claramente a limitação e continua funcional para análises empresariais com a resposta determinística do Samuel Runtime. Sem a configuração administrativa do Supabase, o histórico fica isolado no navegador. Sem tokens de integração, os módulos correspondentes ficam vazios (nunca com dados mock). Nenhuma destas degradações impede o build.
+
+Rotas úteis: `/login`, `/onboarding`, `/integrations/google/connect`, `/samuel-ai?companyId=<uuid>`.
 
 ## CI/CD
 
@@ -31,7 +34,7 @@ Este repositório inclui GitHub Actions em `.github/workflows/ci.yml` para execu
 
 ## Base de dados
 
-As migrations estão em `supabase/migrations`. As migrations `20260714110000_samuel_conversations.sql` e `20260714112000_executive_inbox_actions.sql` criam o histórico do chat e a persistência da Executive Inbox, com índices e RLS.
+As migrations estão em `supabase/migrations`. Incluem histórico do chat, Executive Inbox, `google_oauth_connections`, `business_profiles` e `company_memory`, com índices e RLS.
 
 Num projeto Supabase ligado:
 

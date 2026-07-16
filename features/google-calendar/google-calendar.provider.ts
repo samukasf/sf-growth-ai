@@ -339,7 +339,7 @@ export async function getGoogleCalendarProviderForCompany(
     if (message.includes("Nenhuma conta Gmail conectada") || message.includes("NOT_CONNECTED")) {
       throw new CalendarApiError(
         "NOT_CONNECTED",
-        `Nenhuma conta Google conectada para a empresa "${companyId}". Conecte em /debug/gmail-connect.`,
+        `Nenhuma conta Google conectada para a empresa "${companyId}". Conecte em /integrations/google/connect.`,
       );
     }
     if (message.includes("não configurada") || message.includes("NOT_CONFIGURED")) {

@@ -14,6 +14,11 @@ export type {
 
 export { fetchMarketWatcherMockData } from "./market-watcher.provider";
 export type { MarketWatcherProviderData } from "./market-watcher.provider";
+export {
+  fetchMarketWatcherLiveData,
+  isMarketNewsConfigured,
+} from "./market-watcher.live";
+export type { MarketWatcherLiveInput } from "./market-watcher.live";
 
 export {
   MARKET_WATCHER_ID,

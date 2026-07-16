@@ -9,6 +9,7 @@ export type WorkspaceSection =
   | "executive-tasks"
   | "executive-watchers"
   | "marketing"
+  | "crm"
   | "sales"
   | "finance"
   | "operations"
@@ -40,7 +41,8 @@ export const WORKSPACE_NAV_ITEMS: WorkspaceNavItem[] = [
   { id: "executive-tasks", label: "Tarefas e decisões", group: "executive" },
   { id: "executive-watchers", label: "Monitorização", group: "executive" },
   { id: "marketing", label: "Marketing", group: "modules" },
-  { id: "sales", label: "Vendas e CRM", group: "modules" },
+  { id: "crm", label: "CRM", group: "modules" },
+  { id: "sales", label: "Vendas", group: "modules" },
   { id: "finance", label: "Finanças", group: "modules" },
   { id: "operations", label: "Operações", group: "modules" },
   { id: "hr", label: "Pessoas", group: "modules" },

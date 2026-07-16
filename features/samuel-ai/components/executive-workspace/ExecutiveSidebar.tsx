@@ -58,6 +58,7 @@ const NAV_ICONS: Partial<Record<WorkspaceSection, LucideIcon>> = {
   "executive-tasks": ShieldCheck,
   "executive-watchers": Radar,
   marketing: Megaphone,
+  crm: BriefcaseBusiness,
   sales: BriefcaseBusiness,
   finance: CircleDollarSign,
   operations: Gauge,

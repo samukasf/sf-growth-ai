@@ -65,6 +65,10 @@ export type LinkedInExecutive = {
 
 export type LinkedInExecutiveInput = {
   metrics?: LinkedInMetrics;
+  bestPosts?: LinkedInPostPerformance[];
+  weakPosts?: LinkedInPostPerformance[];
+  /** When false, missing metrics throws instead of using demo fixtures. */
+  allowMockFallback?: boolean;
   companyName?: string;
   strategy?: ExecutiveStrategy | null;
   intelligence?: ExecutiveIntelligence | null;
@@ -138,7 +142,11 @@ function clampScore(value: number): number {
 }
 
 function resolveMetrics(input: LinkedInExecutiveInput): LinkedInMetrics {
-  return input.metrics ?? MOCK_METRICS;
+  if (input.metrics) return input.metrics;
+  if (input.allowMockFallback === false) {
+    throw new Error("LinkedIn executive requer métricas reais da API.");
+  }
+  return MOCK_METRICS;
 }
 
 function calculateCompanyPageScore(metrics: LinkedInMetrics): number {
@@ -375,8 +383,13 @@ export function buildLinkedInExecutive(input: LinkedInExecutiveInput = {}): Link
   const metrics = resolveMetrics(input);
   const companyName = input.companyName ?? "Empresa";
 
-  const bestPosts = MOCK_BEST_POSTS.map((p) => ({ ...p }));
-  const weakPosts = MOCK_WEAK_POSTS.map((p) => ({ ...p }));
+  const allowMock = input.allowMockFallback !== false;
+  const bestPosts =
+    input.bestPosts?.map((p) => ({ ...p })) ??
+    (allowMock ? MOCK_BEST_POSTS.map((p) => ({ ...p })) : []);
+  const weakPosts =
+    input.weakPosts?.map((p) => ({ ...p })) ??
+    (allowMock ? MOCK_WEAK_POSTS.map((p) => ({ ...p })) : []);
 
   const companyPageScore = calculateCompanyPageScore(metrics);
   const followerGrowthScore = calculateFollowerGrowthScore(metrics);
