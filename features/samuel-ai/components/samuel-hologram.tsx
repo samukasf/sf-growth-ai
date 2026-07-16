@@ -45,6 +45,29 @@ const STATE_LABELS: Record<SamuelHologramState, string> = {
   error: "com atenção necessária",
 };
 
+const FACE_DOTS = Array.from({ length: 112 }, (_, index) => {
+  const row = Math.floor(index / 14);
+  const col = index % 14;
+  const x = 212 + col * 13.5 + ((row % 2) * 5.5);
+  const y = 165 + row * 28 + ((col % 3) * 2.2);
+  const centerBias = Math.abs(x - 300) / 95;
+  const lowerBias = Math.max(0, (y - 300) / 210);
+
+  return {
+    x,
+    y,
+    r: 1.15 + ((index * 7) % 9) / 10,
+    opacity: Math.max(0.18, 0.68 - centerBias * 0.18 - lowerBias * 0.16),
+    delay: -((index % 17) * 0.16),
+  };
+});
+
+const ORBIT_DOTS = Array.from({ length: 34 }, (_, index) => ({
+  angle: (index * 360) / 34,
+  delay: -(index * 0.19),
+  size: 2 + (index % 4) * 0.52,
+}));
+
 function clamp(value: number) {
   return Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
 }
@@ -65,41 +88,64 @@ export function SamuelHologram({
   const resolvedState: SamuelHologramState =
     state ?? (speaking ? "speaking" : active ? "processing" : "resting");
   const isSpeaking = resolvedState === "speaking";
-  const particleCount = compact ? 14 : 28;
+  const particleCount = compact ? 18 : 36;
   const progress = clamp(speechProgress);
   const hasTaskProgress = typeof taskProgress === "number" && Number.isFinite(taskProgress);
   const normalizedTaskProgress = hasTaskProgress ? clamp(taskProgress / 100) : 0;
   const measuredAudio = clamp(audioLevel);
-  const naturalCadence = 0.12 + Math.abs(Math.sin(progress * Math.PI * 15)) * 0.18;
+  const mouthOpen = isSpeaking ? Math.min(1, measuredAudio * 1.48) : smiling ? 0.18 : 0;
   const energyLevel = isSpeaking
-    ? Math.min(1, Math.max(naturalCadence, measuredAudio * 1.9))
+    ? Math.max(0.16, measuredAudio)
     : resolvedState === "processing" || resolvedState === "executing"
-      ? 0.34
-      : 0.12;
+      ? 0.46
+      : resolvedState === "sleeping"
+        ? 0.04
+        : 0.18;
+  const eyeOpen = resolvedState === "sleeping" ? 0.12 : 1;
+  const eyeLight =
+    resolvedState === "sleeping"
+      ? 0.06
+      : resolvedState === "resting"
+        ? 0.52
+        : resolvedState === "listening"
+          ? 0.72
+          : isSpeaking
+            ? 1
+            : 0.86;
 
   const style = useMemo(
     () =>
       ({
         "--samuel-audio-level": energyLevel.toFixed(3),
+        "--samuel-eye-light": eyeLight.toFixed(3),
+        "--samuel-eye-open": eyeOpen.toFixed(3),
+        "--samuel-mouth-open": mouthOpen.toFixed(3),
         "--samuel-speech-progress": progress.toFixed(3),
         "--samuel-task-progress": normalizedTaskProgress.toFixed(3),
         "--samuel-tilt-x": "0deg",
         "--samuel-tilt-y": "0deg",
+        "--samuel-gaze-x": "0px",
+        "--samuel-gaze-y": "0px",
       }) as CSSProperties,
-    [energyLevel, normalizedTaskProgress, progress],
+    [energyLevel, eyeLight, eyeOpen, mouthOpen, normalizedTaskProgress, progress],
   );
 
   function trackGaze(event: PointerEvent<HTMLDivElement>) {
     const bounds = event.currentTarget.getBoundingClientRect();
     const x = ((event.clientX - bounds.left) / bounds.width - 0.5) * 2;
     const y = ((event.clientY - bounds.top) / bounds.height - 0.5) * 2;
-    rootRef.current?.style.setProperty("--samuel-tilt-y", `${x * 1.2}deg`);
-    rootRef.current?.style.setProperty("--samuel-tilt-x", `${y * -0.8}deg`);
+
+    rootRef.current?.style.setProperty("--samuel-tilt-y", `${x * 1.25}deg`);
+    rootRef.current?.style.setProperty("--samuel-tilt-x", `${y * -0.85}deg`);
+    rootRef.current?.style.setProperty("--samuel-gaze-x", `${x * 4.2}px`);
+    rootRef.current?.style.setProperty("--samuel-gaze-y", `${y * 2.8}px`);
   }
 
   function centerPresence() {
     rootRef.current?.style.setProperty("--samuel-tilt-x", "0deg");
     rootRef.current?.style.setProperty("--samuel-tilt-y", "0deg");
+    rootRef.current?.style.setProperty("--samuel-gaze-x", "0px");
+    rootRef.current?.style.setProperty("--samuel-gaze-y", "0px");
   }
 
   return (
@@ -132,14 +178,27 @@ export function SamuelHologram({
           <i
             key={index}
             style={{
-              left: `${5 + ((index * 37) % 91)}%`,
-              top: `${8 + ((index * 43) % 82)}%`,
-              animationDelay: `${-(index * 0.29)}s`,
-              animationDuration: `${3 + (index % 6) * 0.48}s`,
+              left: `${4 + ((index * 37) % 92)}%`,
+              top: `${7 + ((index * 43) % 84)}%`,
+              animationDelay: `${-(index * 0.27)}s`,
+              animationDuration: `${3.2 + (index % 7) * 0.42}s`,
             }}
           />
         ))}
       </div>
+      <div className="samuel-hologram__orbit-dots" aria-hidden="true">
+        {ORBIT_DOTS.map((dot) => (
+          <i
+            key={dot.angle}
+            style={{
+              "--samuel-dot-angle": `${dot.angle}deg`,
+              "--samuel-dot-size": `${dot.size}px`,
+              animationDelay: `${dot.delay}s`,
+            } as CSSProperties}
+          />
+        ))}
+      </div>
+
       <div className="samuel-hologram__core" aria-hidden="true">
         <svg
           className="samuel-hologram__figure"
@@ -147,72 +206,156 @@ export function SamuelHologram({
           focusable="false"
         >
           <defs>
-            <linearGradient id={`${svgId}-shell`} x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stopColor="#07142f" />
-              <stop offset="0.48" stopColor="#0d2f63" />
-              <stop offset="1" stopColor="#030916" />
+            <linearGradient id={`${svgId}-skin`} x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stopColor="#08214f" stopOpacity="0.84" />
+              <stop offset="0.42" stopColor="#0a5eb7" stopOpacity="0.58" />
+              <stop offset="0.74" stopColor="#071f55" stopOpacity="0.72" />
+              <stop offset="1" stopColor="#020817" stopOpacity="0.95" />
             </linearGradient>
             <linearGradient id={`${svgId}-edge`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#d9fbff" stopOpacity=".95" />
-              <stop offset=".38" stopColor="#43dcff" stopOpacity=".8" />
-              <stop offset="1" stopColor="#2563eb" stopOpacity=".16" />
+              <stop offset="0" stopColor="#e9feff" stopOpacity="0.96" />
+              <stop offset="0.38" stopColor="#54e7ff" stopOpacity="0.88" />
+              <stop offset="1" stopColor="#2563eb" stopOpacity="0.22" />
             </linearGradient>
+            <radialGradient id={`${svgId}-eye`}>
+              <stop offset="0" stopColor="#ffffff" />
+              <stop offset="0.22" stopColor="#b8fbff" />
+              <stop offset="0.55" stopColor="#45dcff" />
+              <stop offset="1" stopColor="#2563eb" stopOpacity="0" />
+            </radialGradient>
             <radialGradient id={`${svgId}-core`}>
               <stop offset="0" stopColor="#ffffff" />
-              <stop offset=".25" stopColor="#8cf4ff" />
-              <stop offset=".62" stopColor="#2f8dff" />
+              <stop offset="0.25" stopColor="#9df8ff" />
+              <stop offset="0.62" stopColor="#2f8dff" />
               <stop offset="1" stopColor="#081c54" stopOpacity="0" />
             </radialGradient>
-            <filter id={`${svgId}-glow`} x="-80%" y="-80%" width="260%" height="260%">
+            <clipPath id={`${svgId}-head-clip`}>
+              <path d="M184 238c0-114 44-183 116-183s116 69 116 183v115c0 105-45 172-116 172s-116-67-116-172V238Z" />
+            </clipPath>
+            <filter id={`${svgId}-soft-glow`} x="-80%" y="-80%" width="260%" height="260%">
               <feGaussianBlur stdDeviation="7" result="blur" />
-              <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+            <filter id={`${svgId}-tight-glow`} x="-80%" y="-80%" width="260%" height="260%">
+              <feGaussianBlur stdDeviation="2.2" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
             </filter>
           </defs>
 
+          <g className="samuel-hologram__back-rays">
+            {Array.from({ length: 34 }, (_, index) => (
+              <path
+                key={index}
+                d={`M300 338 L${78 + ((index * 37) % 444)} ${30 + ((index * 59) % 214)}`}
+              />
+            ))}
+          </g>
+
           <g className="samuel-hologram__body">
             <path
-              d="M56 713c10-109 63-173 158-198l34-9 104 0 34 9c95 25 148 89 158 198H56Z"
-              fill={`url(#${svgId}-shell)`}
+              d="M63 713c11-112 67-176 164-200l31-8h84l31 8c97 24 153 88 164 200H63Z"
+              fill={`url(#${svgId}-skin)`}
               stroke={`url(#${svgId}-edge)`}
               strokeWidth="3"
             />
-            <path d="M181 543c23 45 64 68 119 68s96-23 119-68" fill="none" stroke="#5ee9ff" strokeOpacity=".28" strokeWidth="2" />
-            <path d="M205 530 161 701M395 530l44 171M300 535v166" fill="none" stroke="#4ac7ff" strokeOpacity=".18" strokeWidth="2" />
-            <path d="M190 555c-50 44-82 94-91 150M410 555c50 44 82 94 91 150" fill="none" stroke="#78efff" strokeOpacity=".28" />
+            <path className="samuel-hologram__light-thread" d="M154 706c22-87 65-140 127-160M446 706c-22-87-65-140-127-160M300 535v166" />
+            <path className="samuel-hologram__circuit-thread" d="M174 640c76-22 176-22 252 0M205 595c57 22 133 22 190 0" />
+            <g className="samuel-hologram__chest-core" filter={`url(#${svgId}-soft-glow)`}>
+              <circle cx="300" cy="635" r="67" fill="none" stroke="#38bdf8" strokeOpacity=".24" strokeWidth="2" strokeDasharray="4 10" />
+              <circle cx="300" cy="635" r="42" fill={`url(#${svgId}-core)`} opacity=".78" />
+              <circle cx="300" cy="635" r="12" fill="#e6feff" />
+              <path d="M277 635h10l7-18 12 36 8-18h10" fill="none" stroke="#061230" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+            </g>
           </g>
 
-          <g className="samuel-hologram__helmet">
+          <g className="samuel-hologram__head">
             <path
-              d="M183 223c0-107 43-172 117-172s117 65 117 172v152c0 96-46 158-117 158s-117-62-117-158V223Z"
-              fill={`url(#${svgId}-shell)`}
+              className="samuel-hologram__head-shell"
+              d="M184 238c0-114 44-183 116-183s116 69 116 183v115c0 105-45 172-116 172s-116-67-116-172V238Z"
+              fill={`url(#${svgId}-skin)`}
               stroke={`url(#${svgId}-edge)`}
               strokeWidth="4"
             />
-            <path d="M210 155c20-54 50-80 90-80s70 26 90 80" fill="none" stroke="#87f3ff" strokeOpacity=".34" strokeWidth="2" />
-            <path d="M183 293h-21c-13 0-23 11-23 24v58c0 17 12 31 28 34l16 3M417 293h21c13 0 23 11 23 24v58c0 17-12 31-28 34l-16 3" fill="#081a3a" stroke="#54dcff" strokeOpacity=".55" strokeWidth="3" />
-            <path d="M215 421c20 58 49 86 85 86s65-28 85-86" fill="none" stroke="#58dfff" strokeOpacity=".2" />
-          </g>
+            <path className="samuel-hologram__hair-shadow" d="M207 151c16-67 47-101 93-101 44 0 75 31 93 93-29-17-63-26-101-26-33 0-62 11-85 34Z" />
+            <path className="samuel-hologram__ear samuel-hologram__ear--left" d="M184 295h-20c-14 0-25 12-25 27v52c0 22 14 39 34 43l11 2" />
+            <path className="samuel-hologram__ear samuel-hologram__ear--right" d="M416 295h20c14 0 25 12 25 27v52c0 22-14 39-34 43l-11 2" />
 
-          <g className="samuel-hologram__visor" filter={`url(#${svgId}-glow)`}>
-            <path d="M204 230c48-30 144-30 192 0l-14 84c-51 21-113 21-164 0l-14-84Z" fill="#020817" fillOpacity=".96" stroke="#65e7ff" strokeWidth="3" />
-            <path className="samuel-hologram__visor-light" d="M224 262c43-16 109-16 152 0" fill="none" stroke="#a5f3fc" strokeWidth="8" strokeLinecap="round" />
-            <path className="samuel-hologram__visor-scan" d="M222 286c46 11 110 11 156 0" fill="none" stroke="#38bdf8" strokeOpacity=".55" strokeWidth="2" strokeLinecap="round" />
-            <circle cx="300" cy="263" r="5" fill="#fff" />
-          </g>
+            <g clipPath={`url(#${svgId}-head-clip)`}>
+              <g className="samuel-hologram__face-grid">
+                {FACE_DOTS.map((dot, index) => (
+                  <circle
+                    key={index}
+                    cx={dot.x}
+                    cy={dot.y}
+                    r={dot.r}
+                    opacity={dot.opacity}
+                    style={{ animationDelay: `${dot.delay}s` }}
+                  />
+                ))}
+              </g>
+              <g className="samuel-hologram__face-scan-lines">
+                {Array.from({ length: 18 }, (_, index) => (
+                  <path
+                    key={index}
+                    d={`M205 ${165 + index * 18}c47 ${index % 2 ? 9 : -7} 143 ${index % 2 ? -9 : 7} 190 0`}
+                  />
+                ))}
+              </g>
+              <g className="samuel-hologram__face-circuits">
+                <path d="M214 269c23-20 55-24 78-10M386 269c-23-20-55-24-78-10" />
+                <path d="M216 313c22 31 49 45 82 44M384 313c-22 31-49 45-82 44" />
+                <path d="M236 391c27 18 48 27 64 27s37-9 64-27" />
+                <path d="M252 456c28 25 68 25 96 0" />
+                <path d="M300 179v230M267 203c10 41 10 78 0 111M333 203c-10 41-10 78 0 111" />
+              </g>
+            </g>
 
-          <g className="samuel-hologram__chest-core" filter={`url(#${svgId}-glow)`}>
-            <circle cx="300" cy="622" r="64" fill="none" stroke="#38bdf8" strokeOpacity=".3" strokeWidth="2" strokeDasharray="4 10" />
-            <circle cx="300" cy="622" r="42" fill={`url(#${svgId}-core)`} opacity=".78" />
-            <circle cx="300" cy="622" r="14" fill="#dffcff" />
-            <path d="M278 622h9l7-17 12 34 8-17h9" fill="none" stroke="#061230" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
-          </g>
+            <g className="samuel-hologram__brow-rig" filter={`url(#${svgId}-tight-glow)`}>
+              <path className="samuel-hologram__svg-brow samuel-hologram__svg-brow--left" d="M216 254c18-14 47-17 70-8" />
+              <path className="samuel-hologram__svg-brow samuel-hologram__svg-brow--right" d="M384 254c-18-14-47-17-70-8" />
+            </g>
 
-          <g className="samuel-hologram__data-lines">
-            <path d="M246 337h-31l-27 27M354 337h31l27 27M247 455l-40 48M353 455l40 48" fill="none" stroke="#52e0ff" strokeOpacity=".34" strokeWidth="2" />
-            <circle cx="188" cy="364" r="3" fill="#a5f3fc" /><circle cx="412" cy="364" r="3" fill="#a5f3fc" />
+            <g className="samuel-hologram__eye-rig" filter={`url(#${svgId}-soft-glow)`}>
+              <g className="samuel-hologram__eye-unit samuel-hologram__eye-unit--left">
+                <path className="samuel-hologram__eye-shell" d="M218 283c18-15 48-15 66 0-18 16-48 16-66 0Z" />
+                <ellipse className="samuel-hologram__eye-glow" cx="251" cy="283" rx="24" ry="7" fill={`url(#${svgId}-eye)`} />
+                <circle className="samuel-hologram__pupil" cx="251" cy="283" r="3.5" />
+              </g>
+              <g className="samuel-hologram__eye-unit samuel-hologram__eye-unit--right">
+                <path className="samuel-hologram__eye-shell" d="M316 283c18-15 48-15 66 0-18 16-48 16-66 0Z" />
+                <ellipse className="samuel-hologram__eye-glow" cx="349" cy="283" rx="24" ry="7" fill={`url(#${svgId}-eye)`} />
+                <circle className="samuel-hologram__pupil" cx="349" cy="283" r="3.5" />
+              </g>
+            </g>
+
+            <g className="samuel-hologram__nose-rig">
+              <path d="M300 294c-10 33-15 58-15 75 9 9 21 13 36 8" />
+              <path d="M279 399c12 9 30 9 42 0" />
+            </g>
+
+            <g className="samuel-hologram__mouth-rig" filter={`url(#${svgId}-tight-glow)`}>
+              <path className="samuel-hologram__lip-line" d="M258 433c26 13 58 13 84 0" />
+              <ellipse className="samuel-hologram__mouth-aperture" cx="300" cy="434" rx="33" ry="10" />
+              <path className="samuel-hologram__smile-line" d="M263 432c25 23 49 25 74 0" />
+            </g>
+
+            <g className="samuel-hologram__beard-grid" clipPath={`url(#${svgId}-head-clip)`}>
+              {Array.from({ length: 54 }, (_, index) => {
+                const x = 222 + (index % 9) * 19 + ((Math.floor(index / 9) % 2) * 8);
+                const y = 407 + Math.floor(index / 9) * 19;
+                return <circle key={index} cx={x} cy={y} r={1.35 + (index % 3) * 0.28} />;
+              })}
+            </g>
           </g>
         </svg>
       </div>
+
       <div className="samuel-hologram__voice-field" aria-hidden="true">
         {[12, 22, 32, 18, 38, 26, 16].map((height, index) => (
           <i
