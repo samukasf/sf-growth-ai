@@ -66,6 +66,6 @@ describe("buildExecutiveCompetitorFromContext", () => {
 
     expect(result).not.toBeNull();
     expect(result?.competitors[0]?.name).toBe("RivalOps");
-    expect(result?.executiveSummary).toContain("sinais reais");
+    expect(result?.executiveSummary).toContain("reais de contexto");
   });
 });

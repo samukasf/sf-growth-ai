@@ -514,13 +514,16 @@ export default async function SamuelAiRoute({ searchParams }: SamuelAiRouteProps
     linkedInExecutive = null;
   }
 
+  const marketIndustry =
+    executiveContext?.businessProfile?.segment ??
+    executiveContext?.company.industry ??
+    undefined;
+
   const marketProviderData = executiveContext
     ? await fetchMarketWatcherLiveData({
         companyId: executiveContext.company.id,
         companyName: executiveContext.company.name,
-        industry:
-          executiveContext.businessProfile?.segment ??
-          executiveContext.company.industry,
+        industry: marketIndustry,
         memories: executiveContext.memories,
         intelligence: executiveIntelligenceWithIntegrations,
         competitor: executiveCompetitor,
@@ -531,9 +534,7 @@ export default async function SamuelAiRoute({ searchParams }: SamuelAiRouteProps
     ? buildCombinedWatcherExecutive({
         companyId: executiveContext.company.id,
         companyName: executiveContext.company.name,
-        industry:
-          executiveContext.businessProfile?.segment ??
-          executiveContext.company.industry,
+        industry: marketIndustry,
         providerData: marketProviderData,
       })
     : { watcherExecutive: null, marketWatcher: null };

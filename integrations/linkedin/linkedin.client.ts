@@ -91,7 +91,6 @@ export class LinkedInClient {
   }
 
   async getOrganization(): Promise<{ id: string; name: string }> {
-    const urn = encodeURIComponent(organizationUrn(this.config.organizationId));
     const data = await this.request<{ id?: number | string; localizedName?: string; name?: { localized?: Record<string, string> } }>(
       `/organizations/${this.config.organizationId}`,
     );
