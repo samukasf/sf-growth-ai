@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type KeyboardEvent,
@@ -12,7 +13,9 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/cn";
 
 import { loadSamuelChatHistory } from "../chat/samuel-chat.client";
+import { SamuelHologram } from "./samuel-hologram";
 import { useSamuelRealtimeVoice } from "../realtime/use-samuel-realtime-voice";
+import { useSamuelSpeech } from "../voice/use-samuel-speech";
 import type {
   SamuelChatSendOptions,
   SamuelChatSendResult,
@@ -190,6 +193,13 @@ export function ChatPanel({
   const [voiceNotice, setVoiceNotice] = useState<string | null>(null);
   const [voiceAutoSend, setVoiceAutoSend] = useState(true);
   const [voiceReplyEnabled, setVoiceReplyEnabled] = useState(true);
+  const {
+    blocked: browserSpeechBlocked,
+    cancel: cancelBrowserSpeech,
+    speak: speakBrowserSpeech,
+    speaking: browserSpeaking,
+    supported: browserSpeechSupported,
+  } = useSamuelSpeech({ enabled: voiceReplyEnabled });
   const abortRef = useRef<AbortController | null>(null);
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
@@ -246,26 +256,20 @@ export function ChatPanel({
     () => () => {
       abortRef.current?.abort();
       recognitionRef.current?.abort();
-      window.speechSynthesis?.cancel();
+      cancelBrowserSpeech();
     },
-    [],
+    [cancelBrowserSpeech],
   );
 
   const speakSamuel = useCallback((content: string) => {
-    if (!voiceReplyEnabled || typeof window === "undefined") return;
-    if (!("speechSynthesis" in window)) return;
+    if (!voiceReplyEnabled) return;
     const trimmed = content.trim();
     if (!trimmed) return;
     if (spokenAssistantRef.current === trimmed) return;
 
     spokenAssistantRef.current = trimmed;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(trimmed);
-    utterance.lang = "pt-BR";
-    utterance.rate = 1;
-    utterance.pitch = 0.92;
-    window.speechSynthesis.speak(utterance);
-  }, [voiceReplyEnabled]);
+    speakBrowserSpeech(trimmed);
+  }, [speakBrowserSpeech, voiceReplyEnabled]);
 
   const appendVoiceTranscript = useCallback(
     ({
@@ -300,6 +304,20 @@ export function ChatPanel({
     onTranscript: appendVoiceTranscript,
   });
   const realtimeActive = !["idle", "error"].includes(realtimeVoice.session.state);
+  const samuelSpeaking =
+    browserSpeaking || realtimeVoice.session.state === "speaking";
+  const lastAssistantMessage = useMemo(
+    () =>
+      [...messages]
+        .reverse()
+        .find(
+          (message) =>
+            message.role === "assistant" &&
+            message.status !== "streaming" &&
+            message.content.trim(),
+        ) ?? null,
+    [messages],
+  );
 
   const performSend = useCallback(
     async (rawContent: string, retry = false) => {
@@ -465,7 +483,7 @@ export function ChatPanel({
     }
 
     recognitionRef.current?.abort();
-    window.speechSynthesis?.cancel();
+    cancelBrowserSpeech();
 
     const recognition = new Recognition();
     recognition.lang = "pt-BR";
@@ -513,7 +531,7 @@ export function ChatPanel({
     setListening(true);
     setVoiceNotice("Samuel está ouvindo… fale naturalmente.");
     recognition.start();
-  }, [busy, hydrated, performSend, voiceAutoSend]);
+  }, [busy, cancelBrowserSpeech, hydrated, performSend, voiceAutoSend]);
 
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === "Enter" && !event.shiftKey) {
@@ -530,6 +548,29 @@ export function ChatPanel({
         aria-label="Conversa com Samuel AI"
         className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4 sm:space-y-6 sm:p-6"
       >
+        <div className={cn("samuel-chat-presence", samuelSpeaking && "samuel-chat-presence--speaking")}>
+          <SamuelHologram
+            compact
+            active={busy || realtimeActive || samuelSpeaking}
+            speaking={samuelSpeaking}
+          />
+          <div className="samuel-chat-presence__copy">
+            <span>Samuel AI · presença executiva</span>
+            <strong>
+              {samuelSpeaking
+                ? "Estou falando com você"
+                : realtimeVoice.session.state === "listening"
+                  ? "Estou ouvindo"
+                  : busy
+                    ? "Estou analisando"
+                    : "Estou online e atento"}
+            </strong>
+            <p>
+              O holograma é a presença visual do Samuel. Ele reage à voz e ao processamento em tempo real.
+            </p>
+          </div>
+        </div>
+
         {!hasEngaged && (
           <div className="flex min-h-[220px] flex-col items-center justify-center rounded-2xl border border-cyan-300/10 bg-cyan-300/[0.03] px-4 py-10 text-center">
             <div className="mb-4 flex size-16 items-center justify-center rounded-full border border-cyan-300/20 bg-cyan-300/10 text-cyan-100 shadow-[0_0_36px_rgba(34,211,238,0.18)]">
@@ -552,9 +593,11 @@ export function ChatPanel({
           </div>
         )}
 
-        {(voiceNotice || realtimeVoice.session.error) && (
+        {(voiceNotice || realtimeVoice.session.error || browserSpeechBlocked) && (
           <div className="rounded-lg border border-cyan-400/20 bg-cyan-400/5 px-4 py-3 text-xs text-cyan-100/90">
-            {voiceNotice || realtimeVoice.session.error}
+            {voiceNotice ||
+              realtimeVoice.session.error ||
+              "O navegador bloqueou a reprodução automática. Use “Ouvir última resposta” para liberar a voz."}
           </div>
         )}
 
@@ -690,7 +733,7 @@ export function ChatPanel({
             type="button"
             onClick={() => {
               setVoiceReplyEnabled((current) => !current);
-              window.speechSynthesis?.cancel();
+              cancelBrowserSpeech();
             }}
             className={cn(
               "rounded-full border px-3 py-1 transition",
@@ -700,6 +743,19 @@ export function ChatPanel({
             )}
           >
             Samuel responde em voz
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (lastAssistantMessage) {
+                spokenAssistantRef.current = null;
+                speakBrowserSpeech(lastAssistantMessage.content);
+              }
+            }}
+            disabled={!lastAssistantMessage || !browserSpeechSupported}
+            className="rounded-full border border-blue-300/30 bg-blue-300/10 px-3 py-1 text-blue-100 transition disabled:cursor-not-allowed disabled:opacity-45"
+          >
+            Ouvir última resposta
           </button>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
