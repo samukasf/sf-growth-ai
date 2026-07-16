@@ -62,10 +62,16 @@ const FACE_DOTS = Array.from({ length: 112 }, (_, index) => {
   };
 });
 
-const ORBIT_DOTS = Array.from({ length: 34 }, (_, index) => ({
-  angle: (index * 360) / 34,
+const ORBIT_DOTS = Array.from({ length: 44 }, (_, index) => ({
+  angle: (index * 360) / 44,
   delay: -(index * 0.19),
   size: 2 + (index % 4) * 0.52,
+}));
+
+const LIGHT_STRANDS = Array.from({ length: 16 }, (_, index) => ({
+  rotation: index * 22.5,
+  delay: -(index * 0.23),
+  length: 130 + (index % 5) * 22,
 }));
 
 function clamp(value: number) {
@@ -93,7 +99,20 @@ export function SamuelHologram({
   const hasTaskProgress = typeof taskProgress === "number" && Number.isFinite(taskProgress);
   const normalizedTaskProgress = hasTaskProgress ? clamp(taskProgress / 100) : 0;
   const measuredAudio = clamp(audioLevel);
-  const mouthOpen = isSpeaking ? Math.min(1, measuredAudio * 1.48) : smiling ? 0.18 : 0;
+  const speechCycle = isSpeaking ? (Math.sin(progress * Math.PI * 18) + 1) / 2 : 0;
+  const speechAccent = isSpeaking ? (Math.sin(progress * Math.PI * 31 + 0.8) + 1) / 2 : 0;
+  const mouthOpen = isSpeaking
+    ? clamp(Math.pow(measuredAudio, 0.72) * 1.34)
+    : smiling
+      ? 0.16
+      : 0;
+  const mouthWide = isSpeaking
+    ? clamp(0.26 + measuredAudio * 0.58 + speechCycle * measuredAudio * 0.18)
+    : smiling
+      ? 0.42
+      : 0.18;
+  const mouthRound = isSpeaking ? clamp(measuredAudio * (0.34 + speechAccent * 0.42)) : 0;
+  const cheekLift = isSpeaking ? clamp(measuredAudio * 0.62 + speechCycle * 0.12) : smiling ? 0.38 : 0;
   const energyLevel = isSpeaking
     ? Math.max(0.16, measuredAudio)
     : resolvedState === "processing" || resolvedState === "executing"
@@ -106,7 +125,7 @@ export function SamuelHologram({
     resolvedState === "sleeping"
       ? 0.06
       : resolvedState === "resting"
-        ? 0.52
+        ? 0.34
         : resolvedState === "listening"
           ? 0.72
           : isSpeaking
@@ -120,6 +139,9 @@ export function SamuelHologram({
         "--samuel-eye-light": eyeLight.toFixed(3),
         "--samuel-eye-open": eyeOpen.toFixed(3),
         "--samuel-mouth-open": mouthOpen.toFixed(3),
+        "--samuel-mouth-wide": mouthWide.toFixed(3),
+        "--samuel-mouth-round": mouthRound.toFixed(3),
+        "--samuel-cheek-lift": cheekLift.toFixed(3),
         "--samuel-speech-progress": progress.toFixed(3),
         "--samuel-task-progress": normalizedTaskProgress.toFixed(3),
         "--samuel-tilt-x": "0deg",
@@ -127,7 +149,17 @@ export function SamuelHologram({
         "--samuel-gaze-x": "0px",
         "--samuel-gaze-y": "0px",
       }) as CSSProperties,
-    [energyLevel, eyeLight, eyeOpen, mouthOpen, normalizedTaskProgress, progress],
+    [
+      cheekLift,
+      energyLevel,
+      eyeLight,
+      eyeOpen,
+      mouthOpen,
+      mouthRound,
+      mouthWide,
+      normalizedTaskProgress,
+      progress,
+    ],
   );
 
   function trackGaze(event: PointerEvent<HTMLDivElement>) {
@@ -194,6 +226,18 @@ export function SamuelHologram({
               "--samuel-dot-angle": `${dot.angle}deg`,
               "--samuel-dot-size": `${dot.size}px`,
               animationDelay: `${dot.delay}s`,
+            } as CSSProperties}
+          />
+        ))}
+      </div>
+      <div className="samuel-hologram__light-strands" aria-hidden="true">
+        {LIGHT_STRANDS.map((strand) => (
+          <i
+            key={strand.rotation}
+            style={{
+              "--samuel-strand-rotation": `${strand.rotation}deg`,
+              "--samuel-strand-length": `${strand.length}px`,
+              animationDelay: `${strand.delay}s`,
             } as CSSProperties}
           />
         ))}
@@ -324,11 +368,13 @@ export function SamuelHologram({
             <g className="samuel-hologram__eye-rig" filter={`url(#${svgId}-soft-glow)`}>
               <g className="samuel-hologram__eye-unit samuel-hologram__eye-unit--left">
                 <path className="samuel-hologram__eye-shell" d="M218 283c18-15 48-15 66 0-18 16-48 16-66 0Z" />
+                <path className="samuel-hologram__eyelid-line" d="M219 283c18 12 47 12 64 0" />
                 <ellipse className="samuel-hologram__eye-glow" cx="251" cy="283" rx="24" ry="7" fill={`url(#${svgId}-eye)`} />
                 <circle className="samuel-hologram__pupil" cx="251" cy="283" r="3.5" />
               </g>
               <g className="samuel-hologram__eye-unit samuel-hologram__eye-unit--right">
                 <path className="samuel-hologram__eye-shell" d="M316 283c18-15 48-15 66 0-18 16-48 16-66 0Z" />
+                <path className="samuel-hologram__eyelid-line" d="M317 283c18 12 47 12 64 0" />
                 <ellipse className="samuel-hologram__eye-glow" cx="349" cy="283" rx="24" ry="7" fill={`url(#${svgId}-eye)`} />
                 <circle className="samuel-hologram__pupil" cx="349" cy="283" r="3.5" />
               </g>
@@ -340,8 +386,12 @@ export function SamuelHologram({
             </g>
 
             <g className="samuel-hologram__mouth-rig" filter={`url(#${svgId}-tight-glow)`}>
-              <path className="samuel-hologram__lip-line" d="M258 433c26 13 58 13 84 0" />
-              <ellipse className="samuel-hologram__mouth-aperture" cx="300" cy="434" rx="33" ry="10" />
+              <path className="samuel-hologram__cheek-line samuel-hologram__cheek-line--left" d="M235 418c15 9 28 13 42 12" />
+              <path className="samuel-hologram__cheek-line samuel-hologram__cheek-line--right" d="M365 418c-15 9-28 13-42 12" />
+              <path className="samuel-hologram__upper-lip" d="M257 431c17-10 29-13 43-13s26 3 43 13" />
+              <ellipse className="samuel-hologram__mouth-aperture" cx="300" cy="436" rx="31" ry="9" />
+              <ellipse className="samuel-hologram__mouth-core" cx="300" cy="437" rx="18" ry="5" />
+              <path className="samuel-hologram__lower-lip" d="M258 436c18 13 33 18 42 18s24-5 42-18" />
               <path className="samuel-hologram__smile-line" d="M263 432c25 23 49 25 74 0" />
             </g>
 
