@@ -443,6 +443,37 @@ input:focus-visible {
   animation: samuel-base-pulse 2.6s ease-in-out infinite;
 }
 
+.samuel-hologram__voice-field {
+  position: absolute;
+  z-index: 10;
+  left: 50%;
+  top: 37%;
+  display: flex;
+  height: 2.65rem;
+  align-items: center;
+  gap: 3px;
+  border: 1px solid rgba(165, 243, 252, 0.28);
+  border-radius: 999px;
+  padding: 0.28rem 0.48rem;
+  opacity: 0;
+  background: rgba(3, 28, 81, 0.56);
+  box-shadow: 0 0 24px rgba(34, 211, 238, 0.36), inset 0 0 18px rgba(59, 130, 246, 0.22);
+  backdrop-filter: blur(8px);
+  transform: translate(-50%, 10px) scale(0.82);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.samuel-hologram__voice-field i {
+  display: block;
+  width: 2px;
+  max-height: 2rem;
+  border-radius: 999px;
+  background: linear-gradient(#fff, #67e8f9 45%, #60a5fa);
+  box-shadow: 0 0 6px rgba(103, 232, 249, 0.95);
+  transform: scaleY(0.25);
+  transform-origin: center;
+}
+
 .samuel-hologram--active .samuel-hologram__aura {
   animation-duration: 1.2s;
 }
@@ -450,6 +481,282 @@ input:focus-visible {
 .samuel-hologram--active .samuel-hologram__ring,
 .samuel-hologram--active .samuel-hologram__radar {
   animation-duration: 5s;
+}
+
+.samuel-hologram--speaking {
+  filter:
+    drop-shadow(0 0 18px rgba(103, 232, 249, 0.52))
+    drop-shadow(0 0 42px rgba(37, 99, 235, 0.32));
+}
+
+.samuel-hologram--speaking .samuel-hologram__portrait {
+  filter:
+    saturate(1.15)
+    contrast(1.08)
+    brightness(1.04)
+    drop-shadow(0 0 12px rgba(165, 243, 252, 0.82))
+    drop-shadow(0 0 40px rgba(37, 99, 235, 0.46));
+  animation: samuel-speaking-avatar 760ms cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+.samuel-hologram--speaking .samuel-hologram__aura {
+  animation: samuel-speaking-aura 920ms ease-in-out infinite;
+}
+
+.samuel-hologram--speaking .samuel-hologram__energy {
+  animation-duration: 780ms;
+}
+
+.samuel-hologram--speaking .samuel-hologram__voice-field {
+  opacity: 1;
+  transform: translate(-50%, 0) scale(1);
+}
+
+.samuel-hologram--speaking .samuel-hologram__voice-field i {
+  animation: samuel-speaking-bar 520ms ease-in-out infinite alternate;
+}
+
+.samuel-hologram--compact {
+  width: 148px;
+  height: 148px;
+  flex: 0 0 148px;
+  margin: 0;
+  filter: drop-shadow(0 0 18px rgba(37, 99, 235, 0.28));
+}
+
+.samuel-hologram--compact .samuel-hologram__portrait {
+  bottom: -18%;
+  height: 116%;
+}
+
+.samuel-hologram--compact .samuel-hologram__aura {
+  inset: 4% 2% -4%;
+}
+
+.samuel-hologram--compact .samuel-hologram__energy {
+  left: 8%;
+  top: 4%;
+  width: 84%;
+}
+
+.samuel-hologram--compact .samuel-hologram__ring,
+.samuel-hologram--compact .samuel-hologram__radar {
+  top: 43%;
+}
+
+.samuel-hologram--compact .samuel-hologram__base {
+  left: 5%;
+  right: 5%;
+  bottom: 0;
+}
+
+.samuel-hologram--compact .samuel-hologram__scan {
+  left: 8%;
+  right: 8%;
+}
+
+.samuel-hologram--compact .samuel-hologram__voice-field {
+  top: 37%;
+  height: 1.6rem;
+  gap: 2px;
+  padding: 0.16rem 0.32rem;
+}
+
+.samuel-hologram--compact .samuel-hologram__voice-field i {
+  width: 1px;
+  max-height: 1.05rem;
+}
+
+.samuel-proactive-card {
+  position: absolute;
+  z-index: 24;
+  left: 50%;
+  bottom: 6.3rem;
+  width: min(430px, 76%);
+  border: 1px solid rgba(125, 211, 252, 0.44);
+  border-radius: 1.05rem;
+  padding: 0.82rem 0.9rem 0.78rem;
+  color: #effcff;
+  background:
+    linear-gradient(145deg, rgba(4, 30, 82, 0.9), rgba(7, 59, 121, 0.78)),
+    rgba(3, 23, 66, 0.82);
+  box-shadow:
+    0 18px 45px rgba(3, 25, 72, 0.32),
+    0 0 32px rgba(56, 189, 248, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(18px);
+  transform: translateX(-50%);
+  animation: samuel-proactive-arrive 520ms cubic-bezier(0.2, 0.9, 0.25, 1.12) both;
+  text-align: left;
+}
+
+.samuel-proactive-card--speaking {
+  border-color: rgba(103, 232, 249, 0.76);
+  box-shadow:
+    0 18px 45px rgba(3, 25, 72, 0.34),
+    0 0 42px rgba(34, 211, 238, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.samuel-proactive-card__close {
+  position: absolute;
+  right: 0.52rem;
+  top: 0.42rem;
+  display: flex;
+  width: 1.45rem;
+  height: 1.45rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: rgba(224, 247, 255, 0.72);
+  font-size: 1rem;
+  line-height: 1;
+  transition: color 160ms ease, background-color 160ms ease;
+}
+
+.samuel-proactive-card__close:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.samuel-proactive-card__heading {
+  display: flex;
+  align-items: center;
+  gap: 0.42rem;
+  padding-right: 1.4rem;
+}
+
+.samuel-proactive-card__heading p {
+  font-size: 0.55rem;
+  font-weight: 760;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: #9ff6ff;
+}
+
+.samuel-proactive-card__signal {
+  display: block;
+  width: 0.48rem;
+  height: 0.48rem;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: #22d3ee;
+  box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.1), 0 0 12px rgba(103, 232, 249, 0.92);
+  animation: samuel-signal-pulse 1.25s ease-in-out infinite;
+}
+
+.samuel-proactive-card__message {
+  margin-top: 0.42rem;
+  padding-right: 0.45rem;
+  font-size: 0.68rem;
+  font-weight: 520;
+  line-height: 1.48;
+  color: #f1fbff;
+  text-wrap: pretty;
+}
+
+.samuel-proactive-card__notice {
+  margin-top: 0.38rem;
+  border-left: 2px solid #fbbf24;
+  padding-left: 0.48rem;
+  font-size: 0.52rem;
+  line-height: 1.35;
+  color: #fde68a;
+}
+
+.samuel-proactive-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.62rem;
+}
+
+.samuel-proactive-card__actions button {
+  display: inline-flex;
+  min-height: 2rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.32rem;
+  border: 1px solid rgba(165, 243, 252, 0.24);
+  border-radius: 999px;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.53rem;
+  font-weight: 690;
+  color: #e5fbff;
+  background: rgba(255, 255, 255, 0.08);
+  transition: transform 160ms ease, border-color 160ms ease, background-color 160ms ease;
+}
+
+.samuel-proactive-card__actions button:first-child {
+  border-color: rgba(103, 232, 249, 0.52);
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.86), rgba(8, 145, 178, 0.82));
+}
+
+.samuel-proactive-card__actions button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(165, 243, 252, 0.72);
+}
+
+.samuel-proactive-card__actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.samuel-proactive-card__actions svg {
+  width: 0.72rem;
+  height: 0.72rem;
+}
+
+.samuel-chat-presence {
+  position: relative;
+  display: flex;
+  min-height: 158px;
+  align-items: center;
+  gap: 0.8rem;
+  overflow: hidden;
+  border: 1px solid rgba(56, 189, 248, 0.16);
+  border-radius: 1rem;
+  padding: 0.15rem 1rem 0.15rem 0.4rem;
+  background:
+    radial-gradient(circle at 15% 50%, rgba(37, 99, 235, 0.2), transparent 36%),
+    linear-gradient(135deg, rgba(8, 31, 72, 0.82), rgba(5, 20, 48, 0.7));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.samuel-chat-presence--speaking {
+  border-color: rgba(103, 232, 249, 0.4);
+  box-shadow: 0 0 34px rgba(34, 211, 238, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.samuel-chat-presence__copy {
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+}
+
+.samuel-chat-presence__copy > span {
+  display: block;
+  font-size: 0.56rem;
+  font-weight: 720;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #67e8f9;
+}
+
+.samuel-chat-presence__copy > strong {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.9rem;
+  font-weight: 680;
+  color: #f0fbff;
+}
+
+.samuel-chat-presence__copy > p {
+  margin-top: 0.3rem;
+  max-width: 390px;
+  font-size: 0.66rem;
+  line-height: 1.45;
+  color: rgba(207, 232, 255, 0.72);
 }
 
 .samuel-hero__identity {
@@ -926,6 +1233,32 @@ input:focus-visible {
   50% { transform: translateX(-50%) translateY(-7px) scale(1.008); }
 }
 
+@keyframes samuel-speaking-avatar {
+  0%, 100% { transform: translateX(-50%) translateY(1px) scale(1); }
+  28% { transform: translateX(-50%) translateY(-4px) rotate(-0.35deg) scale(1.008); }
+  62% { transform: translateX(-50%) translateY(-1px) rotate(0.42deg) scale(1.014); }
+}
+
+@keyframes samuel-speaking-aura {
+  0%, 100% { opacity: 0.65; transform: scale(0.96); filter: blur(15px); }
+  50% { opacity: 1; transform: scale(1.07); filter: blur(11px); }
+}
+
+@keyframes samuel-speaking-bar {
+  from { transform: scaleY(0.24); opacity: 0.6; }
+  to { transform: scaleY(1); opacity: 1; }
+}
+
+@keyframes samuel-proactive-arrive {
+  from { opacity: 0; transform: translate(-50%, 18px) scale(0.94); }
+  to { opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
+
+@keyframes samuel-signal-pulse {
+  0%, 100% { opacity: 0.68; transform: scale(0.86); }
+  50% { opacity: 1; transform: scale(1.12); }
+}
+
 @keyframes samuel-base-pulse {
   0%, 100% { opacity: 0.45; transform: scaleX(0.9); }
   50% { opacity: 1; transform: scaleX(1.02); }
@@ -1049,6 +1382,20 @@ input:focus-visible {
     bottom: 2.5%;
   }
 
+  .samuel-proactive-card {
+    bottom: 6.6rem;
+    width: calc(100% - 1rem);
+    border-radius: 0.78rem;
+    padding: 0.62rem 0.65rem 0.58rem;
+  }
+
+  .samuel-proactive-card__heading p { font-size: 0.43rem; }
+  .samuel-proactive-card__message { margin-top: 0.3rem; font-size: 0.5rem; line-height: 1.38; }
+  .samuel-proactive-card__notice { font-size: 0.4rem; }
+  .samuel-proactive-card__actions { gap: 0.28rem; margin-top: 0.42rem; }
+  .samuel-proactive-card__actions button { min-height: 1.65rem; padding: 0.25rem 0.48rem; font-size: 0.42rem; }
+  .samuel-proactive-card__close { right: 0.28rem; top: 0.22rem; }
+
   .samuel-hero__identity {
     bottom: 0.65rem;
   }
@@ -1162,6 +1509,22 @@ input:focus-visible {
   .samuel-insight-card > div:last-child { display: grid; gap: 0.15rem; font-size: 0.32rem; }
 
   .samuel-company-brain-link { font-size: 0.5rem; }
+
+  .samuel-chat-presence {
+    min-height: 132px;
+    gap: 0.3rem;
+    padding: 0.08rem 0.6rem 0.08rem 0.1rem;
+  }
+
+  .samuel-chat-presence .samuel-hologram--compact {
+    width: 116px;
+    height: 122px;
+    flex-basis: 116px;
+  }
+
+  .samuel-chat-presence__copy > span { font-size: 0.45rem; }
+  .samuel-chat-presence__copy > strong { font-size: 0.72rem; }
+  .samuel-chat-presence__copy > p { font-size: 0.52rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1176,6 +1539,9 @@ input:focus-visible {
   .samuel-hologram__particles i,
   .samuel-hologram__scan,
   .samuel-hologram__base,
+  .samuel-hologram__voice-field i,
+  .samuel-proactive-card,
+  .samuel-proactive-card__signal,
   .samuel-primary-action__wave i,
   .samuel-insight-visual > span {
     animation: none !important;
