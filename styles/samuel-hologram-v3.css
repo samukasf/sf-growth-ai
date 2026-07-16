@@ -1,0 +1,443 @@
+/* Samuel Hologram v3: professional digital human built from SVG, light points,
+   animated circuit threads, audio-driven mouth movement and eye light that
+   disappears during every blink. */
+.samuel-hologram {
+  --samuel-status-rgb: 103, 232, 249;
+  --samuel-eye-light: 0.62;
+  --samuel-eye-open: 1;
+  --samuel-mouth-open: 0;
+  --samuel-audio-level: 0.18;
+  --samuel-gaze-x: 0px;
+  --samuel-gaze-y: 0px;
+}
+
+.samuel-hologram__core {
+  width: min(100%, 495px);
+  bottom: -2.4%;
+}
+
+.samuel-hologram__figure {
+  filter:
+    drop-shadow(0 0 8px rgba(var(--samuel-status-rgb), 0.56))
+    drop-shadow(0 0 32px rgba(37, 99, 235, 0.34))
+    drop-shadow(0 0 calc(12px + var(--samuel-audio-level) * 22px) rgba(var(--samuel-status-rgb), 0.22));
+}
+
+.samuel-hologram__back-rays path {
+  fill: none;
+  stroke: rgba(var(--samuel-status-rgb), 0.16);
+  stroke-width: 1;
+  stroke-linecap: round;
+  stroke-dasharray: 4 22;
+  animation: samuel-holo-ray-flow 5.6s linear infinite;
+}
+
+.samuel-hologram__back-rays path:nth-child(3n) {
+  stroke-opacity: 0.24;
+  animation-duration: 4.2s;
+}
+
+.samuel-hologram__back-rays path:nth-child(4n) {
+  stroke: rgba(255, 255, 255, 0.18);
+  animation-direction: reverse;
+}
+
+.samuel-hologram__head,
+.samuel-hologram__body {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+}
+
+.samuel-hologram__head {
+  animation: samuel-holo-head-idle 5.2s ease-in-out infinite;
+}
+
+.samuel-hologram__head-shell {
+  filter:
+    drop-shadow(0 0 7px rgba(103, 232, 249, 0.52))
+    drop-shadow(0 0 26px rgba(37, 99, 235, 0.34));
+}
+
+.samuel-hologram__hair-shadow {
+  fill: rgba(2, 6, 23, 0.82);
+  stroke: rgba(var(--samuel-status-rgb), 0.28);
+  stroke-width: 2;
+}
+
+.samuel-hologram__ear {
+  fill: rgba(5, 24, 62, 0.72);
+  stroke: rgba(var(--samuel-status-rgb), 0.58);
+  stroke-width: 3;
+}
+
+.samuel-hologram__face-grid circle,
+.samuel-hologram__beard-grid circle {
+  fill: rgb(var(--samuel-status-rgb));
+  filter: drop-shadow(0 0 4px rgba(var(--samuel-status-rgb), 0.85));
+  animation: samuel-holo-dot-twinkle 3.8s ease-in-out infinite;
+}
+
+.samuel-hologram__beard-grid circle {
+  opacity: 0.5;
+  animation-duration: 4.5s;
+}
+
+.samuel-hologram__face-scan-lines path {
+  fill: none;
+  stroke: rgba(var(--samuel-status-rgb), 0.14);
+  stroke-width: 1;
+}
+
+.samuel-hologram__face-circuits path,
+.samuel-hologram__light-thread,
+.samuel-hologram__circuit-thread {
+  fill: none;
+  stroke: rgba(var(--samuel-status-rgb), 0.56);
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 9 14;
+  filter: drop-shadow(0 0 5px rgba(var(--samuel-status-rgb), 0.54));
+  animation: samuel-holo-thread-flow 3.4s linear infinite;
+}
+
+.samuel-hologram__circuit-thread {
+  stroke-width: 1.2;
+  stroke-opacity: 0.34;
+  stroke-dasharray: 5 17;
+  animation-duration: 4.6s;
+}
+
+.samuel-hologram__svg-brow {
+  fill: none;
+  stroke: rgba(var(--samuel-status-rgb), 0.66);
+  stroke-width: 3;
+  stroke-linecap: round;
+  opacity: 0.62;
+  transition: opacity 180ms ease;
+}
+
+.samuel-hologram__eye-unit {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: samuel-holo-eye-blink 7.8s linear infinite;
+}
+
+.samuel-hologram__eye-unit--right {
+  animation-delay: -0.08s;
+}
+
+.samuel-hologram__eye-shell {
+  fill: rgba(2, 8, 23, 0.82);
+  stroke: rgba(var(--samuel-status-rgb), 0.58);
+  stroke-width: 2.2;
+}
+
+.samuel-hologram__eye-glow {
+  opacity: calc(var(--samuel-eye-open) * var(--samuel-eye-light));
+  transform: translate(var(--samuel-gaze-x), var(--samuel-gaze-y)) scaleX(calc(0.96 + var(--samuel-audio-level) * 0.12));
+  transform-box: fill-box;
+  transform-origin: center;
+  filter:
+    drop-shadow(0 0 4px rgba(var(--samuel-status-rgb), 0.9))
+    drop-shadow(0 0 13px rgba(var(--samuel-status-rgb), 0.72));
+  transition: opacity 90ms linear, transform 90ms ease-out;
+}
+
+.samuel-hologram__pupil {
+  fill: rgba(239, 254, 255, 0.94);
+  opacity: calc(var(--samuel-eye-open) * var(--samuel-eye-light));
+  transform: translate(var(--samuel-gaze-x), var(--samuel-gaze-y));
+  transform-box: fill-box;
+  transform-origin: center;
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.82));
+  transition: opacity 90ms linear, transform 90ms ease-out;
+}
+
+.samuel-hologram__nose-rig path {
+  fill: none;
+  stroke: rgba(165, 243, 252, 0.32);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.samuel-hologram__lip-line {
+  fill: none;
+  stroke: rgba(165, 243, 252, 0.58);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+.samuel-hologram__mouth-aperture {
+  fill: rgba(1, 5, 18, 0.92);
+  stroke: rgba(var(--samuel-status-rgb), 0.68);
+  stroke-width: 2;
+  opacity: calc(var(--samuel-mouth-open) * 0.92);
+  transform:
+    scaleX(calc(0.68 + var(--samuel-mouth-open) * 0.34))
+    scaleY(calc(0.06 + var(--samuel-mouth-open) * 1.52));
+  transform-box: fill-box;
+  transform-origin: center;
+  filter:
+    drop-shadow(0 0 3px rgba(var(--samuel-status-rgb), 0.54))
+    drop-shadow(0 0 calc(3px + var(--samuel-mouth-open) * 12px) rgba(var(--samuel-status-rgb), 0.7));
+  transition: opacity 55ms linear, transform 55ms linear;
+}
+
+.samuel-hologram__smile-line {
+  fill: none;
+  stroke: rgba(207, 250, 254, 0.72);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.samuel-hologram__orbit-dots {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  pointer-events: none;
+}
+
+.samuel-hologram__orbit-dots i {
+  --samuel-orbit-radius: min(42vw, 236px);
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  width: var(--samuel-dot-size);
+  height: var(--samuel-dot-size);
+  border-radius: 999px;
+  background: rgba(224, 252, 255, 0.92);
+  box-shadow:
+    0 0 8px rgba(var(--samuel-status-rgb), 0.9),
+    0 0 18px rgba(37, 99, 235, 0.58);
+  opacity: 0.72;
+  transform: translate(-50%, -50%) rotate(var(--samuel-dot-angle)) translateX(var(--samuel-orbit-radius));
+  animation: samuel-holo-orbit-dot 10.5s linear infinite;
+}
+
+.samuel-hologram__orbit-dots i:nth-child(2n) {
+  animation-direction: reverse;
+  animation-duration: 13.5s;
+}
+
+.samuel-hologram__orbit-dots i:nth-child(3n) {
+  background: rgba(96, 165, 250, 0.84);
+}
+
+.samuel-hologram--sleeping {
+  --samuel-eye-light: 0.06;
+  --samuel-eye-open: 0.08;
+  --samuel-audio-level: 0.04;
+}
+
+.samuel-hologram--sleeping .samuel-hologram__head,
+.samuel-hologram--sleeping .samuel-hologram__body {
+  opacity: 0.58;
+  filter: saturate(0.68) brightness(0.72);
+}
+
+.samuel-hologram--sleeping .samuel-hologram__eye-unit {
+  animation-duration: 11s;
+}
+
+.samuel-hologram--listening {
+  --samuel-eye-light: 0.74;
+}
+
+.samuel-hologram--listening .samuel-hologram__head {
+  animation: samuel-holo-listening 5.4s ease-in-out infinite;
+}
+
+.samuel-hologram--processing,
+.samuel-hologram--executing {
+  --samuel-status-rgb: 96, 165, 250;
+  --samuel-eye-light: 0.94;
+}
+
+.samuel-hologram--processing .samuel-hologram__face-circuits path,
+.samuel-hologram--executing .samuel-hologram__face-circuits path {
+  animation-duration: 1.05s;
+  stroke-width: 2;
+}
+
+.samuel-hologram--processing .samuel-hologram__face-grid circle {
+  animation-duration: 1.2s;
+}
+
+.samuel-hologram--executing .samuel-hologram__head {
+  animation: samuel-holo-executing 1.6s ease-in-out infinite;
+}
+
+.samuel-hologram--speaking {
+  --samuel-status-rgb: 103, 232, 249;
+  --samuel-eye-light: 1;
+}
+
+.samuel-hologram--speaking .samuel-hologram__head {
+  animation:
+    samuel-holo-speaking-head 2.6s ease-in-out infinite,
+    samuel-holo-speaking-energy 820ms ease-in-out infinite;
+}
+
+.samuel-hologram--speaking .samuel-hologram__svg-brow--left {
+  animation: samuel-holo-speaking-brow-left 2.2s ease-in-out infinite;
+}
+
+.samuel-hologram--speaking .samuel-hologram__svg-brow--right {
+  animation: samuel-holo-speaking-brow-right 2.2s ease-in-out infinite;
+}
+
+.samuel-hologram--speaking .samuel-hologram__mouth-aperture {
+  opacity: calc(0.12 + var(--samuel-mouth-open) * 0.88);
+}
+
+.samuel-hologram--speaking .samuel-hologram__face-circuits path,
+.samuel-hologram--speaking .samuel-hologram__light-thread {
+  animation-duration: calc(2.2s - var(--samuel-audio-level) * 0.9s);
+}
+
+.samuel-hologram--smiling .samuel-hologram__smile-line,
+.samuel-hologram--celebrating .samuel-hologram__smile-line {
+  opacity: 0.88;
+}
+
+.samuel-hologram--smiling .samuel-hologram__mouth-aperture,
+.samuel-hologram--celebrating .samuel-hologram__mouth-aperture {
+  opacity: 0;
+}
+
+.samuel-hologram--celebrating {
+  --samuel-status-rgb: 110, 231, 183;
+  --samuel-eye-light: 1;
+}
+
+.samuel-hologram--alert {
+  --samuel-status-rgb: 251, 191, 36;
+  --samuel-eye-light: 0.96;
+}
+
+.samuel-hologram--error {
+  --samuel-status-rgb: 248, 113, 113;
+  --samuel-eye-light: 0.92;
+}
+
+.samuel-hologram--alert .samuel-hologram__eye-glow,
+.samuel-hologram--error .samuel-hologram__eye-glow {
+  animation: samuel-holo-alert-eye 1.4s ease-in-out infinite;
+}
+
+.samuel-hologram--compact .samuel-hologram__core {
+  width: 134px;
+  height: 162px;
+  bottom: -10%;
+}
+
+.samuel-hologram--compact .samuel-hologram__orbit-dots i {
+  --samuel-orbit-radius: 66px;
+}
+
+.samuel-hologram--compact .samuel-hologram__back-rays {
+  opacity: 0.34;
+}
+
+@keyframes samuel-holo-ray-flow {
+  from { stroke-dashoffset: 0; opacity: 0.2; }
+  50% { opacity: 0.62; }
+  to { stroke-dashoffset: -104; opacity: 0.2; }
+}
+
+@keyframes samuel-holo-head-idle {
+  0%, 100% { transform: translateY(1px) rotate(-0.06deg) scale(1); }
+  50% { transform: translateY(-3px) rotate(0.08deg) scale(1.002); }
+}
+
+@keyframes samuel-holo-listening {
+  0%, 100% { transform: translateY(1px) rotate(-0.04deg); }
+  52% { transform: translateY(-3px) rotate(0.18deg); }
+}
+
+@keyframes samuel-holo-executing {
+  0%, 100% { transform: translateY(1px) scale(1); }
+  50% { transform: translateY(-4px) scale(1.004); }
+}
+
+@keyframes samuel-holo-speaking-head {
+  0%, 100% { transform: translateY(1px) rotate(-0.12deg) scale(1); }
+  33% { transform: translateY(-1px) rotate(-0.22deg) scale(1.002); }
+  68% { transform: translateY(-3px) rotate(0.18deg) scale(1.004); }
+}
+
+@keyframes samuel-holo-speaking-energy {
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(var(--samuel-status-rgb), 0.62)); }
+  50% { filter: drop-shadow(0 0 calc(12px + var(--samuel-audio-level) * 24px) rgba(var(--samuel-status-rgb), 0.9)); }
+}
+
+@keyframes samuel-holo-dot-twinkle {
+  0%, 100% { opacity: 0.24; transform: scale(0.78); }
+  42% { opacity: 0.82; transform: scale(1.12); }
+  58% { opacity: 0.48; transform: scale(0.92); }
+}
+
+@keyframes samuel-holo-thread-flow {
+  from { stroke-dashoffset: 0; opacity: 0.34; }
+  45% { opacity: 0.88; }
+  to { stroke-dashoffset: -92; opacity: 0.34; }
+}
+
+@keyframes samuel-holo-eye-blink {
+  0%, 42.8%, 45.2%, 74.8%, 77.2%, 100% {
+    opacity: var(--samuel-eye-open);
+    transform: scaleY(1);
+  }
+  43.8%, 75.8% {
+    opacity: 0;
+    transform: scaleY(0.02);
+  }
+}
+
+@keyframes samuel-holo-speaking-brow-left {
+  0%, 100% { transform: translateY(0) rotate(-1deg); opacity: 0.62; }
+  45% { transform: translateY(-2px) rotate(-3deg); opacity: 0.84; }
+}
+
+@keyframes samuel-holo-speaking-brow-right {
+  0%, 100% { transform: translateY(0) rotate(1deg); opacity: 0.62; }
+  45% { transform: translateY(-2px) rotate(3deg); opacity: 0.84; }
+}
+
+@keyframes samuel-holo-alert-eye {
+  0%, 100% { opacity: calc(var(--samuel-eye-light) * 0.64); }
+  50% { opacity: var(--samuel-eye-light); }
+}
+
+@keyframes samuel-holo-orbit-dot {
+  from {
+    opacity: 0.3;
+    transform: translate(-50%, -50%) rotate(var(--samuel-dot-angle)) translateX(var(--samuel-orbit-radius)) scale(0.75);
+  }
+  50% {
+    opacity: 0.95;
+  }
+  to {
+    opacity: 0.3;
+    transform: translate(-50%, -50%) rotate(calc(var(--samuel-dot-angle) + 360deg)) translateX(var(--samuel-orbit-radius)) scale(1.05);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .samuel-hologram__back-rays path,
+  .samuel-hologram__head,
+  .samuel-hologram__body,
+  .samuel-hologram__face-grid circle,
+  .samuel-hologram__beard-grid circle,
+  .samuel-hologram__face-circuits path,
+  .samuel-hologram__light-thread,
+  .samuel-hologram__circuit-thread,
+  .samuel-hologram__eye-unit,
+  .samuel-hologram__orbit-dots i {
+    animation: none !important;
+  }
+}
