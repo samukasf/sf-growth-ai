@@ -57,6 +57,17 @@ function cleanText(value: unknown, maxLength: number) {
     : "";
 }
 
+export function studioFailureDiagnostic(error: unknown) {
+  const message = error instanceof Error ? error.message : "Falha desconhecida.";
+  return message
+    .replace(/Bearer\s+[A-Za-z0-9._~-]+/gi, "Bearer [protegido]")
+    .replace(/\bsk-[A-Za-z0-9_-]+\b/g, "[chave protegida]")
+    .replace(/https?:\/\/\S+/gi, "[endereço protegido]")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 240) || "Falha desconhecida.";
+}
+
 function projectNameFromBrief(brief: string) {
   const words = brief
     .replace(/[^\p{L}\p{N}\s-]/gu, " ")

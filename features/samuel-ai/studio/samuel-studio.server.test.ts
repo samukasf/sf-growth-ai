@@ -4,6 +4,7 @@ import {
   buildStudioPrompt,
   parseGeneratedStudioProject,
   SAMUEL_STUDIO_TEXT_FORMAT,
+  studioFailureDiagnostic,
   validateStudioRequest,
 } from "./samuel-studio.server";
 
@@ -41,5 +42,15 @@ describe("Samuel Studio", () => {
     expect(prompt).toContain("não use fetch");
     expect(prompt).toContain("sempre devolva /data.js");
     expect(SAMUEL_STUDIO_TEXT_FORMAT.schema.required).toEqual(["name", "summary", "files"]);
+  });
+
+  it("remove credenciais e endereços do diagnóstico de fallback", () => {
+    const diagnostic = studioFailureDiagnostic(
+      new Error("Bearer segredo123 sk-projeto123 falhou em https://gateway.example/path"),
+    );
+    expect(diagnostic).toContain("[protegido]");
+    expect(diagnostic).toContain("[chave protegida]");
+    expect(diagnostic).toContain("[endereço protegido]");
+    expect(diagnostic).not.toContain("segredo123");
   });
 });

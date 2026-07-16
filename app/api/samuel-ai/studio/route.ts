@@ -6,6 +6,7 @@ import {
   createStarterStudioProject,
   parseGeneratedStudioProject,
   SAMUEL_STUDIO_TEXT_FORMAT,
+  studioFailureDiagnostic,
   validateStudioRequest,
 } from "@/features/samuel-ai/studio/samuel-studio.server";
 import type {
@@ -75,13 +76,14 @@ export async function POST(request: Request) {
     if (!provider) {
       const response: SamuelStudioGenerateResponse = {
         project: createStarterStudioProject({ id, type: input.type, brief: input.brief, createdAt }),
+        source: "starter",
         warning: "O AI Gateway não está configurado; o Samuel criou uma base local editável.",
       };
       return Response.json(response);
     }
 
-    try {
-      const completion = await provider.complete({
+    const completeProject = async (activeProvider: typeof provider) => {
+      const completion = await activeProvider.complete({
         payload: {
           systemContext: [
             "Você está operando o Samuel Studio, um gerador seguro de interfaces React.",
@@ -93,7 +95,7 @@ export async function POST(request: Request) {
           metadata: { intent: "creative", product: "samuel-studio" },
         },
       });
-      const project = parseGeneratedStudioProject(completion.content, {
+      return parseGeneratedStudioProject(completion.content, {
         id,
         type: input.type,
         provider: completion.providerId,
@@ -101,9 +103,33 @@ export async function POST(request: Request) {
         createdAt,
         fallbackName: input.existingProject?.name ?? "Projeto Samuel",
       });
-      const response: SamuelStudioGenerateResponse = { project };
+    };
+
+    let structuredFailure: unknown;
+    try {
+      const project = await completeProject(provider);
+      const response: SamuelStudioGenerateResponse = { project, source: "gateway" };
       return Response.json(response);
-    } catch {
+    } catch (error) {
+      structuredFailure = error;
+    }
+
+    const plainProvider = createConfiguredResponsesProvider({
+      maxOutputTokens: 8_000,
+      reasoningEffort: "low",
+    });
+    let plainFailure: unknown;
+    if (plainProvider) {
+      try {
+        const project = await completeProject(plainProvider);
+        const response: SamuelStudioGenerateResponse = { project, source: "gateway" };
+        return Response.json(response);
+      } catch (error) {
+        plainFailure = error;
+      }
+    }
+
+    {
       const response: SamuelStudioGenerateResponse = {
         project: createStarterStudioProject({
           id,
@@ -112,7 +138,12 @@ export async function POST(request: Request) {
           createdAt,
           warningProvider: provider.providerId,
         }),
+        source: "starter",
         warning: "O Gateway não devolveu código válido desta vez; o Samuel preservou o trabalho com uma base local funcional.",
+        diagnostic: {
+          structured: studioFailureDiagnostic(structuredFailure),
+          plain: studioFailureDiagnostic(plainFailure),
+        },
       };
       return Response.json(response);
     }
