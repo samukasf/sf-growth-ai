@@ -69,6 +69,29 @@ export function resolveMetaClientConfig(
   };
 }
 
+/** Resolve config from env or from an already-loaded OAuth connection override. */
+export async function resolveMetaClientConfigForCompany(
+  companyId: string,
+): Promise<MetaClientConfig | null> {
+  const fromEnv = resolveMetaClientConfig(undefined, companyId);
+  if (fromEnv) return fromEnv;
+
+  try {
+    const { findMetaOAuthConnection } = await import("./meta-token.repository");
+    const connection = await findMetaOAuthConnection(companyId);
+    if (!connection) return null;
+    return resolveMetaClientConfig(
+      {
+        accessToken: connection.accessToken,
+        pageId: connection.pageId,
+      },
+      companyId,
+    );
+  } catch {
+    return null;
+  }
+}
+
 export function resolveMetaOAuthConfig(): MetaOAuthConfig | null {
   const appId = process.env.META_APP_ID ?? "";
   const appSecret = process.env.META_APP_SECRET ?? "";

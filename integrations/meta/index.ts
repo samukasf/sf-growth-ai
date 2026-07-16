@@ -13,6 +13,7 @@ export { mapSnapshotToMetrics, type MetaMappedData } from "./meta.mapper";
 
 export {
   resolveMetaClientConfig,
+  resolveMetaClientConfigForCompany,
   resolveMetaPageId,
   resolveMetaAdAccountId,
   resolveMetaInstagramBusinessId,
@@ -21,6 +22,19 @@ export {
   isMetaTokenExpiredError,
   type MetaOAuthConfig,
 } from "./meta.auth";
+
+export {
+  buildSignedMetaOAuthAuthorizeUrl,
+  completeMetaOAuthConnection,
+  signMetaOAuthState,
+  verifyMetaOAuthState,
+} from "./meta.oauth";
+
+export {
+  findMetaOAuthConnection,
+  upsertMetaOAuthConnection,
+  type MetaOAuthConnection,
+} from "./meta-token.repository";
 
 export {
   buildMetaCacheKey,

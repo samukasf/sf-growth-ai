@@ -168,6 +168,10 @@ export function ExecutiveHome({
   const activeBrainCount = companies.filter((c) => c.brain_status === "active").length;
   const hasCompanies = companyCount > 0;
   const hasActiveBrain = activeBrainCount > 0;
+  const samuelHref =
+    companies.find((company) => company.operational_company_id)?.operational_company_id
+      ? `/samuel-ai?companyId=${companies.find((company) => company.operational_company_id)!.operational_company_id}`
+      : "/samuel-ai";
 
   const sidebarItems: DsSidebarItem[] = [
     {
@@ -186,7 +190,7 @@ export function ExecutiveHome({
     {
       id: "samuel",
       label: "Samuel",
-      href: "/samuel-ai",
+      href: samuelHref,
       icon: <Sparkles size={ICON_SIZE} strokeWidth={ICON_STROKE} />,
     },
     {

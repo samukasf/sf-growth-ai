@@ -26,7 +26,9 @@ Preencha em `.env.local` (ver `.env.example` completo):
 
 Sem uma chave de IA, o chat informa claramente a limitação e continua funcional para análises empresariais com a resposta determinística do Samuel Runtime. Sem a configuração administrativa do Supabase, o histórico fica isolado no navegador. Sem tokens de integração, os módulos correspondentes ficam vazios (nunca com dados mock). Nenhuma destas degradações impede o build.
 
-Rotas úteis: `/login`, `/onboarding`, `/integrations/google/connect`, `/samuel-ai?companyId=<uuid>`.
+Rotas úteis: `/login`, `/onboarding`, `/integrations/google/connect`, `/integrations/meta/connect`, `/integrations/linkedin/connect`, `/samuel-ai?companyId=<uuid>`.
+
+Guia passo a passo para ligar contas e chaves: [`SETUP.md`](./SETUP.md).
 
 ## CI/CD
 

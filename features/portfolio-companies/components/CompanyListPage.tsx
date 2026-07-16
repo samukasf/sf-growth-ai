@@ -18,7 +18,10 @@ const ACTIVE_AGENCY = "Influence Publicidade";
 const ICON_SIZE = 18;
 const ICON_STROKE = 2;
 
-function portfolioSidebar(active: "home" | "companies"): DsSidebarItem[] {
+function portfolioSidebar(
+  active: "home" | "companies",
+  samuelHref = "/samuel-ai",
+): DsSidebarItem[] {
   return [
     {
       id: "home",
@@ -37,7 +40,7 @@ function portfolioSidebar(active: "home" | "companies"): DsSidebarItem[] {
     {
       id: "samuel",
       label: "Samuel",
-      href: "/samuel-ai",
+      href: samuelHref,
       icon: <Sparkles size={ICON_SIZE} strokeWidth={ICON_STROKE} />,
     },
     {
@@ -77,16 +80,22 @@ function BrandLogo() {
 type PortfolioShellProps = {
   title: string;
   subtitle?: string;
+  samuelHref?: string;
   children: React.ReactNode;
 };
 
-export function PortfolioShell({ title, subtitle, children }: PortfolioShellProps) {
+export function PortfolioShell({
+  title,
+  subtitle,
+  samuelHref = "/samuel-ai",
+  children,
+}: PortfolioShellProps) {
   return (
     <div className="ds-root flex min-h-dvh bg-[var(--ds-background)]">
       <DsSidebar
         title={APP_NAME}
         subtitle={ACTIVE_AGENCY}
-        items={portfolioSidebar("companies")}
+        items={portfolioSidebar("companies", samuelHref)}
         className="hidden lg:flex"
       />
       <div className="flex min-w-0 flex-1 flex-col">
@@ -110,8 +119,17 @@ function brainBadge(status: PortfolioCompanyRecord["brain_status"]) {
 }
 
 export function CompanyListPage({ companies }: CompanyListPageProps) {
+  const samuelHref =
+    companies.find((company) => company.operational_company_id)?.operational_company_id
+      ? `/samuel-ai?companyId=${companies.find((company) => company.operational_company_id)!.operational_company_id}`
+      : "/samuel-ai";
+
   return (
-    <PortfolioShell title="Empresas" subtitle="Lista de empresas cadastradas">
+    <PortfolioShell
+      title="Empresas"
+      subtitle="Lista de empresas cadastradas"
+      samuelHref={samuelHref}
+    >
       <div className="mx-auto flex max-w-4xl flex-col gap-6">
         <div>
           <h1 className="ds-title text-[var(--ds-text)]">Empresas</h1>
@@ -131,22 +149,34 @@ export function CompanyListPage({ companies }: CompanyListPageProps) {
           <ul className="flex flex-col gap-3">
             {companies.map((company) => (
               <li key={company.id}>
-                <Link href={`/empresas/${company.id}`}>
-                  <DsCard
-                    padding="lg"
-                    className="transition-shadow hover:shadow-[var(--ds-shadow-md)]"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-4">
-                      <div>
-                        <p className="text-base font-semibold text-[var(--ds-text)]">{company.name}</p>
-                        <p className="mt-1 text-sm text-[var(--ds-text-muted)]">
-                          {[company.industry, company.city].filter(Boolean).join(" · ") || "—"}
-                        </p>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Link href={`/empresas/${company.id}`} className="min-w-0 flex-1">
+                    <DsCard
+                      padding="lg"
+                      className="transition-shadow hover:shadow-[var(--ds-shadow-md)]"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                          <p className="text-base font-semibold text-[var(--ds-text)]">
+                            {company.name}
+                          </p>
+                          <p className="mt-1 text-sm text-[var(--ds-text-muted)]">
+                            {[company.industry, company.city].filter(Boolean).join(" · ") || "—"}
+                          </p>
+                        </div>
+                        {brainBadge(company.brain_status ?? "inactive")}
                       </div>
-                      {brainBadge(company.brain_status ?? "inactive")}
-                    </div>
-                  </DsCard>
-                </Link>
+                    </DsCard>
+                  </Link>
+                  {company.operational_company_id ? (
+                    <Link
+                      href={`/samuel-ai?companyId=${company.operational_company_id}`}
+                      className="inline-flex items-center justify-center rounded-[var(--ds-radius-lg)] border border-[var(--ds-border)] px-4 text-sm font-medium text-[var(--ds-primary)] transition hover:bg-[var(--ds-primary-soft)]"
+                    >
+                      Abrir Samuel
+                    </Link>
+                  ) : null}
+                </div>
               </li>
             ))}
           </ul>

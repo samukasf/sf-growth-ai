@@ -1,5 +1,6 @@
 import { cn } from "@/utils/cn";
 
+import { IntegrationEmptyState } from "@/components/integrations/IntegrationEmptyState";
 import type { GoogleAnalyticsExecutive } from "../services/google-analytics-executive.service";
 import { StatusBadge } from "@/features/samuel-ai/components/shared/status-badge";
 import { SectionHeader } from "@/features/samuel-ai/components/section-header";
@@ -120,7 +121,15 @@ export function GoogleAnalyticsExecutiveSummarySection({
           title="Google Analytics Executive Summary"
           description="Inteligência GA4 integrada ao Samuel AI™"
         />
-        <p className="text-sm text-muted">Dados do Google Analytics indisponíveis.</p>
+        <IntegrationEmptyState
+          title="Dados do Google Analytics indisponíveis"
+          description="Defina um access token GA4 e o property ID no servidor para ativar tráfego, sessões e conversões reais."
+          envVars={[
+            "GOOGLE_ANALYTICS_ACCESS_TOKEN",
+            "GOOGLE_ANALYTICS_PROPERTY_ID",
+          ]}
+          docsNote="Use GOOGLE_ANALYTICS_PROPERTY_MAP para mapear property por empresa."
+        />
       </section>
     );
   }

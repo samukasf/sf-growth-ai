@@ -1,5 +1,6 @@
 import { cn } from "@/utils/cn";
 
+import { IntegrationEmptyState } from "@/components/integrations/IntegrationEmptyState";
 import type { GoogleBusinessExecutive } from "../services/google-business-executive.service";
 import { StatusBadge } from "@/features/samuel-ai/components/shared/status-badge";
 import { SectionHeader } from "@/features/samuel-ai/components/section-header";
@@ -75,7 +76,15 @@ export function GoogleBusinessExecutiveSummarySection({
           title="Google Business Executive Summary"
           description="Inteligência do Google Business Profile integrada ao Samuel AI™"
         />
-        <p className="text-sm text-muted">Dados do Google Business indisponíveis.</p>
+        <IntegrationEmptyState
+          title="Dados do Google Business indisponíveis"
+          description="Defina o access token e a location do Google Business Profile no servidor."
+          envVars={[
+            "GOOGLE_BUSINESS_ACCESS_TOKEN",
+            "GOOGLE_BUSINESS_LOCATION_NAME",
+          ]}
+          docsNote="GOOGLE_BUSINESS_LOCATION_MAP permite mapear location por empresa."
+        />
       </section>
     );
   }

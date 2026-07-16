@@ -47,11 +47,13 @@ Estabelecer a interface executiva principal e o pipeline SSR de engines como fun
 
 - [x] Persistência da Executive Inbox com fallback local e sincronização remota
 - [x] AI Provider real no chat e orquestrador
-- [ ] Market Watcher com dados reais
-- [ ] LinkedIn integration
-- [ ] Onboarding e rotas de produto além de `/samuel-ai`
-- [ ] CRM na navegação do Workspace
-- [ ] Remover modo demonstração de painéis colapsados
+- [x] Market Watcher com dados reais (NewsAPI + memórias/contexto; sem mock)
+- [x] LinkedIn integration (API live via token de servidor)
+- [x] Onboarding e rotas de produto além de `/samuel-ai` (`/login`, `/onboarding`, connects)
+- [x] CRM na navegação do Workspace
+- [x] Remover modo demonstração das integrações (empty state honesto + OAuth Google/Meta)
+- [ ] Popular tokens/contas em produção (ver `SETUP.md`)
+- [ ] Unificar GA/GBP/GSC no mesmo OAuth Google Workspace
 
 ### Critério de conclusão
 

@@ -1,5 +1,6 @@
 import { cn } from "@/utils/cn";
 
+import { IntegrationEmptyState } from "@/components/integrations/IntegrationEmptyState";
 import type { LinkedInExecutive } from "../services/linkedin-executive.service";
 import { StatusBadge } from "@/features/samuel-ai/components/shared/status-badge";
 import { SectionHeader } from "@/features/samuel-ai/components/section-header";
@@ -117,7 +118,13 @@ export function LinkedInExecutiveSummarySection({
           title="LinkedIn Executive Summary"
           description="Inteligência LinkedIn B2B integrada ao Samuel AI™"
         />
-        <p className="text-sm text-muted">Dados do LinkedIn indisponíveis.</p>
+        <IntegrationEmptyState
+          title="Dados do LinkedIn indisponíveis"
+          description="Configure um access token da Company Page no servidor para o Samuel ler seguidores, impressões e posts."
+          envVars={["LINKEDIN_ACCESS_TOKEN", "LINKEDIN_ORG_ID"]}
+          connectHref="/integrations/linkedin/connect"
+          connectLabel="Ver como configurar"
+        />
       </section>
     );
   }

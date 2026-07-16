@@ -35,6 +35,7 @@ export type PortfolioCompanyRecord = {
   employee_count: string | null;
   main_objective: string | null;
   notes: string | null;
+  operational_company_id: string | null;
   brain_status: CompanyBrainStatus;
   brain_activated_at: string | null;
   first_conversation_status: FirstConversationStatus;
@@ -100,6 +101,8 @@ export async function createPortfolioCompanyAction(
     throw new Error(error.message);
   }
 
+  let portfolioRecord = data as PortfolioCompanyRecord;
+
   // Mirror into operational `companies` so Samuel AI / integrations resolve the same firm.
   try {
     const slugBase = companyName
@@ -136,6 +139,22 @@ export async function createPortfolioCompanyAction(
         },
         { onConflict: "company_id" },
       );
+
+      const { data: linked } = await supabase
+        .from("portfolio_companies")
+        .update({ operational_company_id: operational.id })
+        .eq("id", data.id)
+        .select("*")
+        .single();
+
+      if (linked) {
+        portfolioRecord = linked as PortfolioCompanyRecord;
+      } else {
+        portfolioRecord = {
+          ...portfolioRecord,
+          operational_company_id: operational.id,
+        };
+      }
     }
   } catch {
     // Portfolio creation remains valid even if operational mirror fails.
@@ -144,5 +163,5 @@ export async function createPortfolioCompanyAction(
   revalidatePath("/");
   revalidatePath("/empresas");
   revalidatePath("/samuel-ai");
-  return data as PortfolioCompanyRecord;
+  return portfolioRecord;
 }
