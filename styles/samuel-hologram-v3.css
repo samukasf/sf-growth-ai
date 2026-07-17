@@ -139,37 +139,42 @@
 
 .samuel-hologram__portrait-eye {
   position: absolute;
-  top: 33.1%;
-  width: 15.4%;
-  height: 2.5%;
-  border-radius: 999px;
+  top: 33.3%;
+  width: 12.6%;
+  height: 1.9%;
+  border-radius: 52% 52% 47% 47% / 68% 68% 36% 36%;
   background:
-    radial-gradient(ellipse at center, rgba(238, 254, 255, 0.86), rgba(var(--samuel-status-rgb), 0.66) 38%, rgba(37, 99, 235, 0.1) 76%, transparent);
+    radial-gradient(ellipse at center, rgba(10, 28, 58, 0.78), rgba(2, 8, 23, 0.92) 68%, transparent 76%);
   box-shadow:
-    0 0 5px rgba(var(--samuel-status-rgb), 0.9),
-    0 0 17px rgba(var(--samuel-status-rgb), 0.6);
+    inset 0 0 3px rgba(224, 252, 255, 0.48),
+    inset 0 0 9px rgba(var(--samuel-status-rgb), 0.4);
   opacity: var(--samuel-eye-open);
   overflow: hidden;
+  clip-path: ellipse(49% 44% at 50% 50%);
   transform: translate(var(--samuel-gaze-x), var(--samuel-gaze-y)) scaleY(var(--samuel-eye-open));
   transform-origin: center;
   animation: samuel-portrait-eye-blink 7.9s linear infinite;
+  will-change: opacity, transform;
 }
 
 .samuel-hologram__portrait-eye--left {
-  left: 34.8%;
+  left: 36.1%;
 }
 
 .samuel-hologram__portrait-eye--right {
-  right: 34.6%;
+  right: 35.9%;
   animation-delay: -0.08s;
 }
 
 .samuel-hologram__portrait-eye-glow {
   position: absolute;
-  inset: -80% -18%;
+  inset: 13% 10% 14%;
   border-radius: inherit;
-  background: radial-gradient(ellipse at center, #ffffff 0 12%, #a5f3fc 20%, rgba(var(--samuel-status-rgb), 0.72) 42%, transparent 74%);
+  background:
+    radial-gradient(ellipse at center, #f8ffff 0 10%, #a5f3fc 20%, rgba(var(--samuel-status-rgb), 0.84) 46%, rgba(37, 99, 235, 0.2) 72%, transparent 86%);
   opacity: calc(var(--samuel-eye-open) * var(--samuel-eye-light));
+  filter: blur(0.15px);
+  mix-blend-mode: screen;
   transition: opacity 80ms linear;
 }
 
@@ -177,13 +182,23 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 12%;
+  width: 9%;
   aspect-ratio: 1;
   border-radius: 999px;
   background: #efffff;
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 5px rgba(255, 255, 255, 0.74);
   opacity: calc(var(--samuel-eye-open) * var(--samuel-eye-light));
   transform: translate(-50%, -50%);
+}
+
+.samuel-hologram__portrait-eye::after {
+  content: "";
+  position: absolute;
+  inset: -2px 0 auto;
+  height: 48%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(2, 6, 23, 0.7), transparent);
+  opacity: 0.56;
 }
 
 .samuel-hologram__portrait-brow {

@@ -29,6 +29,7 @@ export type GmailActionArgs = {
 };
 
 export type GmailActionPlan = {
+  surface: "gmail";
   actionId: GmailActionId;
   args: GmailActionArgs;
   requiresConfirmation: boolean;

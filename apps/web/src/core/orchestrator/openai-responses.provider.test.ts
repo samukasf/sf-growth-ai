@@ -1,9 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  buildChatCompletionsApiInput,
   buildResponsesApiInput,
   buildSamuelInstructions,
+  extractChatCompletionsText,
   extractResponsesApiText,
+  getResponsesProviderConfig,
   OpenAIResponsesProvider,
 } from "./openai-responses.provider";
 
@@ -22,6 +25,7 @@ const completionInput = {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
 });
 
 describe("OpenAIResponsesProvider", () => {
@@ -39,6 +43,30 @@ describe("OpenAIResponsesProvider", () => {
         ],
       }),
     ).toBe("Diagnóstico concluído");
+  });
+
+  it("extracts text from an OpenAI-compatible Chat Completions envelope", () => {
+    expect(
+      extractChatCompletionsText({
+        choices: [{ message: { content: "Resposta Kimi" } }],
+      }),
+    ).toBe("Resposta Kimi");
+  });
+
+  it("selects Kimi K3 when requested through the text provider env", () => {
+    vi.stubEnv("SAMUEL_AI_TEXT_PROVIDER", "kimi");
+    vi.stubEnv("MOONSHOT_API_KEY", "moon-test-key");
+
+    const config = getResponsesProviderConfig();
+
+    expect(config).toMatchObject({
+      apiKind: "chat_completions",
+      apiKey: "moon-test-key",
+      baseUrl: "https://api.moonshot.ai/v1",
+      model: "kimi-k3",
+      providerId: "kimi-chat-completions",
+      chatReasoningEffort: "max",
+    });
   });
 
   it("builds fluid instructions and structured conversation history", () => {
@@ -85,6 +113,15 @@ describe("OpenAIResponsesProvider", () => {
     expect(instructions).toContain("motor de geração de código");
     expect(instructions).toContain("objeto estruturado");
     expect(instructions).not.toContain("assistente executivo masculino");
+  });
+
+  it("builds system-first Chat Completions messages for compatible providers", () => {
+    const messages = buildChatCompletionsApiInput(completionInput);
+
+    expect(messages[0].role).toBe("system");
+    expect(messages[0].content).toContain("Samuel AI");
+    expect(messages[1]).toEqual({ role: "user", content: "Chamo-me Ana" });
+    expect(messages.at(-1)?.content).toContain("Analisa as vendas");
   });
 
   it("sends JSON schema and reasoning controls when configured", async () => {
@@ -186,5 +223,52 @@ describe("OpenAIResponsesProvider", () => {
     };
     expect(requestBody.input[0]).toEqual({ role: "user", content: "Chamo-me Ana" });
     expect(requestBody.store).toBe(false);
+  });
+
+  it("streams OpenAI-compatible Chat Completions deltas for Kimi", async () => {
+    const encoder = new TextEncoder();
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(
+          encoder.encode('data: {"choices":[{"delta":{"content":"Bom"}}]}\n\n'),
+        );
+        controller.enqueue(
+          encoder.encode('data: {"choices":[{"delta":{"content":" dia"}}]}\n\n'),
+        );
+        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        controller.close();
+      },
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(body, { status: 200 })),
+    );
+
+    const provider = new OpenAIResponsesProvider({
+      apiKey: "moon-test-key",
+      baseUrl: "https://api.moonshot.ai/v1",
+      model: "kimi-k3",
+      maxOutputTokens: 200,
+      apiKind: "chat_completions",
+      providerId: "kimi-chat-completions",
+      chatReasoningEffort: "max",
+    });
+    const deltas: string[] = [];
+    const result = await provider.stream(completionInput, (delta) => deltas.push(delta));
+
+    expect(deltas).toEqual(["Bom", " dia"]);
+    expect(result.content).toBe("Bom dia");
+    expect(result.providerId).toBe("kimi-chat-completions");
+    const requestUrl = vi.mocked(fetch).mock.calls[0]?.[0];
+    const request = vi.mocked(fetch).mock.calls[0]?.[1];
+    const requestBody = JSON.parse(String(request?.body)) as {
+      messages: Array<{ role: string; content: string }>;
+      reasoning_effort?: string;
+      stream: boolean;
+    };
+    expect(String(requestUrl)).toBe("https://api.moonshot.ai/v1/chat/completions");
+    expect(requestBody.messages[0]?.role).toBe("system");
+    expect(requestBody.reasoning_effort).toBe("max");
+    expect(requestBody.stream).toBe(true);
   });
 });

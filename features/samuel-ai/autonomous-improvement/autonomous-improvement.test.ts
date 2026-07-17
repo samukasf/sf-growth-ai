@@ -60,6 +60,23 @@ describe("Samuel autonomous improvement engine", () => {
     );
   });
 
+  it("recognizes Kimi K3 as an enabled text intelligence provider", () => {
+    const report = buildAutonomousImprovementReport({
+      now: new Date("2026-07-16T12:00:00.000Z"),
+      env: {
+        SAMUEL_AI_TEXT_PROVIDER: "kimi",
+        MOONSHOT_API_KEY: "moon-secret-that-must-not-leak",
+      },
+    });
+
+    const serialized = JSON.stringify(report);
+
+    expect(report.intelligence.providerConfigured).toBe(true);
+    expect(report.intelligence.expectedResponseMode).toBe("kimi");
+    expect(serialized).toContain("Kimi K3");
+    expect(serialized).not.toContain("moon-secret-that-must-not-leak");
+  });
+
   it("prioritizes supervised PR-based autonomy over unsafe self-modification", () => {
     const report = buildAutonomousImprovementReport({
       now: new Date("2026-07-16T12:00:00.000Z"),

@@ -18,6 +18,16 @@ describe("parseGmailIntent", () => {
     expect(plan?.args.to).toBe("joao@empresa.com");
   });
 
+  it("extracts natural message body for send commands", () => {
+    const plan = parseGmailIntent(
+      "Envie um e-mail para joao@empresa.com dizendo Bom dia João, seguem as informações combinadas.",
+    );
+
+    expect(plan?.actionId).toBe("gmail_send");
+    expect(plan?.args.to).toBe("joao@empresa.com");
+    expect(plan?.args.body).toBe("Bom dia João, seguem as informações combinadas.");
+  });
+
   it("detects trash with message id", () => {
     const plan = parseGmailIntent("Apaga o email id:18abcXYZ");
     expect(plan?.actionId).toBe("gmail_trash");

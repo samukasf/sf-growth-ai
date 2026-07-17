@@ -73,7 +73,7 @@ export type AutonomousImprovementReport = {
     realtimeConfigured: boolean;
     memoryConfigured: boolean;
     rufloBridgeConfigured: boolean;
-    expectedResponseMode: "local_fallback" | "gateway" | "openai";
+    expectedResponseMode: "local_fallback" | "gateway" | "openai" | "kimi";
   };
   performance: {
     estimatedLatencyPolicy: "fast_default" | "balanced" | "configuration_required";
@@ -85,4 +85,3 @@ export type AutonomousImprovementReport = {
   backlog: ImprovementBacklogItem[];
   nextBestAction: string;
 };
-

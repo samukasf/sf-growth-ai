@@ -19,6 +19,17 @@ function extractQuoted(text: string): string | undefined {
   return match?.[1]?.trim();
 }
 
+function extractNaturalBody(text: string): string | undefined {
+  const match = text.match(
+    /\b(?:dizendo|com a mensagem|mensagem|texto|corpo)\b\s*[:=]?\s*([\s\S]{3,})$/i,
+  );
+  const body = match?.[1]?.trim();
+  if (!body) return undefined;
+  return body
+    .replace(/\b(?:assunto|subject)\s*[:=]\s*[«"']?[^«"'\n]+[»"']?/i, "")
+    .trim();
+}
+
 function extractMessageId(text: string): string | undefined {
   const match = text.match(/\b(?:id|messageId|mensagem)\s*[:=]?\s*([a-zA-Z0-9_-]{6,})\b/i);
   return match?.[1];
@@ -41,6 +52,7 @@ function plan(
   preview: string,
 ): GmailActionPlan {
   return {
+    surface: "gmail",
     actionId,
     args,
     requiresConfirmation: mutates(actionId),
@@ -65,7 +77,7 @@ export function parseGmailIntent(query: string): GmailActionPlan | null {
 
   const messageId = extractMessageId(query);
   const email = extractEmail(query);
-  const body = extractQuoted(query);
+  const body = extractQuoted(query) ?? extractNaturalBody(query);
 
   if (/\b(apag\w*|exclu\w*|lixeira|trash|delet\w*)\b/.test(normalized)) {
     if (!messageId) {

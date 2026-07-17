@@ -19,6 +19,7 @@ import type {
   SamuelChatRequest,
   SamuelChatRuntimeSummary,
   SamuelChatStreamEvent,
+  SamuelToolActionPlan,
 } from "@/features/samuel-ai/chat/samuel-chat.types";
 import { loadGoogleWorkspaceChatSignal } from "@/features/google-workspace/google-workspace-chat.server";
 import type { GoogleWorkspaceChatSignal } from "@/features/google-workspace/google-workspace-chat";
@@ -26,8 +27,12 @@ import {
   buildGmailActionPlan,
   executeGmailTool,
   gmailResultToFragment,
-  type GmailActionPlan,
 } from "@/features/gmail";
+import {
+  buildCalendarActionPlan,
+  calendarResultToFragment,
+  executeCalendarTool,
+} from "@/features/google-calendar";
 import { SamuelConversationRepository } from "@/features/samuel-ai/server/samuel-conversation.repository";
 import { getWorkspaceSessionIdentity } from "@/features/samuel-ai/server/workspace-session";
 import type { ChatMessage } from "@/features/samuel-ai/types";
@@ -99,17 +104,19 @@ function buildCompletionInput(
   runtimeResult: Awaited<ReturnType<typeof runSamuelRuntime>>,
   history: ChatMessage[],
   workspaceSignal?: GoogleWorkspaceChatSignal,
-  gmailFragments: string[] = [],
-  pendingAction?: GmailActionPlan | null,
+  toolFragments: string[] = [],
+  pendingAction?: SamuelToolActionPlan | null,
 ): LLMCompletionInput {
   const response = runtimeResult.response;
+  const pendingSurface = pendingAction?.surface === "calendar" ? "GOOGLE AGENDA" : "GMAIL";
   const actionHint = pendingAction
     ? [
-        `[GMAIL — AÇÃO PENDENTE] ${pendingAction.title}: ${pendingAction.preview}`,
-        "[GMAIL — REGRAS] Não diga que a ação já foi executada. Peça confirmação explícita no cartão de confirmação da UI.",
+        `[${pendingSurface} — AÇÃO PENDENTE] ${pendingAction.title}: ${pendingAction.preview}`,
+        `[${pendingSurface} — REGRAS] Não diga que a ação já foi executada. Peça confirmação explícita no cartão de confirmação da UI.`,
       ]
     : [
         "[GMAIL — REGRAS] Só afirme envio/apagamento/arquivo se existir fragmento [GMAIL — EXECUTADO]. Caso contrário, proponha e aguarde confirmação.",
+        "[GOOGLE AGENDA — REGRAS] Só afirme criação/edição/cancelamento de evento se existir fragmento [GOOGLE AGENDA — EXECUTADO]. Caso contrário, proponha e aguarde confirmação.",
       ];
 
   return {
@@ -124,7 +131,7 @@ function buildCompletionInput(
         `[RUNTIME] Próximo passo: ${response.nextStep}`,
         `[RUNTIME] Evidências consolidadas: ${runtimeResult.evidenceCount}`,
         ...(workspaceSignal?.fragments ?? []),
-        ...gmailFragments,
+        ...toolFragments,
         ...actionHint,
       ],
     },
@@ -246,14 +253,17 @@ export async function POST(request: Request) {
           chatRequest.query,
           chatRequest.companyId,
         );
-        const gmailFragments: string[] = [];
-        let pendingAction: GmailActionPlan | null = null;
+        const calendarPlan = gmailPlan
+          ? null
+          : buildCalendarActionPlan(chatRequest.query, chatRequest.companyId);
+        const toolFragments: string[] = [];
+        let pendingAction: SamuelToolActionPlan | null = null;
 
         if (gmailPlan) {
           if (gmailPlan.requiresConfirmation) {
             pendingAction = gmailPlan;
             send({ type: "action_proposal", action: gmailPlan });
-            gmailFragments.push(
+            toolFragments.push(
               `[GMAIL — PROPOSTA] ${gmailPlan.title}: ${gmailPlan.preview}`,
             );
           } else {
@@ -263,13 +273,39 @@ export async function POST(request: Request) {
               gmailPlan.args,
             );
             send({ type: "action_result", result });
-            gmailFragments.push(gmailResultToFragment(result));
+            toolFragments.push(gmailResultToFragment(result));
             if (!result.ok && /não conectada|NOT_CONNECTED|NOT_CONFIGURED/i.test(result.summary)) {
               send({
                 type: "warning",
                 code: "GMAIL_NOT_CONNECTED",
                 message:
                   "Gmail não está conectado. Abra /integrations/google/connect e autorize novamente (inclui permissões de organizar/apagar).",
+              });
+            }
+          }
+        }
+
+        if (calendarPlan) {
+          if (calendarPlan.requiresConfirmation) {
+            pendingAction = calendarPlan;
+            send({ type: "action_proposal", action: calendarPlan });
+            toolFragments.push(
+              `[GOOGLE AGENDA — PROPOSTA] ${calendarPlan.title}: ${calendarPlan.preview}`,
+            );
+          } else {
+            const result = await executeCalendarTool(
+              chatRequest.companyId,
+              calendarPlan.actionId,
+              calendarPlan.args,
+            );
+            send({ type: "action_result", result });
+            toolFragments.push(calendarResultToFragment(result));
+            if (!result.ok && /não conectada|NOT_CONNECTED|NOT_CONFIGURED|permiss/i.test(result.summary)) {
+              send({
+                type: "warning",
+                code: "GOOGLE_CALENDAR_NOT_CONNECTED",
+                message:
+                  "Google Agenda não está conectada com permissão de escrita. Abra /integrations/google/connect e autorize novamente.",
               });
             }
           }
@@ -306,7 +342,7 @@ export async function POST(request: Request) {
                 runtimeResult,
                 chatRequest.history ?? [],
                 workspaceSignal,
-                gmailFragments,
+                toolFragments,
                 pendingAction,
               ),
               (delta) => {
@@ -338,13 +374,14 @@ export async function POST(request: Request) {
 
         if (!content) {
           content =
-            gmailFragments.map((line) => line.replace(/^\[.*?\]\s*/, "")).join("\n\n") ||
+            toolFragments.map((line) => line.replace(/^\[.*?\]\s*/, "")).join("\n\n") ||
             workspaceSignal.fallbackAnswer ||
             buildSamuelFallbackAnswer(chatRequest.query, runtimeSummary, {
               providerConfigured: Boolean(provider),
             });
           if (pendingAction) {
-            content = `${content}\n\nProposta: ${pendingAction.title}. Confirme no cartão abaixo para eu executar no Gmail.`;
+            const target = pendingAction.surface === "calendar" ? "Google Agenda" : "Gmail";
+            content = `${content}\n\nProposta: ${pendingAction.title}. Confirme no cartão abaixo para eu executar no ${target}.`;
           }
           send({ type: "provider", provider: providerId, model });
           send({ type: "delta", delta: content });
