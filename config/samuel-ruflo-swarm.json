@@ -1,0 +1,49 @@
+{
+  "$schema": "https://sf-growth-ai.local/schemas/samuel-ruflo-swarm.schema.json",
+  "name": "samuel-ai-autonomous-improvement",
+  "sourceRepository": "https://github.com/ruvnet/ruflo",
+  "execution": {
+    "mode": "supervised",
+    "cadence": "hourly",
+    "defaultWriteMode": "proposal_only",
+    "allowedWriteModes": ["proposal_only", "pull_request"],
+    "requiresHumanApprovalFor": [
+      "production_deploy",
+      "code_change",
+      "external_integration_write",
+      "credential_change",
+      "destructive_action"
+    ]
+  },
+  "mcp": {
+    "enabledEnv": "RUFLO_ENABLED",
+    "commandEnv": "RUFLO_MCP_COMMAND",
+    "defaultCommand": "npx ruflo@latest mcp start"
+  },
+  "swarms": [
+    {
+      "id": "speed-intelligence",
+      "topology": "hierarchical",
+      "maxAgents": 12,
+      "mission": "Improve Samuel AI response speed, routing, caching, and intelligence without weakening safety."
+    },
+    {
+      "id": "product-experience",
+      "topology": "mesh",
+      "maxAgents": 10,
+      "mission": "Continuously improve hologram, voice, chat flow, site builder, app builder, and mobile/desktop UX."
+    },
+    {
+      "id": "real-integrations",
+      "topology": "hierarchical",
+      "maxAgents": 10,
+      "mission": "Track Gmail, Google Workspace, Meta, WhatsApp, TikTok, Maps, deploys, and business data readiness."
+    },
+    {
+      "id": "quality-security",
+      "topology": "hierarchical",
+      "maxAgents": 14,
+      "mission": "Audit tests, dependency health, prompt-injection surfaces, OAuth safety, and release risk."
+    }
+  ]
+}

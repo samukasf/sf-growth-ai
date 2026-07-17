@@ -21,8 +21,28 @@ function isEnabled(value: string | undefined) {
   return ["1", "true", "yes", "on"].includes(String(value ?? "").toLowerCase());
 }
 
-function hasAny(env: RuntimeEnv, keys: string[]) {
-  return keys.some((key) => Boolean(env[key]));
+function hasValue(env: RuntimeEnv, key: string) {
+  return Boolean(env[key]?.trim());
+}
+
+function hasAll(env: RuntimeEnv, keys: string[]) {
+  return keys.every((key) => hasValue(env, key));
+}
+
+function hasUsableResponsesProvider(env: RuntimeEnv) {
+  return hasValue(env, "AI_GATEWAY_API_KEY") || hasValue(env, "OPENAI_API_KEY");
+}
+
+function hasUsableSupabaseMemory(env: RuntimeEnv) {
+  return hasAll(env, [
+    "NEXT_PUBLIC_SUPABASE_URL",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY",
+  ]);
+}
+
+function hasUsableRufloBridge(env: RuntimeEnv) {
+  return isEnabled(env.RUFLO_ENABLED) && hasValue(env, "RUFLO_MCP_COMMAND");
 }
 
 function compactUrl(value: string | undefined) {
@@ -33,22 +53,23 @@ function compactUrl(value: string | undefined) {
 }
 
 function providerMode(env: RuntimeEnv): AutonomousImprovementReport["intelligence"]["expectedResponseMode"] {
-  if (env.AI_GATEWAY_API_KEY || env.AI_GATEWAY_BASE_URL || env.AI_GATEWAY_MODEL) return "gateway";
-  if (env.OPENAI_API_KEY) return "openai";
+  if (hasValue(env, "AI_GATEWAY_API_KEY")) return "gateway";
+  if (hasValue(env, "OPENAI_API_KEY")) return "openai";
   return "local_fallback";
 }
 
 function buildSignals(env: RuntimeEnv): ImprovementSignal[] {
-  const providerConfigured = hasAny(env, ["AI_GATEWAY_API_KEY", "OPENAI_API_KEY"]);
-  const supabaseConfigured = hasAny(env, [
-    "NEXT_PUBLIC_SUPABASE_URL",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-    "SUPABASE_SERVICE_ROLE_KEY",
-  ]);
-  const googleConfigured = hasAny(env, ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"]);
-  const metaConfigured = hasAny(env, ["META_ACCESS_TOKEN", "META_APP_ID", "META_APP_SECRET"]);
-  const rufloConfigured = isEnabled(env.RUFLO_ENABLED) || Boolean(env.RUFLO_MCP_COMMAND);
-  const cronSecretConfigured = Boolean(env.SAMUEL_AUTONOMY_CRON_SECRET);
+  const providerConfigured = hasUsableResponsesProvider(env);
+  const supabaseConfigured = hasUsableSupabaseMemory(env);
+  const googleConfigured = hasAll(env, ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"]);
+  const metaConfigured =
+    hasAll(env, ["META_APP_ID", "META_APP_SECRET"]) ||
+    (hasValue(env, "META_ACCESS_TOKEN") &&
+      (hasValue(env, "META_PAGE_ID") ||
+        hasValue(env, "META_AD_ACCOUNT_ID") ||
+        hasValue(env, "META_INSTAGRAM_BUSINESS_ID")));
+  const rufloConfigured = hasUsableRufloBridge(env);
+  const cronSecretConfigured = hasValue(env, "SAMUEL_AUTONOMY_CRON_SECRET");
 
   const signals: ImprovementSignal[] = [
     {
@@ -92,7 +113,7 @@ function buildSignals(env: RuntimeEnv): ImprovementSignal[] {
       severity: "warning",
       source: "Environment capability scan",
       agentIds: ["data-memory-curation-agent-1", "data-company-brain-agent-2"],
-      evidence: ["NEXT_PUBLIC_SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY não totalmente configurados"],
+      evidence: ["NEXT_PUBLIC_SUPABASE_URL/NEXT_PUBLIC_SUPABASE_ANON_KEY/SUPABASE_SERVICE_ROLE_KEY não totalmente configurados"],
     });
   }
 
@@ -137,7 +158,7 @@ function buildSignals(env: RuntimeEnv): ImprovementSignal[] {
           severity: "healthy",
           source: "Ruflo bridge",
           agentIds: ["operations-git-hub-pr-agent-3", "architecture-scalability-architect-7"],
-          evidence: ["RUFLO_ENABLED=true ou RUFLO_MCP_COMMAND configurado"],
+          evidence: ["RUFLO_ENABLED=true", "RUFLO_MCP_COMMAND configurado"],
         }
       : {
           id: "ruflo-bridge-optional",
@@ -146,7 +167,7 @@ function buildSignals(env: RuntimeEnv): ImprovementSignal[] {
           severity: "notice",
           source: "Ruflo bridge",
           agentIds: ["operations-git-hub-pr-agent-3", "security-supply-chain-auditor-6"],
-          evidence: ["Execução externa desativada por padrão para segurança"],
+          evidence: ["Execução externa desativada ou comando ausente por segurança"],
         },
   );
 
@@ -233,13 +254,10 @@ export function buildAutonomousImprovementReport({
   now = new Date(),
   mode = "status",
 }: BuildReportInput = {}): AutonomousImprovementReport {
-  const providerConfigured = hasAny(env, ["AI_GATEWAY_API_KEY", "OPENAI_API_KEY"]);
-  const realtimeConfigured = hasAny(env, ["OPENAI_REALTIME_MODEL", "OPENAI_API_KEY"]);
-  const memoryConfigured = hasAny(env, [
-    "NEXT_PUBLIC_SUPABASE_URL",
-    "SUPABASE_SERVICE_ROLE_KEY",
-  ]);
-  const rufloBridgeConfigured = isEnabled(env.RUFLO_ENABLED) || Boolean(env.RUFLO_MCP_COMMAND);
+  const providerConfigured = hasUsableResponsesProvider(env);
+  const realtimeConfigured = hasAll(env, ["OPENAI_REALTIME_MODEL", "OPENAI_API_KEY"]);
+  const memoryConfigured = hasUsableSupabaseMemory(env);
+  const rufloBridgeConfigured = hasUsableRufloBridge(env);
   const signals = buildSignals(env);
   const backlog = buildBacklog(signals);
   const sourceUrl = compactUrl(env.RUFLO_REPOSITORY_URL ?? env.AGENT_CATALOG_REPOSITORY_URL);

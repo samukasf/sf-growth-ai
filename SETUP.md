@@ -73,8 +73,9 @@ O Samuel possui um motor de melhoria contínua supervisionada em
    - `RUFLO_REPOSITORY_URL=https://github.com/ruvnet/ruflo`
    - `RUFLO_ENABLED=true`
    - `RUFLO_MCP_COMMAND=npx ruflo@latest mcp start`
-4. Configure `SAMUEL_AUTONOMY_CRON_SECRET` antes de habilitar qualquer ação manual com escrita.
-5. Regra de segurança: o motor pode diagnosticar e propor melhorias sozinho; alterações de código,
+4. A configuração declarativa dos swarms fica em `config/samuel-ruflo-swarm.json`.
+5. Configure `SAMUEL_AUTONOMY_CRON_SECRET` antes de habilitar qualquer ação manual com escrita.
+6. Regra de segurança: o motor pode diagnosticar e propor melhorias sozinho; alterações de código,
    integrações externas e ações destrutivas devem virar plano, teste e PR revisável.
    - “Envia e-mail para nome@empresa.com assunto: Olá”
    - “Apaga o email id:XXXX”
