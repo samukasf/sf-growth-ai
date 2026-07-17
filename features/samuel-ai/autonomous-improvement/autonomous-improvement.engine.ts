@@ -30,7 +30,12 @@ function hasAll(env: RuntimeEnv, keys: string[]) {
 }
 
 function hasUsableResponsesProvider(env: RuntimeEnv) {
-  return hasValue(env, "AI_GATEWAY_API_KEY") || hasValue(env, "OPENAI_API_KEY");
+  return (
+    hasValue(env, "AI_GATEWAY_API_KEY") ||
+    hasValue(env, "OPENAI_API_KEY") ||
+    hasValue(env, "KIMI_API_KEY") ||
+    hasValue(env, "MOONSHOT_API_KEY")
+  );
 }
 
 function hasUsableSupabaseMemory(env: RuntimeEnv) {
@@ -53,7 +58,15 @@ function compactUrl(value: string | undefined) {
 }
 
 function providerMode(env: RuntimeEnv): AutonomousImprovementReport["intelligence"]["expectedResponseMode"] {
+  const preference = String(env.SAMUEL_AI_TEXT_PROVIDER ?? "auto").toLowerCase();
+  if (
+    ["kimi", "kimi-k3", "moonshot"].includes(preference) &&
+    (hasValue(env, "KIMI_API_KEY") || hasValue(env, "MOONSHOT_API_KEY"))
+  ) {
+    return "kimi";
+  }
   if (hasValue(env, "AI_GATEWAY_API_KEY")) return "gateway";
+  if (hasValue(env, "KIMI_API_KEY") || hasValue(env, "MOONSHOT_API_KEY")) return "kimi";
   if (hasValue(env, "OPENAI_API_KEY")) return "openai";
   return "local_fallback";
 }
@@ -88,11 +101,11 @@ function buildSignals(env: RuntimeEnv): ImprovementSignal[] {
       ? {
           id: "llm-provider-ready",
           title: "Motor de inteligência configurado",
-          detail: "O Samuel pode enriquecer planos e conversas usando provider de IA configurado no servidor.",
+          detail: "O Samuel pode enriquecer planos e conversas usando provider de IA configurado no servidor, incluindo Gateway, OpenAI ou Kimi K3.",
           severity: "healthy",
           source: "Environment capability scan",
           agentIds: ["data-learning-loop-agent-6", "product-samuel-personality-agent-3"],
-          evidence: ["AI_GATEWAY_API_KEY ou OPENAI_API_KEY presente"],
+          evidence: ["AI_GATEWAY_API_KEY, OPENAI_API_KEY, KIMI_API_KEY ou MOONSHOT_API_KEY presente"],
         }
       : {
           id: "llm-provider-missing",
@@ -101,7 +114,11 @@ function buildSignals(env: RuntimeEnv): ImprovementSignal[] {
           severity: "warning",
           source: "Environment capability scan",
           agentIds: ["data-learning-loop-agent-6", "operations-cost-control-agent-6"],
-          evidence: ["AI_GATEWAY_API_KEY ausente", "OPENAI_API_KEY ausente"],
+          evidence: [
+            "AI_GATEWAY_API_KEY ausente",
+            "OPENAI_API_KEY ausente",
+            "KIMI_API_KEY/MOONSHOT_API_KEY ausente",
+          ],
         },
   );
 

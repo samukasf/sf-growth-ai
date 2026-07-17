@@ -21,8 +21,11 @@ Preencha em `.env.local` (ver `.env.example` completo):
 - `OPENAI_API_KEY` para conversas geradas por IA e para a voz Realtime. `OPENAI_MODEL` é configurável (`gpt-5.4-mini` por padrão).
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` e `SUPABASE_SERVICE_ROLE_KEY` para dados e histórico persistente.
 - `AI_GATEWAY_API_KEY`, `AI_GATEWAY_BASE_URL` e `AI_GATEWAY_MODEL` somente para o chat textual. O gateway pode manter uma IA aberta como provedora principal do texto, mas nunca controla a voz Realtime.
+- `SAMUEL_AI_TEXT_PROVIDER=kimi`, `KIMI_API_KEY` ou `MOONSHOT_API_KEY`, `KIMI_BASE_URL=https://api.moonshot.ai/v1` e `KIMI_MODEL=kimi-k3` para usar Kimi K3 no chat textual por API compatível com OpenAI Chat Completions.
 - `OPENAI_REALTIME_MODEL` exclusivamente para a voz; a identidade vocal do Samuel usa `cedar`.
 - Integrações opcionais: `GOOGLE_*` (OAuth Workspace, Analytics, Business, Search Console), `META_*`, `LINKEDIN_*`, `NEWS_API_KEY` (Market Watcher).
+
+Para ações reais de Gmail e Google Agenda, conecte a conta em `/integrations/google/connect`. Se a conta já estava conectada antes das permissões de escrita, reconecte para conceder `gmail.modify`, `gmail.send`, `gmail.compose` e `calendar`. O Samuel lista dados sem simulação e exige confirmação explícita no cartão da interface antes de enviar/apagar e-mail ou criar/editar/cancelar evento.
 
 Sem uma chave de IA, o chat informa claramente a limitação e continua funcional para análises empresariais com a resposta determinística do Samuel Runtime. Sem a configuração administrativa do Supabase, o histórico fica isolado no navegador. Sem tokens de integração, os módulos correspondentes ficam vazios (nunca com dados mock). Nenhuma destas degradações impede o build.
 

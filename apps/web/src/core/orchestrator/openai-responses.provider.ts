@@ -9,8 +9,11 @@ export type ResponsesProviderConfig = {
   baseUrl: string;
   model: string;
   maxOutputTokens: number;
+  apiKind?: "responses" | "chat_completions";
+  providerId?: string;
   textFormat?: ResponsesTextFormat;
   reasoningEffort?: "none" | "minimal" | "low" | "medium" | "high" | "xhigh";
+  chatReasoningEffort?: "max";
 };
 
 export type ResponsesTextFormat = {
@@ -34,35 +37,105 @@ export type ResponsesApiInputMessage = {
   content: string;
 };
 
+type ChatCompletionsEnvelope = {
+  id?: string;
+  error?: { message?: string };
+  choices?: Array<{
+    message?: { content?: ChatCompletionsContent };
+    delta?: { content?: ChatCompletionsContent };
+  }>;
+};
+
+type ChatCompletionsContent =
+  | string
+  | Array<{
+      type?: string;
+      text?: string;
+    }>;
+
+type ChatCompletionsMessage = {
+  role: "system" | "user" | "assistant";
+  content: string;
+};
+
 function normalizeBaseUrl(value: string) {
   return value.replace(/\/+$/, "");
 }
 
+function firstEnvValue(...keys: string[]): string | undefined {
+  for (const key of keys) {
+    const value = process.env[key]?.trim();
+    if (value) return value;
+  }
+  return undefined;
+}
+
 export function getResponsesProviderConfig(): ResponsesProviderConfig | null {
-  const apiKey =
-    process.env.AI_GATEWAY_API_KEY ?? process.env.OPENAI_API_KEY;
-  if (!apiKey) return null;
+  const providerPreference = (
+    process.env.SAMUEL_AI_TEXT_PROVIDER ?? "auto"
+  ).trim().toLowerCase();
+  const gatewayApiKey = firstEnvValue("AI_GATEWAY_API_KEY");
+  const kimiApiKey = firstEnvValue("KIMI_API_KEY", "MOONSHOT_API_KEY");
+  const openAiApiKey = firstEnvValue("OPENAI_API_KEY");
+  const wantsKimi = ["kimi", "kimi-k3", "moonshot"].includes(providerPreference);
+  const wantsGateway = ["gateway", "ai-gateway"].includes(providerPreference);
+  const wantsOpenAi = ["openai", "responses"].includes(providerPreference);
+  const kimiReasoningEffort = process.env.KIMI_REASONING_EFFORT?.trim().toLowerCase();
 
   const rawMaxTokens = Number.parseInt(
     process.env.SAMUEL_AI_MAX_OUTPUT_TOKENS ?? "1800",
     10,
   );
+  const maxOutputTokens =
+    Number.isFinite(rawMaxTokens) && rawMaxTokens > 0
+      ? Math.min(rawMaxTokens, 16_000)
+      : 1800;
+
+  if (wantsKimi || (!wantsGateway && !wantsOpenAi && !gatewayApiKey && kimiApiKey)) {
+    if (!kimiApiKey) return null;
+    return {
+      apiKey: kimiApiKey,
+      baseUrl: normalizeBaseUrl(
+        process.env.KIMI_BASE_URL ??
+          process.env.MOONSHOT_BASE_URL ??
+          "https://api.moonshot.ai/v1",
+      ),
+      model:
+        process.env.KIMI_MODEL ??
+        process.env.MOONSHOT_MODEL ??
+        "kimi-k3",
+      maxOutputTokens,
+      apiKind: "chat_completions",
+      providerId: "kimi-chat-completions",
+      chatReasoningEffort:
+        !kimiReasoningEffort || kimiReasoningEffort === "max" ? "max" : undefined,
+    };
+  }
+
+  const apiKey = wantsGateway
+    ? gatewayApiKey
+    : wantsOpenAi
+      ? openAiApiKey
+      : gatewayApiKey ?? openAiApiKey;
+  if (!apiKey) return null;
 
   return {
     apiKey,
     baseUrl: normalizeBaseUrl(
-      process.env.AI_GATEWAY_BASE_URL ??
-        process.env.OPENAI_BASE_URL ??
-        "https://api.openai.com/v1",
+      wantsOpenAi
+        ? (process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1")
+        : process.env.AI_GATEWAY_BASE_URL ??
+            process.env.OPENAI_BASE_URL ??
+            "https://api.openai.com/v1",
     ),
     model:
-      process.env.AI_GATEWAY_MODEL ??
-      process.env.OPENAI_MODEL ??
-      "gpt-5.4-mini",
-    maxOutputTokens:
-      Number.isFinite(rawMaxTokens) && rawMaxTokens > 0
-        ? Math.min(rawMaxTokens, 16_000)
-        : 1800,
+      wantsOpenAi
+        ? (process.env.OPENAI_MODEL ?? "gpt-5.4-mini")
+        : process.env.AI_GATEWAY_MODEL ??
+            process.env.OPENAI_MODEL ??
+            "gpt-5.4-mini",
+    maxOutputTokens,
+    apiKind: "responses",
   };
 }
 
@@ -71,6 +144,21 @@ export function extractResponsesApiText(payload: ResponsesApiEnvelope): string {
     .flatMap((item) => item.content ?? [])
     .filter((content) => content.type === "output_text")
     .map((content) => content.text ?? "")
+    .join("");
+}
+
+function contentToText(content: ChatCompletionsContent | undefined): string {
+  if (!content) return "";
+  if (typeof content === "string") return content;
+  return content
+    .filter((part) => part.type === "text" || typeof part.text === "string")
+    .map((part) => part.text ?? "")
+    .join("");
+}
+
+export function extractChatCompletionsText(payload: ChatCompletionsEnvelope): string {
+  return (payload.choices ?? [])
+    .map((choice) => contentToText(choice.message?.content))
     .join("");
 }
 
@@ -134,6 +222,28 @@ export function buildResponsesApiInput(
   ];
 }
 
+export function buildChatCompletionsApiInput(
+  input: LLMCompletionInput,
+): ChatCompletionsMessage[] {
+  return [
+    { role: "system", content: buildSamuelInstructions(input) },
+    ...buildResponsesApiInput(input),
+  ];
+}
+
+function toChatResponseFormat(format: ResponsesTextFormat | undefined) {
+  if (!format) return undefined;
+  if (format.type === "json_object") return { type: "json_object" };
+  return {
+    type: "json_schema",
+    json_schema: {
+      name: format.name ?? "samuel_response",
+      strict: format.strict ?? true,
+      schema: format.schema ?? {},
+    },
+  };
+}
+
 async function readError(response: Response): Promise<string> {
   try {
     const payload = await response.json() as ResponsesApiEnvelope;
@@ -147,9 +257,11 @@ export class OpenAIResponsesProvider implements LLMProviderPort {
   readonly providerId: string;
 
   constructor(private readonly config: ResponsesProviderConfig) {
-    this.providerId = config.baseUrl.includes("api.openai.com")
+    this.providerId = config.providerId ?? (
+      config.baseUrl.includes("api.openai.com")
       ? "openai-responses"
-      : "ai-gateway-responses";
+      : "ai-gateway-responses"
+    );
   }
 
   get model() {
@@ -157,6 +269,10 @@ export class OpenAIResponsesProvider implements LLMProviderPort {
   }
 
   async complete(input: LLMCompletionInput): Promise<LLMCompletionResult> {
+    if (this.config.apiKind === "chat_completions") {
+      return this.completeChatCompletions(input);
+    }
+
     const response = await fetch(`${this.config.baseUrl}/responses`, {
       method: "POST",
       headers: {
@@ -192,11 +308,52 @@ export class OpenAIResponsesProvider implements LLMProviderPort {
     };
   }
 
+  private async completeChatCompletions(
+    input: LLMCompletionInput,
+  ): Promise<LLMCompletionResult> {
+    const model = input.model ?? this.config.model;
+    const responseFormat = toChatResponseFormat(this.config.textFormat);
+    const response = await fetch(`${this.config.baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.config.apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        messages: buildChatCompletionsApiInput(input),
+        max_tokens: this.config.maxOutputTokens,
+        ...(responseFormat ? { response_format: responseFormat } : {}),
+        ...(this.config.chatReasoningEffort
+          ? { reasoning_effort: this.config.chatReasoningEffort }
+          : {}),
+        stream: false,
+      }),
+    });
+
+    if (!response.ok) throw new Error(await readError(response));
+
+    const payload = await response.json() as ChatCompletionsEnvelope;
+    const content = extractChatCompletionsText(payload);
+    if (!content) throw new Error("AI Gateway não devolveu texto.");
+
+    return {
+      content,
+      providerId: this.providerId,
+      model,
+      generatedAt: new Date().toISOString(),
+    };
+  }
+
   async stream(
     input: LLMCompletionInput,
     onDelta: (delta: string) => void,
     signal?: AbortSignal,
   ): Promise<LLMCompletionResult> {
+    if (this.config.apiKind === "chat_completions") {
+      return this.streamChatCompletions(input, onDelta, signal);
+    }
+
     const model = input.model ?? this.config.model;
     const response = await fetch(`${this.config.baseUrl}/responses`, {
       method: "POST",
@@ -277,12 +434,91 @@ export class OpenAIResponsesProvider implements LLMProviderPort {
       generatedAt: new Date().toISOString(),
     };
   }
+
+  private async streamChatCompletions(
+    input: LLMCompletionInput,
+    onDelta: (delta: string) => void,
+    signal?: AbortSignal,
+  ): Promise<LLMCompletionResult> {
+    const model = input.model ?? this.config.model;
+    const responseFormat = toChatResponseFormat(this.config.textFormat);
+    const response = await fetch(`${this.config.baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.config.apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        messages: buildChatCompletionsApiInput(input),
+        max_tokens: this.config.maxOutputTokens,
+        ...(responseFormat ? { response_format: responseFormat } : {}),
+        ...(this.config.chatReasoningEffort
+          ? { reasoning_effort: this.config.chatReasoningEffort }
+          : {}),
+        stream: true,
+      }),
+      signal,
+    });
+
+    if (!response.ok) throw new Error(await readError(response));
+    if (!response.body) throw new Error("AI Gateway não iniciou o stream.");
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let content = "";
+
+    const processFrame = (frame: string) => {
+      const data = frame
+        .split(/\r?\n/)
+        .filter((line) => line.startsWith("data:"))
+        .map((line) => line.slice(5).trim())
+        .join("\n");
+
+      if (!data || data === "[DONE]") return;
+
+      const event = JSON.parse(data) as ChatCompletionsEnvelope;
+      if (event.error?.message) throw new Error(event.error.message);
+
+      const delta = (event.choices ?? [])
+        .map((choice) => contentToText(choice.delta?.content))
+        .join("");
+      if (delta) {
+        content += delta;
+        onDelta(delta);
+      }
+    };
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const frames = buffer.split(/\r?\n\r?\n/);
+      buffer = frames.pop() ?? "";
+      for (const frame of frames) processFrame(frame);
+    }
+
+    buffer += decoder.decode();
+    if (buffer.trim()) processFrame(buffer);
+
+    if (!content.trim()) {
+      throw new Error("AI Gateway concluiu sem devolver texto.");
+    }
+
+    return {
+      content,
+      providerId: this.providerId,
+      model,
+      generatedAt: new Date().toISOString(),
+    };
+  }
 }
 
 export function createConfiguredResponsesProvider(
   overrides: Partial<Pick<
     ResponsesProviderConfig,
-    "model" | "maxOutputTokens" | "textFormat" | "reasoningEffort"
+    "model" | "maxOutputTokens" | "textFormat" | "reasoningEffort" | "chatReasoningEffort"
   >> = {},
 ) {
   const config = getResponsesProviderConfig();

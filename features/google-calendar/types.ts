@@ -109,3 +109,23 @@ export type CalendarToolOutput = {
   data: Record<string, unknown>;
 };
 
+export type CalendarActionArgs = Omit<CalendarToolInput, "actionId">;
+
+export type CalendarActionPlan = {
+  surface: "calendar";
+  actionId: CalendarActionId;
+  args: CalendarActionArgs;
+  requiresConfirmation: boolean;
+  title: string;
+  preview: string;
+  confirmationToken?: string;
+};
+
+export type CalendarToolResult = {
+  ok: boolean;
+  surface: "calendar";
+  actionId: CalendarActionId;
+  summary: string;
+  data?: unknown;
+  error?: string;
+};
