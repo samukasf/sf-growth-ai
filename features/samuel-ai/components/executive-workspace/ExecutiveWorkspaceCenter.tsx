@@ -1,5 +1,16 @@
 "use client";
 
+import type { LucideIcon } from "lucide-react";
+import {
+  BrainCircuit,
+  CalendarDays,
+  Globe2,
+  Inbox,
+  ListTodo,
+  Radar,
+  WandSparkles,
+} from "lucide-react";
+
 import { cn } from "@/utils/cn";
 
 import { MetaExecutiveSummarySection } from "@/features/meta/components/meta-executive-summary-section";
@@ -136,12 +147,91 @@ function ExecutiveRecommendationsPanel({
 function SamuelAiWorkspace({
   data,
   handlers,
+  onNavigate,
 }: {
   data: ExecutiveWorkspaceData;
   handlers: ExecutiveWorkspaceHandlers;
+  onNavigate: (section: WorkspaceSection) => void;
 }) {
+  const flowActions: Array<{
+    section: WorkspaceSection;
+    label: string;
+    description: string;
+    icon: LucideIcon;
+  }> = [
+    {
+      section: "executive-inbox",
+      label: "Inbox",
+      description: "E-mails, alertas e decisões",
+      icon: Inbox,
+    },
+    {
+      section: "executive-agenda",
+      label: "Agenda",
+      description: "Compromissos e execução",
+      icon: CalendarDays,
+    },
+    {
+      section: "executive-tasks",
+      label: "Tarefas",
+      description: "Prioridades e decisões",
+      icon: ListTodo,
+    },
+    {
+      section: "site-builder",
+      label: "Sites",
+      description: "Criador navegável",
+      icon: Globe2,
+    },
+    {
+      section: "studio",
+      label: "Studio IA",
+      description: "Sites, apps e código",
+      icon: WandSparkles,
+    },
+    {
+      section: "autonomous-improvement",
+      label: "Autoevolução",
+      description: "Melhorias internas",
+      icon: BrainCircuit,
+    },
+    {
+      section: "executive-watchers",
+      label: "Monitorização",
+      description: "Sinais e oportunidades",
+      icon: Radar,
+    },
+  ];
+
   return (
     <div className="flex flex-col gap-4">
+      <CommandPanel className="samuel-flow-strip p-3 sm:p-4" accent>
+        <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+          <SectionHeader
+            title="Samuel no centro da operação"
+            description="Fale com o holograma e acione as principais páginas do sistema sem sair da experiência."
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">
+          {flowActions.map((action) => (
+            <button
+              key={action.section}
+              type="button"
+              onClick={() => onNavigate(action.section)}
+              className="group flex min-h-20 flex-col justify-between rounded-2xl border border-blue-200/60 bg-white/80 p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-cyan-300 hover:bg-cyan-50/80 hover:shadow-md"
+            >
+              <span className="flex size-9 items-center justify-center rounded-xl border border-blue-200 bg-blue-50 text-blue-700 transition group-hover:border-cyan-300 group-hover:bg-cyan-100 group-hover:text-cyan-700">
+                <action.icon className="size-4" strokeWidth={1.75} />
+              </span>
+              <span>
+                <strong className="block text-[11px] font-semibold text-blue-950">{action.label}</strong>
+                <small className="mt-0.5 block text-[9px] leading-snug text-blue-950/52">{action.description}</small>
+              </span>
+            </button>
+          ))}
+        </div>
+      </CommandPanel>
+
       {(data.hasActiveAnalysis || handlers.isProcessing || data.executiveConversation || data.pendingQuestion) && (
         <CommandPanel accent className="p-4 sm:p-5">
           <ExecutiveExperience
@@ -177,11 +267,11 @@ function SamuelAiWorkspace({
         </CommandPanel>
       )}
 
-      <CommandPanel className="flex min-h-[min(380px,50dvh)] flex-col overflow-hidden p-0">
+      <CommandPanel className="flex min-h-[calc(100dvh-190px)] flex-col overflow-hidden p-0">
         <div className="shrink-0 border-b border-border px-5 py-4">
           <SectionHeader
-            title="Conversa com Samuel AI"
-            description="Conversa contínua com contexto, memória e resposta em tempo real"
+            title="Cockpit de conversa com Samuel AI"
+            description="O holograma é o Samuel: fale, ouça e acompanhe a resposta ativa sem o histórico ocupar a tela."
           />
         </div>
         <div className="min-h-0 flex-1 overflow-hidden">
@@ -296,7 +386,7 @@ export function ExecutiveWorkspaceCenter({
         );
 
       case "samuel-ai":
-        return <SamuelAiWorkspace data={data} handlers={handlers} />;
+        return <SamuelAiWorkspace data={data} handlers={handlers} onNavigate={onSectionChange} />;
 
       case "autonomous-improvement":
         return <AutonomousImprovementPanel />;
