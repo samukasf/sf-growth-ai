@@ -279,6 +279,7 @@ export function ChatPanel({
   const [voiceAutoSend, setVoiceAutoSend] = useState(true);
   const [voiceReplyEnabled, setVoiceReplyEnabled] = useState(true);
   const [voiceConsoleOpen, setVoiceConsoleOpen] = useState(false);
+  const [historyExpanded, setHistoryExpanded] = useState(false);
   const presenceSleeping = useSamuelIdlePresence();
   const [activeBrowserMessageId, setActiveBrowserMessageId] = useState<string | null>(null);
   const [activeRealtimeMessageId, setActiveRealtimeMessageId] = useState<string | null>(null);
@@ -515,6 +516,19 @@ export function ChatPanel({
         ) ?? null,
     [messages],
   );
+  const visibleMessages = useMemo(
+    () => (historyExpanded ? messages : messages.slice(-12)),
+    [historyExpanded, messages],
+  );
+  const hiddenMessageCount = Math.max(0, messages.length - visibleMessages.length);
+  const liveCaption = useMemo(() => {
+    const activeMessage = messages.find((message) => message.id === activeSpokenMessageId);
+    const source =
+      activeMessage?.content ||
+      lastAssistantMessage?.content ||
+      "Fale por voz ou escreva uma instrução. O holograma é o Samuel AI em modo executivo.";
+    return source.length > 210 ? `${source.slice(0, 210).trim()}…` : source;
+  }, [activeSpokenMessageId, lastAssistantMessage?.content, messages]);
 
   const performSend = useCallback(
     async (rawContent: string, retry = false) => {
@@ -564,6 +578,7 @@ export function ChatPanel({
       setLastFailedQuery(null);
       setPendingAction(null);
       setActionResult(null);
+      setHistoryExpanded(false);
 
       const controller = new AbortController();
       abortRef.current = controller;
@@ -792,36 +807,52 @@ export function ChatPanel({
   }
 
   return (
-    <div className="samuel-chat-shell">
+    <div className="samuel-chat-shell samuel-chat-shell--hologram">
+      <div className={cn("samuel-chat-presence", samuelSpeaking && "samuel-chat-presence--speaking")}>
+        <SamuelHologram
+          state={hologramState}
+          audioLevel={hologramAudioLevel}
+          speechProgress={hologramSpeechProgress}
+          smiling={browserSpeechSettling || realtimeSettling}
+        />
+        <div className="samuel-chat-presence__copy">
+          <span>Samuel AI · presença executiva</span>
+          <strong>
+            {samuelSpeaking
+              ? "Estou falando com você"
+              : browserSpeechSettling || realtimeSettling || realtimeVoice.session.state === "listening"
+                ? "Estou ouvindo"
+                : busy
+                  ? "Estou analisando"
+                  : "Estou online e atento"}
+          </strong>
+          <p>
+            O holograma é o Samuel. A voz, a boca, os olhos e a mensagem ativa trabalham juntos.
+          </p>
+          <blockquote className="samuel-chat-presence__caption">
+            {liveCaption}
+          </blockquote>
+        </div>
+      </div>
+
       <div
         role="log"
         aria-live="polite"
         aria-label="Conversa com Samuel AI"
         className="samuel-chat-log"
       >
-        <div className={cn("samuel-chat-presence", samuelSpeaking && "samuel-chat-presence--speaking")}>
-          <SamuelHologram
-            compact
-            state={hologramState}
-            audioLevel={hologramAudioLevel}
-            speechProgress={hologramSpeechProgress}
-            smiling={browserSpeechSettling || realtimeSettling}
-          />
-          <div className="samuel-chat-presence__copy">
-            <span>Samuel AI · presença executiva</span>
-            <strong>
-              {samuelSpeaking
-                ? "Estou falando com você"
-                : browserSpeechSettling || realtimeSettling || realtimeVoice.session.state === "listening"
-                  ? "Estou ouvindo"
-                  : busy
-                    ? "Estou analisando"
-                    : "Estou online e atento"}
-            </strong>
-            <p>
-              O holograma é a presença visual do Samuel. Ele reage à voz e ao processamento em tempo real.
-            </p>
+        <div className="samuel-chat-history-header">
+          <div>
+            <span>Histórico compacto</span>
+            <strong>Conversa com Samuel</strong>
           </div>
+          <button
+            type="button"
+            onClick={() => setHistoryExpanded((current) => !current)}
+            disabled={messages.length <= 12}
+          >
+            {historyExpanded ? "Compactar" : `Ver tudo${hiddenMessageCount ? ` (+${hiddenMessageCount})` : ""}`}
+          </button>
         </div>
 
         {!hasEngaged && (
@@ -837,7 +868,17 @@ export function ChatPanel({
           </div>
         )}
 
-        {messages.map((message) => {
+        {hiddenMessageCount > 0 && !historyExpanded && (
+          <button
+            type="button"
+            className="samuel-chat-history-hint"
+            onClick={() => setHistoryExpanded(true)}
+          >
+            {hiddenMessageCount} mensagem(ns) anterior(es) ocultas para manter a tela leve. Tocar para expandir.
+          </button>
+        )}
+
+        {visibleMessages.map((message) => {
           const speakingMessage = message.id === activeSpokenMessageId;
           return (
             <ExecutiveMessage
