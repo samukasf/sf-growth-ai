@@ -1,7 +1,12 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-const configuredUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const configuredAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+function readEnv(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+const configuredUrl = readEnv(process.env.NEXT_PUBLIC_SUPABASE_URL);
+const configuredAnonKey = readEnv(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
 /**
  * The UI has graceful empty states when Supabase is not configured. Creating the
