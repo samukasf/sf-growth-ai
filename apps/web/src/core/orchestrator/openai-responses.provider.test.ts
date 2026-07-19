@@ -28,6 +28,27 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
+describe("getResponsesProviderConfig", () => {
+  it("uses OPENAI fallbacks when AI_GATEWAY variables are empty", () => {
+    vi.stubEnv("AI_GATEWAY_API_KEY", "   ");
+    vi.stubEnv("AI_GATEWAY_BASE_URL", "");
+    vi.stubEnv("AI_GATEWAY_MODEL", "  ");
+    vi.stubEnv("OPENAI_API_KEY", "openai-key");
+    vi.stubEnv("OPENAI_BASE_URL", "https://api.openai.com/v1");
+    vi.stubEnv("OPENAI_MODEL", "gpt-test");
+
+    const config = getResponsesProviderConfig();
+
+    expect(config).toEqual({
+      apiKey: "openai-key",
+      baseUrl: "https://api.openai.com/v1",
+      model: "gpt-test",
+      maxOutputTokens: 1800,
+      apiKind: "responses",
+    });
+  });
+});
+
 describe("OpenAIResponsesProvider", () => {
   it("extracts text from a Responses API envelope", () => {
     expect(
@@ -165,6 +186,7 @@ describe("OpenAIResponsesProvider", () => {
     };
     expect(requestBody.text?.format).toEqual(textFormat);
     expect(requestBody.reasoning?.effort).toBe("low");
+    expect(requestBody).not.toHaveProperty("store");
   });
 
   it("injects live Google Workspace data even when the intent is general", () => {
@@ -270,5 +292,102 @@ describe("OpenAIResponsesProvider", () => {
     expect(requestBody.messages[0]?.role).toBe("system");
     expect(requestBody.reasoning_effort).toBe("max");
     expect(requestBody.stream).toBe(true);
+  });
+
+  it("omits store when streaming through Groq", async () => {
+    const encoder = new TextEncoder();
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(
+          encoder.encode(
+            'data: {"type":"response.output_text.delta","delta":"Olá"}\n\n',
+          ),
+        );
+        controller.close();
+      },
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(body, { status: 200 })),
+    );
+
+    const provider = new OpenAIResponsesProvider({
+      apiKey: "groq-key",
+      baseUrl: "https://api.groq.com/openai/v1",
+      model: "llama-3.3-70b-versatile",
+      maxOutputTokens: 200,
+    });
+    await provider.stream(completionInput, () => {});
+
+    const fetchMock = vi.mocked(fetch);
+    const request = fetchMock.mock.calls[0]?.[1];
+    const requestBody = JSON.parse(String(request?.body)) as Record<string, unknown>;
+    expect(requestBody).not.toHaveProperty("store");
+    expect(requestBody.stream).toBe(true);
+    expect(provider.providerId).toBe("ai-gateway-responses");
+  });
+
+  it("includes store: false when completing through OpenAI", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            output: [
+              {
+                type: "message",
+                content: [{ type: "output_text", text: "Resposta" }],
+              },
+            ],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      ),
+    );
+
+    const provider = new OpenAIResponsesProvider({
+      apiKey: "openai-key",
+      baseUrl: "https://api.openai.com/v1",
+      model: "gpt-test",
+      maxOutputTokens: 200,
+    });
+    await provider.complete(completionInput);
+
+    const fetchMock = vi.mocked(fetch);
+    const request = fetchMock.mock.calls[0]?.[1];
+    const requestBody = JSON.parse(String(request?.body)) as Record<string, unknown>;
+    expect(requestBody.store).toBe(false);
+  });
+
+  it("omits store when completing through Groq", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            output: [
+              {
+                type: "message",
+                content: [{ type: "output_text", text: "Resposta" }],
+              },
+            ],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      ),
+    );
+
+    const provider = new OpenAIResponsesProvider({
+      apiKey: "groq-key",
+      baseUrl: "https://api.groq.com/openai/v1",
+      model: "llama-3.3-70b-versatile",
+      maxOutputTokens: 200,
+    });
+    await provider.complete(completionInput);
+
+    const fetchMock = vi.mocked(fetch);
+    const request = fetchMock.mock.calls[0]?.[1];
+    const requestBody = JSON.parse(String(request?.body)) as Record<string, unknown>;
+    expect(requestBody).not.toHaveProperty("store");
   });
 });
