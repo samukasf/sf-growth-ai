@@ -39,6 +39,7 @@ export type ProactiveSamuelGreeting = {
   actionLabel: string | null;
   hasConcreteSignal: boolean;
   visualState: "resting" | "processing" | "alert";
+  visualTone: "green" | "blue" | "yellow" | "red";
   signal: SamuelInitiativeSignal | null;
 };
 
@@ -58,6 +59,20 @@ const KIND_WEIGHT: Record<SamuelInitiativeKind, number> = {
   task: 40,
   system: 30,
 };
+
+function visualToneForPriority(priority: SamuelInitiativePriority) {
+  switch (priority) {
+    case "critical":
+      return "red" as const;
+    case "high":
+      return "yellow" as const;
+    case "medium":
+      return "blue" as const;
+    case "low":
+    default:
+      return "green" as const;
+  }
+}
 
 function countLabel(value: number, singular: string, plural: string) {
   return `${value} ${value === 1 ? singular : plural}`;
@@ -180,6 +195,7 @@ export function buildProactiveSamuelGreeting(input: ProactiveSamuelGreetingInput
       actionLabel: null,
       hasConcreteSignal: false,
       visualState: "resting",
+      visualTone: "green",
       signal: null,
     };
   }
@@ -190,13 +206,14 @@ export function buildProactiveSamuelGreeting(input: ProactiveSamuelGreetingInput
 
   return {
     id: `${signal.kind}:${signal.id}`,
-    eyebrow: signal.priority === "critical" ? "Atenção executiva" : "Iniciativa do Samuel",
+    eyebrow: signal.priority === "critical" ? "Atenção executiva" : "Samuel tem algo para dizer",
     message,
     spokenMessage: `${salutation} ${message}`,
     sourceLabel: signal.source,
     actionLabel: signal.actionLabel ?? "Analisar agora",
     hasConcreteSignal: true,
     visualState: signal.priority === "critical" ? "alert" : "processing",
+    visualTone: visualToneForPriority(signal.priority),
     signal,
   };
 }
