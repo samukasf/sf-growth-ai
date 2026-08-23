@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { selectSamuelMasculineVoice } from "./use-samuel-speech";
+import {
+  selectSamuelMasculineVoice,
+  selectSamuelPortugueseFallbackVoice,
+} from "./use-samuel-speech";
 
 describe("selectSamuelMasculineVoice", () => {
   it("prioriza uma voz masculina brasileira no iPhone", () => {
@@ -29,5 +32,16 @@ describe("selectSamuelMasculineVoice", () => {
     ];
 
     expect(selectSamuelMasculineVoice(voices)?.name).toBe("Daniel");
+  });
+});
+
+describe("selectSamuelPortugueseFallbackVoice", () => {
+  it("usa uma voz portuguesa disponível quando nenhuma masculina específica existe", () => {
+    const voices = [
+      { name: "Samantha", lang: "en-US", localService: true },
+      { name: "Luciana", lang: "pt-BR", localService: true },
+    ];
+
+    expect(selectSamuelPortugueseFallbackVoice(voices)?.name).toBe("Luciana");
   });
 });
