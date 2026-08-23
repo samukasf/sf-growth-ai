@@ -17,8 +17,8 @@ const RATE_LIMIT_MAX = 6;
 
 const buckets = new Map<string, { count: number; resetAt: number }>();
 
-function jsonError(message: string, status: number, code: string) {
-  return Response.json({ error: message, code }, { status });
+function jsonError(message: string, status: number, code: string, headers?: HeadersInit) {
+  return Response.json({ error: message, code }, { status, headers });
 }
 
 function rateLimit(key: string) {
@@ -90,6 +90,7 @@ export async function POST(request: Request) {
       "Limite de sessões de voz atingido. Tente novamente em instantes.",
       429,
       "REALTIME_RATE_LIMITED",
+      { "Retry-After": "10" },
     );
   }
 
@@ -98,8 +99,6 @@ export async function POST(request: Request) {
     return jsonError("Oferta SDP inválida.", 400, "SDP_INVALID");
   }
 
-  // Keep Samuel's identity stable across deployments. A legacy Vercel value
-  // must not silently switch him back to a different vocal identity.
   const session = buildRealtimeSession({
     model,
     voice: DEFAULT_REALTIME_VOICE,
@@ -130,9 +129,24 @@ export async function POST(request: Request) {
   const responseText = await openAiResponse.text();
   if (!openAiResponse.ok) {
     const unauthorized = openAiResponse.status === 401 || openAiResponse.status === 403;
+    const providerRateLimited = openAiResponse.status === 429;
+    const requestId = openAiResponse.headers.get("x-request-id");
+
+    if (providerRateLimited) {
+      console.warn("Realtime provider rate limited session", { requestId });
+      return jsonError(
+        "A voz em tempo real está temporariamente ocupada. Tente novamente em alguns segundos.",
+        429,
+        "REALTIME_PROVIDER_RATE_LIMITED",
+        {
+          "Retry-After": openAiResponse.headers.get("retry-after") ?? "2",
+        },
+      );
+    }
+
     console.error("Realtime provider rejected session", {
       status: openAiResponse.status,
-      requestId: openAiResponse.headers.get("x-request-id"),
+      requestId,
     });
 
     return jsonError(
