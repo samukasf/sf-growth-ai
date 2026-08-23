@@ -50,9 +50,9 @@ const ACTIONS: ActionCard[] = [
 
 export function SamuelAiFocus({ data, handlers, onNavigate }: SamuelAiFocusProps) {
   const companyName = data.executiveContext?.company.name ?? data.briefing.companyName ?? "Sua empresa";
-  const alertCount =
-    (data.executiveMonitoring?.alerts.length ?? 0) +
-    (data.watcherExecutive?.summary.criticalAlerts ?? 0);
+  const monitoringAlerts = data.executiveMonitoring?.alerts.length ?? 0;
+  const criticalAlerts = data.watcherExecutive?.summary.criticalAlerts ?? 0;
+  const alertCount = monitoringAlerts + criticalAlerts;
   const connectedSources = [
     data.executiveContext,
     data.googleAnalyticsExecutive,
@@ -62,6 +62,29 @@ export function SamuelAiFocus({ data, handlers, onNavigate }: SamuelAiFocusProps
     data.crmExecutive,
   ].filter(Boolean).length;
   const confidence = data.orchestratorSnapshot?.confidence?.score ?? data.executiveStatus.analysisConfidence ?? 0;
+  const samuelState = handlers.isProcessing
+    ? data.pendingQuestion
+      ? "Pensando e executando"
+      : "Processando"
+    : "Disponível";
+  const stateDotClass = handlers.isProcessing
+    ? "bg-cyan-300 shadow-[0_0_14px_rgba(103,232,249,.95)] animate-pulse"
+    : "bg-emerald-300 shadow-[0_0_12px_rgba(110,231,183,.9)]";
+  const signal = criticalAlerts > 0
+    ? {
+        label: "Atenção crítica",
+        detail: `${criticalAlerts} sinal${criticalAlerts === 1 ? "" : "ais"} crítico${criticalAlerts === 1 ? "" : "s"}`,
+        className: "border-red-300/25 bg-red-400/10 text-red-100",
+        dotClass: "bg-red-400 shadow-[0_0_14px_rgba(248,113,113,.9)]",
+      }
+    : monitoringAlerts > 0
+      ? {
+          label: "Tenho algo para dizer",
+          detail: `${monitoringAlerts} atualização${monitoringAlerts === 1 ? "" : "ões"} para rever`,
+          className: "border-amber-300/25 bg-amber-300/10 text-amber-100",
+          dotClass: "bg-amber-300 shadow-[0_0_14px_rgba(252,211,77,.85)]",
+        }
+      : null;
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
@@ -72,20 +95,37 @@ export function SamuelAiFocus({ data, handlers, onNavigate }: SamuelAiFocusProps
         <div className="relative flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
           <div className="max-w-3xl">
             <div className="mb-3 flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[.18em] text-emerald-200">
-                <span className="size-2 rounded-full bg-emerald-300 shadow-[0_0_12px_rgba(110,231,183,.9)]" />
-                Samuel online
+              <span className="inline-flex items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[.18em] text-emerald-100">
+                <span className={`size-2 rounded-full ${stateDotClass}`} />
+                {samuelState}
               </span>
               <span className="rounded-full border border-cyan-300/15 bg-cyan-300/[.06] px-3 py-1.5 text-[10px] uppercase tracking-[.16em] text-cyan-100/70">
                 Executive AI Interface
               </span>
             </div>
-            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl lg:text-4xl">
-              Samuel AI
-            </h2>
+            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl lg:text-4xl">Samuel AI</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
-              Converse, delegue tarefas e acompanhe o raciocínio executivo da {companyName}. A voz, o chat e as ferramentas ficam concentrados aqui.
+              Converse, delegue tarefas e acompanhe a execução da {companyName}. Voz, chat, contexto empresarial e ferramentas ficam concentrados numa única interface.
             </p>
+
+            {signal ? (
+              <button
+                type="button"
+                onClick={() => onNavigate("executive-inbox")}
+                className={`mt-4 inline-flex items-center gap-3 rounded-2xl border px-3.5 py-2.5 text-left transition hover:-translate-y-0.5 ${signal.className}`}
+              >
+                <span className={`size-2.5 shrink-0 rounded-full ${signal.dotClass}`} />
+                <span>
+                  <strong className="block text-[11px] font-semibold">{signal.label}</strong>
+                  <span className="block text-[9px] opacity-70">{signal.detail} · toque quando quiser ver</span>
+                </span>
+              </button>
+            ) : (
+              <div className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-emerald-300/15 bg-emerald-300/[.06] px-3.5 py-2 text-[10px] text-emerald-100/80">
+                <span className="size-2 rounded-full bg-emerald-300" />
+                Nenhum aviso pendente. Samuel permanece atento sem interromper.
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-3 gap-2 sm:min-w-[360px]">
@@ -121,7 +161,9 @@ export function SamuelAiFocus({ data, handlers, onNavigate }: SamuelAiFocusProps
             </span>
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-[#071b48]">Conversa com Samuel</p>
-              <p className="truncate text-[10px] text-blue-950/45">Voz em tempo real · chat · execução supervisionada</p>
+              <p className="truncate text-[10px] text-blue-950/45">
+                {handlers.isProcessing ? "Samuel está a trabalhar na sua solicitação" : "Toque no microfone para falar ou escreva uma instrução"}
+              </p>
             </div>
           </div>
           <button
