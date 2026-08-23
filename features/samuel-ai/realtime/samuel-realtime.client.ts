@@ -1,3 +1,45 @@
+export type SamuelLiveBootstrap =
+  | {
+      provider: "openai";
+      configured: true;
+      fallback: boolean;
+      model: string;
+    }
+  | {
+      provider: "gemini";
+      configured: true;
+      fallback: false;
+      model: string;
+      token: string;
+      websocketUrl: string;
+      expiresAt: string;
+    };
+
+export async function getSamuelLiveBootstrap(
+  companyId: string,
+  signal?: AbortSignal,
+): Promise<SamuelLiveBootstrap> {
+  const response = await fetch("/api/samuel-ai/live/session", {
+    method: "GET",
+    headers: { "X-Samuel-Company-Id": companyId },
+    cache: "no-store",
+    signal,
+  });
+
+  if (!response.ok) {
+    let message = `Voz Live indisponível (${response.status}).`;
+    try {
+      const payload = (await response.json()) as { error?: string };
+      message = payload.error ?? message;
+    } catch {
+      // Keep the generic provider-safe message.
+    }
+    throw new Error(message);
+  }
+
+  return response.json() as Promise<SamuelLiveBootstrap>;
+}
+
 export async function exchangeSamuelRealtimeOffer(
   offerSdp: string,
   input: {
