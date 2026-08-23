@@ -33,7 +33,6 @@ type OpenAiServerEvent = {
 };
 
 type GeminiServerMessage = {
-  setupComplete?: Record<string, unknown>;
   serverContent?: {
     interrupted?: boolean;
     turnComplete?: boolean;
@@ -45,7 +44,6 @@ type GeminiServerMessage = {
       }>;
     };
   };
-  toolCall?: unknown;
 };
 
 const GEMINI_OUTPUT_RATE = 24_000;
@@ -74,9 +72,8 @@ function floatToPcm16Base64(samples: Float32Array) {
     view.setInt16(index * 2, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
   }
   let binary = "";
-  const chunk = 0x8000;
-  for (let offset = 0; offset < bytes.length; offset += chunk) {
-    binary += String.fromCharCode(...bytes.subarray(offset, offset + chunk));
+  for (let offset = 0; offset < bytes.length; offset += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
   }
   return btoa(binary);
 }
@@ -113,11 +110,11 @@ function decodePcm16Base64(base64: string) {
   return samples;
 }
 
-function samuelSystemInstruction(contextSummary?: string | null) {
+function systemInstruction(contextSummary?: string | null) {
   const context = contextSummary?.trim()
     ? ` Contexto empresarial atual: ${contextSummary.trim().slice(0, 600)}.`
     : "";
-  return `Você é Samuel AI, um assistente executivo de inteligência artificial. Converse de forma natural, fluida e objetiva em português brasileiro, adaptando-se ao idioma do utilizador. Espere a pessoa terminar de falar, aceite interrupções naturalmente e evite respostas longas quando uma resposta curta resolver. Nunca invente ações, dados empresariais ou eventos. Quando uma ação externa for necessária e não estiver disponível nesta sessão, diga claramente o que precisa ser executado pelo sistema. Sua presença vocal deve parecer adulta, calma, segura e profissional.${context}`;
+  return `Você é Samuel AI, um assistente executivo de inteligência artificial. Converse de forma natural, fluida e objetiva em português brasileiro, adaptando-se ao idioma do utilizador. Espere a pessoa terminar, aceite interrupções naturalmente e evite respostas longas quando uma resposta curta resolver. Nunca invente ações, dados empresariais ou eventos. Quando uma ação externa for necessária e não estiver disponível nesta sessão, diga claramente o que precisa ser executado pelo sistema. Sua presença vocal deve parecer adulta, calma, segura e profissional.${context}`;
 }
 
 export function useSamuelRealtimeVoice({
@@ -127,11 +124,11 @@ export function useSamuelRealtimeVoice({
   onTranscript,
 }: UseSamuelRealtimeVoiceInput) {
   const [session, dispatch] = useReducer(samuelRealtimeReducer, initialSamuelRealtimeSession);
-
   const peerRef = useRef<RTCPeerConnection | null>(null);
   const dataChannelRef = useRef<RTCDataChannel | null>(null);
   const websocketRef = useRef<WebSocket | null>(null);
   const providerRef = useRef<SamuelLiveBootstrap["provider"] | null>(null);
+  const closingRef = useRef(false);
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -147,7 +144,7 @@ export function useSamuelRealtimeVoice({
 
   const stopGeminiOutput = useCallback(() => {
     geminiSourcesRef.current.forEach((source) => {
-      try { source.stop(); } catch { /* already stopped */ }
+      try { source.stop(); } catch { /* source already stopped */ }
     });
     geminiSourcesRef.current.clear();
     geminiPlaybackAtRef.current = 0;
@@ -157,6 +154,7 @@ export function useSamuelRealtimeVoice({
   }, []);
 
   const cleanup = useCallback(() => {
+    closingRef.current = true;
     abortRef.current?.abort();
     abortRef.current = null;
     dataChannelRef.current?.close();
@@ -265,9 +263,7 @@ export function useSamuelRealtimeVoice({
       case "response.output_audio_transcript.done":
         if (event.transcript) emitTranscript("assistant", event.transcript, true);
         break;
-      case "error":
-        dispatch({ type: "error", error: event.error?.message ?? "A sessão de voz encontrou um erro." });
-        break;
+      case "error": dispatch({ type: "error", error: event.error?.message ?? "A sessão de voz encontrou um erro." }); break;
       default: break;
     }
   }, [emitTranscript]);
@@ -310,11 +306,17 @@ export function useSamuelRealtimeVoice({
       stopGeminiOutput();
       dispatch({ type: "listening" });
     }
-    if (content.inputTranscription?.text) emitTranscript("user", content.inputTranscription.text, Boolean(content.turnComplete));
-    if (content.outputTranscription?.text) emitTranscript("assistant", content.outputTranscription.text, Boolean(content.turnComplete));
+    if (content.inputTranscription?.text) {
+      emitTranscript("user", content.inputTranscription.text, Boolean(content.turnComplete));
+    }
+    if (content.outputTranscription?.text) {
+      emitTranscript("assistant", content.outputTranscription.text, Boolean(content.turnComplete));
+    }
     for (const part of content.modelTurn?.parts ?? []) {
       const audio = part.inlineData;
-      if (audio?.data && (!audio.mimeType || audio.mimeType.startsWith("audio/"))) playGeminiAudio(audio.data);
+      if (audio?.data && (!audio.mimeType || audio.mimeType.startsWith("audio/"))) {
+        playGeminiAudio(audio.data);
+      }
     }
     if (content.turnComplete && geminiSourcesRef.current.size === 0) dispatch({ type: "listening" });
   }, [emitTranscript, playGeminiAudio, stopGeminiOutput]);
@@ -331,14 +333,15 @@ export function useSamuelRealtimeVoice({
     silentGain.connect(context.destination);
     processor.onaudioprocess = (event) => {
       if (socket.readyState !== WebSocket.OPEN) return;
-      const audio = event.inputBuffer.getChannelData(0);
-      const pcm = downsample(audio, context.sampleRate, 16_000);
+      const pcm = downsample(event.inputBuffer.getChannelData(0), context.sampleRate, 16_000);
       socket.send(JSON.stringify({
         realtimeInput: {
-          audio: { data: floatToPcm16Base64(pcm), mimeType: "audio/pcm;rate=16000" },
+          audio: {
+            data: floatToPcm16Base64(pcm),
+            mimeType: "audio/pcm;rate=16000",
+          },
         },
       }));
-      dispatch({ type: "listening" });
     };
     geminiProcessorRef.current = processor;
     void context.resume();
@@ -352,15 +355,19 @@ export function useSamuelRealtimeVoice({
     await new Promise<void>((resolve, reject) => {
       const socket = new WebSocket(bootstrap.websocketUrl);
       websocketRef.current = socket;
-      const fail = () => reject(new Error("Não foi possível conectar ao Gemini Live."));
-      socket.onerror = fail;
+      closingRef.current = false;
+      let opened = false;
+      socket.onerror = () => {
+        if (!opened) reject(new Error("Não foi possível conectar ao Gemini Live."));
+      };
       socket.onclose = (event) => {
-        if (!event.wasClean && session.phase !== "idle") {
+        if (!closingRef.current && opened && !event.wasClean) {
           dispatch({ type: "error", error: "A sessão Gemini Live foi interrompida." });
         }
       };
       socket.onmessage = handleGeminiMessage;
       socket.onopen = () => {
+        opened = true;
         socket.send(JSON.stringify({
           setup: {
             model: `models/${bootstrap.model}`,
@@ -375,7 +382,7 @@ export function useSamuelRealtimeVoice({
                 silenceDurationMs: 850,
               },
             },
-            systemInstruction: { parts: [{ text: samuelSystemInstruction(contextSummary) }] },
+            systemInstruction: { parts: [{ text: systemInstruction(contextSummary) }] },
             sessionResumption: {},
           },
         }));
@@ -383,7 +390,7 @@ export function useSamuelRealtimeVoice({
         resolve();
       };
     });
-  }, [contextSummary, handleGeminiMessage, session.phase, startGeminiInput]);
+  }, [contextSummary, handleGeminiMessage, startGeminiInput]);
 
   const startOpenAi = useCallback(async (stream: MediaStream, controller: AbortController) => {
     if (!supportsOpenAiRealtime()) throw new Error("WebRTC indisponível neste navegador.");
