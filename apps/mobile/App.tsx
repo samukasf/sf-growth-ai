@@ -30,14 +30,14 @@ const STATUS_LABEL: Record<VoiceStatus, string> = {
 };
 
 function Particle({ index }: { index: number }) {
-  const motion = useRef(new Animated.Value(0)).current;
-  const pulse = useRef(new Animated.Value(0)).current;
+  const [motion] = useState(() => new Animated.Value(0));
+  const [pulse] = useState(() => new Animated.Value(0));
   const left = `${(index * 37) % 96}%` as const;
   const top = `${(index * 53) % 92}%` as const;
   const size = 2 + (index % 4) * 1.2;
 
   useEffect(() => {
-    Animated.loop(
+    const animation = Animated.loop(
       Animated.parallel([
         Animated.sequence([
           Animated.timing(motion, {
@@ -66,7 +66,9 @@ function Particle({ index }: { index: number }) {
           }),
         ]),
       ]),
-    ).start();
+    );
+    animation.start();
+    return () => animation.stop();
   }, [index, motion, pulse]);
 
   return (
@@ -92,14 +94,16 @@ function Particle({ index }: { index: number }) {
 }
 
 function SamuelCore({ status }: { status: VoiceStatus }) {
-  const pulse = useRef(new Animated.Value(0)).current;
+  const [pulse] = useState(() => new Animated.Value(0));
   useEffect(() => {
-    Animated.loop(
+    const animation = Animated.loop(
       Animated.sequence([
         Animated.timing(pulse, { toValue: 1, duration: 1400, useNativeDriver: true }),
         Animated.timing(pulse, { toValue: 0, duration: 1400, useNativeDriver: true }),
       ]),
-    ).start();
+    );
+    animation.start();
+    return () => animation.stop();
   }, [pulse]);
 
   const active = status === "listening" || status === "processing" || status === "speaking";
