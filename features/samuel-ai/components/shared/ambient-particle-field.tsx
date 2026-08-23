@@ -2,7 +2,7 @@
 
 import type { CSSProperties } from "react";
 
-const PARTICLES = Array.from({ length: 54 }, (_, index) => ({
+const PARTICLES = Array.from({ length: 42 }, (_, index) => ({
   left: 2 + ((index * 37) % 96),
   top: 2 + ((index * 53) % 94),
   size: 1.2 + (index % 5) * 0.65,
@@ -14,7 +14,7 @@ const PARTICLES = Array.from({ length: 54 }, (_, index) => ({
 }));
 
 export function AmbientParticleField({ dense = false }: { dense?: boolean }) {
-  const particles = dense ? PARTICLES : PARTICLES.slice(0, 36);
+  const particles = dense ? PARTICLES : PARTICLES.slice(0, 24);
 
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
@@ -45,7 +45,7 @@ export function AmbientParticleField({ dense = false }: { dense?: boolean }) {
       {particles.map((particle, index) => (
         <i
           key={index}
-          className="samuel-neutral-particle absolute rounded-full bg-white [animation:samuel-neutral-particle-float_var(--particle-duration)_ease-in-out_var(--particle-delay)_infinite,samuel-neutral-particle-glow_calc(var(--particle-duration)*.62)_ease-in-out_var(--particle-delay)_infinite]"
+          className="samuel-neutral-particle absolute rounded-full bg-white [animation:samuel-neutral-particle-float_var(--particle-duration)_ease-in-out_var(--particle-delay)_infinite,samuel-neutral-particle-glow_var(--particle-glow-duration)_ease-in-out_var(--particle-delay)_infinite]"
           style={{
             left: `${particle.left}%`,
             top: `${particle.top}%`,
@@ -53,6 +53,7 @@ export function AmbientParticleField({ dense = false }: { dense?: boolean }) {
             height: `${particle.size}px`,
             "--particle-opacity": String(particle.opacity),
             "--particle-duration": `${particle.duration}s`,
+            "--particle-glow-duration": `${particle.duration * 0.62}s`,
             "--particle-delay": `${particle.delay}s`,
             "--particle-dx": `${particle.driftX}px`,
             "--particle-dy": `${particle.driftY}px`,
