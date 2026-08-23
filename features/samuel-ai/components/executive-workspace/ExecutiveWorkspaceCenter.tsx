@@ -46,6 +46,7 @@ import {
 } from "../executive-dashboard";
 import type { ExecutiveWorkspaceData, ExecutiveWorkspaceHandlers } from "./executive-workspace.types";
 import { SamuelExecutiveHome } from "./SamuelExecutiveHome";
+import { SamuelAiFocus } from "./SamuelAiFocus";
 import { getWorkspaceSectionLabel, type WorkspaceSection } from "./workspace-navigation";
 
 type ExecutiveWorkspaceCenterProps = ExecutiveWorkspaceData &
@@ -386,7 +387,7 @@ export function ExecutiveWorkspaceCenter({
         );
 
       case "samuel-ai":
-        return <SamuelAiWorkspace data={data} handlers={handlers} onNavigate={onSectionChange} />;
+        return <SamuelAiFocus data={data} handlers={handlers} onNavigate={onSectionChange} />;
 
       case "autonomous-improvement":
         return <AutonomousImprovementPanel />;
@@ -608,7 +609,6 @@ export function ExecutiveWorkspaceCenter({
       >
         {content}
       </div>
-
     </div>
   );
 }
