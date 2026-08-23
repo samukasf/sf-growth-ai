@@ -321,7 +321,7 @@ export default function App() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#050607" },
-  background: { ...StyleSheet.absoluteFillObject, backgroundColor: "#050607", overflow: "hidden" },
+  background: { ...StyleSheet.absoluteFill, backgroundColor: "#050607", overflow: "hidden" },
   particle: {
     position: "absolute",
     borderRadius: 99,
