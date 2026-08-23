@@ -40,6 +40,25 @@ export async function getSamuelLiveBootstrap(
   return response.json() as Promise<SamuelLiveBootstrap>;
 }
 
+function wait(milliseconds: number, signal?: AbortSignal) {
+  return new Promise<void>((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DOMException("Aborted", "AbortError"));
+      return;
+    }
+
+    const timeout = window.setTimeout(resolve, milliseconds);
+    signal?.addEventListener(
+      "abort",
+      () => {
+        window.clearTimeout(timeout);
+        reject(new DOMException("Aborted", "AbortError"));
+      },
+      { once: true },
+    );
+  });
+}
+
 export async function exchangeSamuelRealtimeOffer(
   offerSdp: string,
   input: {
@@ -49,21 +68,32 @@ export async function exchangeSamuelRealtimeOffer(
   },
   signal?: AbortSignal,
 ): Promise<string> {
-  const response = await fetch("/api/samuel-ai/realtime/offer", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/sdp",
-      "X-Samuel-Company-Id": input.companyId,
-      ...(input.conversationId
-        ? { "X-Samuel-Conversation-Id": input.conversationId }
-        : {}),
-      ...(input.contextSummary
-        ? { "X-Samuel-Context-Summary": input.contextSummary.slice(0, 600) }
-        : {}),
-    },
-    body: offerSdp,
-    signal,
-  });
+  const postOffer = () =>
+    fetch("/api/samuel-ai/realtime/offer", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/sdp",
+        "X-Samuel-Company-Id": input.companyId,
+        ...(input.conversationId
+          ? { "X-Samuel-Conversation-Id": input.conversationId }
+          : {}),
+        ...(input.contextSummary
+          ? { "X-Samuel-Context-Summary": input.contextSummary.slice(0, 600) }
+          : {}),
+      },
+      body: offerSdp,
+      signal,
+    });
+
+  let response = await postOffer();
+  if (response.status === 429) {
+    const retryAfterSeconds = Number.parseFloat(response.headers.get("retry-after") ?? "0");
+    const retryDelay = Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
+      ? Math.min(retryAfterSeconds * 1_000, 2_000)
+      : 800;
+    await wait(retryDelay, signal);
+    response = await postOffer();
+  }
 
   if (!response.ok) {
     let message = `Realtime indisponível (${response.status}).`;
