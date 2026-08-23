@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 import { ChatPanel } from "../chat-panel";
+import { AmbientParticleField } from "../shared/ambient-particle-field";
 import type {
   ExecutiveWorkspaceData,
   ExecutiveWorkspaceHandlers,
@@ -68,8 +69,8 @@ export function SamuelAiFocus({ data, handlers, onNavigate }: SamuelAiFocusProps
       : "Processando"
     : "Disponível";
   const stateDotClass = handlers.isProcessing
-    ? "bg-cyan-300 shadow-[0_0_14px_rgba(103,232,249,.95)] animate-pulse"
-    : "bg-emerald-300 shadow-[0_0_12px_rgba(110,231,183,.9)]";
+    ? "bg-white shadow-[0_0_16px_rgba(255,255,255,.95)] animate-pulse"
+    : "bg-zinc-100 shadow-[0_0_14px_rgba(255,255,255,.72)]";
   const signal = criticalAlerts > 0
     ? {
         label: "Atenção crítica",
@@ -81,38 +82,43 @@ export function SamuelAiFocus({ data, handlers, onNavigate }: SamuelAiFocusProps
       ? {
           label: "Tenho algo para dizer",
           detail: `${monitoringAlerts} atualização${monitoringAlerts === 1 ? "" : "ões"} para rever`,
-          className: "border-amber-300/25 bg-amber-300/10 text-amber-100",
-          dotClass: "bg-amber-300 shadow-[0_0_14px_rgba(252,211,77,.85)]",
+          className: "border-amber-200/20 bg-amber-200/[.07] text-amber-50",
+          dotClass: "bg-amber-100 shadow-[0_0_14px_rgba(254,243,199,.72)]",
         }
       : null;
 
   return (
-    <div className="relative flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
-      <section className="relative overflow-hidden rounded-[30px] border border-cyan-300/15 bg-[#031027] px-4 py-5 text-white shadow-[0_24px_80px_rgba(3,16,39,.22)] sm:px-6 lg:px-7">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_-30%,rgba(34,211,238,.24),transparent_38%),radial-gradient(circle_at_90%_20%,rgba(59,130,246,.2),transparent_30%)]" />
-        <div className="pointer-events-none absolute inset-0 opacity-25 [background-image:linear-gradient(rgba(34,211,238,.08)_1px,transparent_1px),linear-gradient(90deg,rgba(34,211,238,.08)_1px,transparent_1px)] [background-size:36px_36px]" />
+    <div className="relative flex min-h-0 flex-1 flex-col gap-4 overflow-hidden rounded-[36px] border border-white/[.07] bg-[#06070a] p-2 text-zinc-100 shadow-[0_30px_100px_rgba(0,0,0,.22)] sm:p-3">
+      <AmbientParticleField dense />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,.025),transparent_32%,rgba(255,255,255,.012)_70%,transparent)]" />
+
+      <section className="relative z-10 overflow-hidden rounded-[30px] border border-white/[.09] bg-black/35 px-4 py-5 text-white shadow-[0_24px_80px_rgba(0,0,0,.28)] backdrop-blur-xl sm:px-6 lg:px-7">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_-35%,rgba(255,255,255,.11),transparent_38%),radial-gradient(circle_at_90%_20%,rgba(226,232,240,.05),transparent_30%)]" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/35 to-transparent" />
 
         <div className="relative flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
           <div className="max-w-3xl">
             <div className="mb-3 flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[.18em] text-emerald-100">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[.055] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[.18em] text-zinc-100 backdrop-blur-md">
                 <span className={`size-2 rounded-full ${stateDotClass}`} />
                 {samuelState}
               </span>
-              <span className="rounded-full border border-cyan-300/15 bg-cyan-300/[.06] px-3 py-1.5 text-[10px] uppercase tracking-[.16em] text-cyan-100/70">
+              <span className="rounded-full border border-white/10 bg-white/[.035] px-3 py-1.5 text-[10px] uppercase tracking-[.16em] text-zinc-400">
                 Executive AI Interface
               </span>
             </div>
-            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl lg:text-4xl">Samuel AI</h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
-              Converse, delegue tarefas e acompanhe a execução da {companyName}. Voz, chat, contexto empresarial e ferramentas ficam concentrados numa única interface.
+            <h2 className="bg-gradient-to-b from-white to-zinc-400 bg-clip-text text-2xl font-semibold tracking-tight text-transparent sm:text-3xl lg:text-4xl">
+              Samuel AI
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400 sm:text-base">
+              Converse, delegue tarefas e acompanhe a execução da {companyName}. Voz, chat, contexto empresarial e ferramentas ficam concentrados numa única experiência.
             </p>
 
             {signal ? (
               <button
                 type="button"
                 onClick={() => onNavigate("executive-inbox")}
-                className={`mt-4 inline-flex items-center gap-3 rounded-2xl border px-3.5 py-2.5 text-left transition hover:-translate-y-0.5 ${signal.className}`}
+                className={`mt-4 inline-flex items-center gap-3 rounded-2xl border px-3.5 py-2.5 text-left backdrop-blur-md transition hover:-translate-y-0.5 ${signal.className}`}
               >
                 <span className={`size-2.5 shrink-0 rounded-full ${signal.dotClass}`} />
                 <span>
@@ -121,8 +127,8 @@ export function SamuelAiFocus({ data, handlers, onNavigate }: SamuelAiFocusProps
                 </span>
               </button>
             ) : (
-              <div className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-emerald-300/15 bg-emerald-300/[.06] px-3.5 py-2 text-[10px] text-emerald-100/80">
-                <span className="size-2 rounded-full bg-emerald-300" />
+              <div className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[.035] px-3.5 py-2 text-[10px] text-zinc-400 backdrop-blur-md">
+                <span className="size-2 rounded-full bg-white shadow-[0_0_12px_rgba(255,255,255,.55)]" />
                 Nenhum aviso pendente. Samuel permanece atento sem interromper.
               </div>
             )}
@@ -136,32 +142,33 @@ export function SamuelAiFocus({ data, handlers, onNavigate }: SamuelAiFocusProps
         </div>
       </section>
 
-      <section className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">
+      <section className="relative z-10 grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">
         {ACTIONS.map((action) => (
           <button
             key={action.section}
             type="button"
             onClick={() => onNavigate(action.section)}
-            className="group min-h-[92px] rounded-[20px] border border-blue-950/[0.08] bg-white p-3 text-left shadow-[0_8px_24px_rgba(15,45,100,.05)] transition hover:-translate-y-0.5 hover:border-cyan-300 hover:shadow-[0_14px_34px_rgba(14,116,144,.12)]"
+            className="group min-h-[94px] rounded-[20px] border border-white/[.08] bg-white/[.045] p-3 text-left shadow-[0_10px_30px_rgba(0,0,0,.18)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[.075] hover:shadow-[0_16px_38px_rgba(0,0,0,.24)]"
           >
-            <span className="mb-3 flex size-9 items-center justify-center rounded-xl border border-blue-200/70 bg-blue-50 text-blue-700 transition group-hover:border-cyan-300 group-hover:bg-cyan-50 group-hover:text-cyan-700">
+            <span className="mb-3 flex size-9 items-center justify-center rounded-xl border border-white/10 bg-white/[.055] text-zinc-300 shadow-[inset_0_1px_0_rgba(255,255,255,.08)] transition group-hover:border-white/20 group-hover:bg-white/[.09] group-hover:text-white">
               <action.icon className="size-4" strokeWidth={1.8} />
             </span>
-            <strong className="block text-[11px] font-semibold text-blue-950">{action.label}</strong>
-            <small className="mt-1 block text-[9px] leading-snug text-blue-950/48">{action.description}</small>
+            <strong className="block text-[11px] font-semibold text-zinc-100">{action.label}</strong>
+            <small className="mt-1 block text-[9px] leading-snug text-zinc-500 transition group-hover:text-zinc-400">{action.description}</small>
           </button>
         ))}
       </section>
 
-      <section className="relative min-h-[680px] flex-1 overflow-hidden rounded-[30px] border border-blue-950/[0.08] bg-white shadow-[0_22px_65px_rgba(15,45,100,.08)]">
-        <div className="flex items-center justify-between gap-3 border-b border-blue-950/[0.07] bg-[linear-gradient(180deg,#ffffff,#f8fbff)] px-4 py-3 sm:px-5">
+      <section className="relative z-10 min-h-[680px] flex-1 overflow-hidden rounded-[30px] border border-white/[.09] bg-zinc-950/72 shadow-[0_24px_70px_rgba(0,0,0,.30)] backdrop-blur-2xl">
+        <AmbientParticleField />
+        <div className="relative z-10 flex items-center justify-between gap-3 border-b border-white/[.08] bg-black/25 px-4 py-3 backdrop-blur-xl sm:px-5">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-[radial-gradient(circle_at_35%_25%,#22d3ee,#2563eb_45%,#081b48_78%)] text-white shadow-[0_0_24px_rgba(37,99,235,.28)]">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-[radial-gradient(circle_at_35%_25%,#ffffff,#d4d4d8_28%,#3f3f46_58%,#09090b_82%)] text-zinc-950 shadow-[0_0_26px_rgba(255,255,255,.22)]">
               <Sparkles className="size-5" />
             </span>
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-[#071b48]">Conversa com Samuel</p>
-              <p className="truncate text-[10px] text-blue-950/45">
+              <p className="truncate text-sm font-semibold text-zinc-100">Conversa com Samuel</p>
+              <p className="truncate text-[10px] text-zinc-500">
                 {handlers.isProcessing ? "Samuel está a trabalhar na sua solicitação" : "Toque no microfone para falar ou escreva uma instrução"}
               </p>
             </div>
@@ -169,14 +176,14 @@ export function SamuelAiFocus({ data, handlers, onNavigate }: SamuelAiFocusProps
           <button
             type="button"
             onClick={() => onNavigate("executive-inbox")}
-            className="hidden items-center gap-2 rounded-xl border border-blue-950/10 bg-white px-3 py-2 text-[10px] font-medium text-blue-800 shadow-sm transition hover:border-blue-300 hover:bg-blue-50 sm:flex"
+            className="hidden items-center gap-2 rounded-xl border border-white/10 bg-white/[.045] px-3 py-2 text-[10px] font-medium text-zinc-300 shadow-sm backdrop-blur-md transition hover:border-white/20 hover:bg-white/[.08] hover:text-white sm:flex"
           >
             <MessageSquareText className="size-3.5" />
             Ver ações pendentes
           </button>
         </div>
 
-        <div className="h-[calc(100%-66px)] min-h-0 overflow-hidden">
+        <div className="relative z-10 h-[calc(100%-66px)] min-h-0 overflow-hidden">
           <ChatPanel
             key={data.executiveContext?.company.id ?? "default-company"}
             initialMessages={EMPTY_CHAT_MESSAGES}
@@ -193,12 +200,12 @@ export function SamuelAiFocus({ data, handlers, onNavigate }: SamuelAiFocusProps
 
 function StatusTile({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[.055] p-3 backdrop-blur-sm">
-      <div className="flex items-center gap-2 text-cyan-200/75">
+    <div className="rounded-2xl border border-white/10 bg-white/[.045] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,.05)] backdrop-blur-xl">
+      <div className="flex items-center gap-2 text-zinc-500">
         <Icon className="size-3.5" strokeWidth={1.7} />
         <span className="text-[9px] uppercase tracking-[.14em]">{label}</span>
       </div>
-      <p className="mt-2 text-xl font-semibold tracking-tight text-white">{value}</p>
+      <p className="mt-2 text-xl font-semibold tracking-tight text-zinc-100">{value}</p>
     </div>
   );
 }
