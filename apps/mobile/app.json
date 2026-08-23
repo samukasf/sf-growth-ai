@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "Samuel IA",
+    "slug": "samuel-ai",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "samuelai",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.sfgrowthai.samuel"
+    },
+    "android": {
+      "package": "com.sfgrowthai.samuel",
+      "permissions": ["RECORD_AUDIO", "MODIFY_AUDIO_SETTINGS"]
+    },
+    "plugins": [
+      [
+        "@config-plugins/react-native-webrtc",
+        {
+          "cameraPermission": false,
+          "microphonePermission": "Permitir que o Samuel IA use o microfone para conversas por voz."
+        }
+      ]
+    ],
+    "extra": {
+      "apiBaseUrl": "https://sf-growth-ai.vercel.app"
+    }
+  }
+}
