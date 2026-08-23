@@ -12,7 +12,7 @@ on:
       - ".github/workflows/mobile-ci.yml"
 
 jobs:
-  typecheck:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,3 +25,6 @@ jobs:
       - name: Typecheck mobile app
         working-directory: apps/mobile
         run: npm run typecheck
+      - name: Validate Expo native configuration
+        working-directory: apps/mobile
+        run: npx expo prebuild --no-install --platform android
