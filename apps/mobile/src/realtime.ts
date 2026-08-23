@@ -49,14 +49,7 @@ export class SamuelRealtimeVoice {
     if (this.peer) return;
     this.input.onStatus("requesting");
     try {
-      const stream = await mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-        video: false,
-      });
+      const stream = await mediaDevices.getUserMedia({ audio: true, video: false });
       this.stream = stream;
       this.input.onStatus("connecting");
 
@@ -66,23 +59,23 @@ export class SamuelRealtimeVoice {
         peer.addTrack(track, stream);
       });
 
-      peer.addEventListener("connectionstatechange", () => {
+      peer.onconnectionstatechange = () => {
         if (peer.connectionState === "connected") this.input.onStatus("listening");
         if (peer.connectionState === "failed" || peer.connectionState === "disconnected") {
           this.input.onError("A ligação de voz foi interrompida.");
           this.input.onStatus("error");
         }
-      });
+      };
 
       const channel = peer.createDataChannel("oai-events");
       this.channel = channel;
-      channel.addEventListener("message", (message) => {
+      channel.onmessage = (message: { data: unknown }) => {
         try {
           this.handleEvent(JSON.parse(String(message.data)) as ProviderEvent);
         } catch {
           // Ignore malformed provider events.
         }
-      });
+      };
 
       const offer = await peer.createOffer({ offerToReceiveAudio: true });
       await peer.setLocalDescription(offer);
