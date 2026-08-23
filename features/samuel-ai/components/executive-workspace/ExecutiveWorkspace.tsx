@@ -48,7 +48,7 @@ export function ExecutiveWorkspace({
   isProcessing,
   ...data
 }: ExecutiveWorkspaceProps) {
-  const [activeSection, setActiveSection] = useState<WorkspaceSection>("dashboard");
+  const [activeSection, setActiveSection] = useState<WorkspaceSection>("samuel-ai");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const companyId = data.executiveContext?.company.id ?? "default-company";
   const [inboxActions, setInboxActions] = useState<ExecutiveInboxActionRecord[]>(() =>
@@ -152,7 +152,7 @@ export function ExecutiveWorkspace({
           <div className="flex items-center gap-3">
             <div className="hidden items-center gap-2 rounded-full border border-emerald-400/15 bg-emerald-400/[0.06] px-3 py-1.5 md:flex">
               <span aria-hidden="true" className="size-2 rounded-full bg-emerald-400" />
-              <span className="text-[10px] font-medium text-emerald-300">Samuel online</span>
+              <span className="text-[10px] font-medium text-emerald-700">Samuel online</span>
             </div>
             <button
               type="button"
@@ -166,7 +166,7 @@ export function ExecutiveWorkspace({
               )}
             </button>
             <div className="hidden items-center gap-2 rounded-xl border border-blue-950/10 bg-white px-2.5 py-1.5 shadow-sm sm:flex">
-              <span className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500/30 to-violet-500/20 text-blue-200">
+              <span className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500/30 to-violet-500/20 text-blue-700">
                 <BriefcaseBusiness className="size-3.5" />
               </span>
               <div className="max-w-32">
@@ -199,7 +199,7 @@ export function ExecutiveWorkspace({
             {...handlers}
           />
 
-          {activeSection !== "dashboard" && activeSection !== "studio" && (
+          {activeSection !== "dashboard" && activeSection !== "studio" && activeSection !== "samuel-ai" && (
             <div className="hidden shrink-0 xl:block xl:overflow-y-auto">
               <ExecutiveWorkspaceRightPanel {...workspaceData} />
             </div>
