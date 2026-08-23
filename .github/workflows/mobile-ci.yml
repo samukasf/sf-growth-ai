@@ -19,8 +19,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: apps/mobile/package.json
       - name: Install mobile dependencies
         working-directory: apps/mobile
         run: npm install --no-audit --no-fund
