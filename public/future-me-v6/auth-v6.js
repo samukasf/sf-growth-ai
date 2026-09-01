@@ -67,7 +67,7 @@
     $id('authEy').textContent = signup ? 'Comece a construir' : login ? 'Bem-vindo de volta' : recover ? 'Recupere o acesso com segurança' : 'Crie uma nova palavra-passe';
     $id('authSubmit').textContent = signup ? 'Criar conta' : login ? 'Entrar' : recover ? 'Enviar link de recuperação' : 'Guardar nova palavra-passe';
     $id('authSwitch').textContent = signup ? 'Já tenho conta' : recover ? 'Voltar para entrar' : 'Criar nova conta';
-    $id('authBack').textContent = recover ? 'Voltar' : 'Voltar ao início';
+    $id('authBack').textContent = update ? 'Cancelar recuperação' : recover ? 'Voltar' : 'Voltar ao início';
     $id('authPassword').autocomplete = login ? 'current-password' : 'new-password';
     $id('authPassword').minLength = update || signup ? 8 : 6;
     clearAuthMessage();
@@ -93,6 +93,22 @@
     paintAuth();
     $id('authEmail').value = email;
     $id('authEmail').focus();
+  };
+
+  window.handleAuthBack = async function () {
+    if (authMode === 'update-password' || isRecoveryReturn()) {
+      await sb.auth.signOut();
+      session = user = profile = null;
+      cleanRecoveryUrl();
+      showAuth('login');
+      return;
+    }
+    if (authMode === 'recover') {
+      authMode = 'login';
+      paintAuth();
+      return;
+    }
+    backLanding();
   };
 
   async function requestPasswordRecovery() {
