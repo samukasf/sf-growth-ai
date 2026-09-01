@@ -1,4 +1,10 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "git": {
+    "deploymentEnabled": {
+      "srbrasa-public-preview": false
+    }
+  },
   "crons": [
     {
       "path": "/api/samuel-ai/autonomous-improvement",
