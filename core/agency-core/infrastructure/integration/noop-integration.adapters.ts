@@ -1,4 +1,3 @@
-import type { ClientExecutiveStackProps } from "../../domain";
 import type {
   BusinessAutomationPort,
   BusinessCommunicationPort,
@@ -18,7 +17,7 @@ export class NoopCompanyBrainAdapter implements CompanyBrainPort {
   isAvailable() {
     return false;
   }
-  async provisionForClient(_organizationId: string, _agencyId: string, _companyId: string) {
+  async provisionForClient() {
     return { companyBrainId: "" };
   }
 }
@@ -27,120 +26,75 @@ export class NoopEnterpriseBrainAdapter implements EnterpriseBrainPort {
   isAvailable() {
     return false;
   }
-  async registerAgencyClient(
-    _organizationId: string,
-    _agencyId: string,
-    _companyId: string,
-  ) {}
+  async registerAgencyClient() {}
 }
 
 export class NoopExecutiveCouncilAdapter implements ExecutiveCouncilPort {
   isAvailable() {
     return false;
   }
-  async provisionCouncil(
-    _organizationId: string,
-    _companyId: string,
-    _executiveStack: ClientExecutiveStackProps,
-  ) {}
+  async provisionCouncil() {}
 }
 
 export class NoopExecutiveCEOAdapter implements ExecutiveCEOPort {
   isAvailable() {
     return false;
   }
-  async assignToClient(
-    _organizationId: string,
-    _companyId: string,
-    _executiveStack: ClientExecutiveStackProps,
-  ) {}
+  async assignToClient() {}
 }
 
 export class NoopExecutiveCRMAdapter implements ExecutiveCRMPort {
   isAvailable() {
     return false;
   }
-  async registerClientAccount(
-    _organizationId: string,
-    _agencyId: string,
-    _companyId: string,
-    _clientName: string,
-  ) {}
+  async registerClientAccount() {}
 }
 
 export class NoopBusinessCommunicationAdapter implements BusinessCommunicationPort {
   isAvailable() {
     return false;
   }
-  async prepareClientChannels(
-    _organizationId: string,
-    _agencyId: string,
-    _companyId: string,
-  ) {}
+  async prepareClientChannels() {}
 }
 
 export class NoopBusinessAutomationAdapter implements BusinessAutomationPort {
   isAvailable() {
     return false;
   }
-  async prepareClientAutomations(
-    _organizationId: string,
-    _agencyId: string,
-    _companyId: string,
-  ) {}
+  async prepareClientAutomations() {}
 }
 
 export class NoopSoftwareFactoryAdapter implements SoftwareFactoryPort {
   isAvailable() {
     return false;
   }
-  async prepareClientWorkspace(
-    _organizationId: string,
-    _agencyId: string,
-    _companyId: string,
-  ) {}
+  async prepareClientWorkspace() {}
 }
 
 export class NoopExecutiveMemoryAdapter implements ExecutiveMemoryPort {
   isAvailable() {
     return false;
   }
-  async provisionMemory(
-    _organizationId: string,
-    _companyId: string,
-    _executiveStack: ClientExecutiveStackProps,
-  ) {}
+  async provisionMemory() {}
 }
 
 export class NoopExecutiveContextAdapter implements ExecutiveContextPort {
   isAvailable() {
     return false;
   }
-  async provisionContext(
-    _organizationId: string,
-    _companyId: string,
-    _executiveStack: ClientExecutiveStackProps,
-  ) {}
+  async provisionContext() {}
 }
 
 export class NoopExecutiveTimelineAdapter implements ExecutiveTimelinePort {
   isAvailable() {
     return false;
   }
-  async provisionTimeline(
-    _organizationId: string,
-    _companyId: string,
-    _executiveStack: ClientExecutiveStackProps,
-  ) {}
+  async provisionTimeline() {}
 }
 
 export class NoopExecutiveDashboardAdapter implements ExecutiveDashboardPort {
   isAvailable() {
     return false;
   }
-  async provisionDashboard(
-    _organizationId: string,
-    _companyId: string,
-    _executiveStack: ClientExecutiveStackProps,
-  ) {}
+  async provisionDashboard() {}
 }
