@@ -35,12 +35,25 @@ function jsonError(message: string, status: number, code: string) {
   return Response.json({ error: message, code }, { status });
 }
 
+async function createGeminiToken(apiKey: string, body: Record<string, unknown>) {
+  const response = await fetch("https://generativelanguage.googleapis.com/v1beta/auth_tokens", {
+    method: "POST",
+    headers: {
+      "x-goog-api-key": apiKey,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  const payload = (await response.json().catch(() => null)) as
+    | { name?: string; error?: { code?: number; status?: string; message?: string } }
+    | null;
+  return { response, payload };
+}
+
 export async function GET(request: Request) {
   let provider: "openai" | "gemini";
   const requestedProvider = new URL(request.url).searchParams.get("provider")?.trim().toLowerCase();
   try {
-    // Prefer Gemini Live whenever its key is available. OpenAI remains available
-    // explicitly and as the automatic fallback when Gemini is not configured.
     provider = requestedProvider === "openai" || requestedProvider === "gemini"
       ? requestedProvider
       : process.env.GEMINI_API_KEY?.trim()
@@ -103,29 +116,41 @@ export async function GET(request: Request) {
 
   const now = Date.now();
   const model = resolveGeminiLiveModel();
-  const tokenResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/auth_tokens", {
-    method: "POST",
-    headers: {
-      "x-goog-api-key": apiKey,
-      "content-type": "application/json",
+
+  // First use the exact constrained-token shape documented for Gemini Live.
+  let tokenAttempt = await createGeminiToken(apiKey, {
+    uses: 1,
+    expireTime: new Date(now + TOKEN_TTL_MS).toISOString(),
+    liveConnectConstraints: {
+      model: `models/${model}`,
+      config: {
+        sessionResumption: {},
+        responseModalities: ["AUDIO"],
+      },
     },
-    body: JSON.stringify({
+  });
+
+  // Some projects reject constrained preview-model tokens. A short-lived,
+  // single-use unconstrained token remains safe and is officially supported.
+  if (!tokenAttempt.response.ok || !tokenAttempt.payload?.name) {
+    console.warn("Gemini constrained token rejected; retrying standard ephemeral token", {
+      status: tokenAttempt.response.status,
+      googleStatus: tokenAttempt.payload?.error?.status,
+      googleMessage: tokenAttempt.payload?.error?.message,
+    });
+    tokenAttempt = await createGeminiToken(apiKey, {
       uses: 1,
       expireTime: new Date(now + TOKEN_TTL_MS).toISOString(),
       newSessionExpireTime: new Date(now + NEW_SESSION_TTL_MS).toISOString(),
-      liveConnectConstraints: {
-        model: `models/${model}`,
-        config: {
-          responseModalities: ["AUDIO"],
-          sessionResumption: {},
-        },
-      },
-    }),
-  });
+    });
+  }
 
-  const payload = (await tokenResponse.json().catch(() => null)) as { name?: string } | null;
-  if (!tokenResponse.ok || !payload?.name) {
-    console.error("Gemini ephemeral token provisioning failed", { status: tokenResponse.status });
+  if (!tokenAttempt.response.ok || !tokenAttempt.payload?.name) {
+    console.error("Gemini ephemeral token provisioning failed", {
+      status: tokenAttempt.response.status,
+      googleStatus: tokenAttempt.payload?.error?.status,
+      googleMessage: tokenAttempt.payload?.error?.message,
+    });
     return jsonError("Não foi possível iniciar a sessão Gemini Live.", 502, "GEMINI_TOKEN_ERROR");
   }
 
@@ -134,8 +159,8 @@ export async function GET(request: Request) {
     configured: true,
     fallback: Boolean(requestedProvider),
     model,
-    token: payload.name,
-    websocketUrl: `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContentConstrained?access_token=${encodeURIComponent(payload.name)}`,
+    token: tokenAttempt.payload.name,
+    websocketUrl: `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContentConstrained?access_token=${encodeURIComponent(tokenAttempt.payload.name)}`,
     expiresAt: new Date(now + TOKEN_TTL_MS).toISOString(),
   }, { headers: { "cache-control": "no-store" } });
 }
