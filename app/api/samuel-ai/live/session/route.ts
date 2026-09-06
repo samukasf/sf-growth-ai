@@ -117,33 +117,15 @@ export async function GET(request: Request) {
   const now = Date.now();
   const model = resolveGeminiLiveModel();
 
-  // First use the exact constrained-token shape documented for Gemini Live.
-  let tokenAttempt = await createGeminiToken(apiKey, {
+  // Use a standard single-use ephemeral token and let the browser send the
+  // complete BidiGenerateContentSetup. This follows the current Gemini Live
+  // AuthToken contract and avoids stale/legacy token constraints overriding
+  // the client's setup message.
+  const tokenAttempt = await createGeminiToken(apiKey, {
     uses: 1,
     expireTime: new Date(now + TOKEN_TTL_MS).toISOString(),
-    liveConnectConstraints: {
-      model: `models/${model}`,
-      config: {
-        sessionResumption: {},
-        responseModalities: ["AUDIO"],
-      },
-    },
+    newSessionExpireTime: new Date(now + NEW_SESSION_TTL_MS).toISOString(),
   });
-
-  // Some projects reject constrained preview-model tokens. A short-lived,
-  // single-use unconstrained token remains safe and is officially supported.
-  if (!tokenAttempt.response.ok || !tokenAttempt.payload?.name) {
-    console.warn("Gemini constrained token rejected; retrying standard ephemeral token", {
-      status: tokenAttempt.response.status,
-      googleStatus: tokenAttempt.payload?.error?.status,
-      googleMessage: tokenAttempt.payload?.error?.message,
-    });
-    tokenAttempt = await createGeminiToken(apiKey, {
-      uses: 1,
-      expireTime: new Date(now + TOKEN_TTL_MS).toISOString(),
-      newSessionExpireTime: new Date(now + NEW_SESSION_TTL_MS).toISOString(),
-    });
-  }
 
   if (!tokenAttempt.response.ok || !tokenAttempt.payload?.name) {
     console.error("Gemini ephemeral token provisioning failed", {
