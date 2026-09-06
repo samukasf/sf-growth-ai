@@ -39,14 +39,19 @@ export async function GET(request: Request) {
   let provider: "openai" | "gemini";
   const requestedProvider = new URL(request.url).searchParams.get("provider")?.trim().toLowerCase();
   try {
+    // Prefer Gemini Live whenever its key is available. OpenAI remains available
+    // explicitly and as the automatic fallback when Gemini is not configured.
     provider = requestedProvider === "openai" || requestedProvider === "gemini"
       ? requestedProvider
-      : resolveSamuelLiveProvider();
+      : process.env.GEMINI_API_KEY?.trim()
+        ? "gemini"
+        : resolveSamuelLiveProvider();
   } catch {
     return jsonError("Configuração do provedor Live inválida.", 500, "LIVE_PROVIDER_INVALID");
   }
 
-  const readiness = provider === resolveSamuelLiveProvider()
+  const configuredProvider = resolveSamuelLiveProvider();
+  const readiness = provider === configuredProvider
     ? liveProviderReadiness()
     : provider === "gemini"
       ? {
