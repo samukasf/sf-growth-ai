@@ -8,7 +8,7 @@ export type SamuelLiveBootstrap =
   | {
       provider: "gemini";
       configured: true;
-      fallback: false;
+      fallback: boolean;
       model: string;
       token: string;
       websocketUrl: string;
@@ -18,8 +18,10 @@ export type SamuelLiveBootstrap =
 export async function getSamuelLiveBootstrap(
   companyId: string,
   signal?: AbortSignal,
+  provider?: "openai" | "gemini",
 ): Promise<SamuelLiveBootstrap> {
-  const response = await fetch("/api/samuel-ai/live/session", {
+  const query = provider ? `?provider=${encodeURIComponent(provider)}` : "";
+  const response = await fetch(`/api/samuel-ai/live/session${query}`, {
     method: "GET",
     headers: { "X-Samuel-Company-Id": companyId },
     cache: "no-store",
