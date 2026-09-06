@@ -37,15 +37,33 @@ function jsonError(message: string, status: number, code: string) {
 
 export async function GET(request: Request) {
   let provider: "openai" | "gemini";
+  const requestedProvider = new URL(request.url).searchParams.get("provider")?.trim().toLowerCase();
   try {
-    provider = resolveSamuelLiveProvider();
+    provider = requestedProvider === "openai" || requestedProvider === "gemini"
+      ? requestedProvider
+      : resolveSamuelLiveProvider();
   } catch {
     return jsonError("Configuração do provedor Live inválida.", 500, "LIVE_PROVIDER_INVALID");
   }
 
-  const readiness = liveProviderReadiness();
+  const readiness = provider === resolveSamuelLiveProvider()
+    ? liveProviderReadiness()
+    : provider === "gemini"
+      ? {
+          provider,
+          configured: Boolean(process.env.GEMINI_API_KEY?.trim()),
+          model: resolveGeminiLiveModel(),
+          missingKey: process.env.GEMINI_API_KEY?.trim() ? null : "GEMINI_API_KEY",
+        }
+      : {
+          provider,
+          configured: Boolean(process.env.OPENAI_API_KEY?.trim()),
+          model: process.env.OPENAI_REALTIME_MODEL?.trim() || "gpt-realtime-2.1",
+          missingKey: process.env.OPENAI_API_KEY?.trim() ? null : "OPENAI_API_KEY",
+        };
+
   if (!readiness.configured) {
-    if (provider === "gemini" && process.env.OPENAI_API_KEY?.trim()) {
+    if (!requestedProvider && provider === "gemini" && process.env.OPENAI_API_KEY?.trim()) {
       return Response.json({
         provider: "openai",
         configured: true,
@@ -66,7 +84,7 @@ export async function GET(request: Request) {
       configured: true,
       fallback: false,
       model: readiness.model,
-    });
+    }, { headers: { "cache-control": "no-store" } });
   }
 
   const apiKey = process.env.GEMINI_API_KEY?.trim();
@@ -109,7 +127,7 @@ export async function GET(request: Request) {
   return Response.json({
     provider: "gemini",
     configured: true,
-    fallback: false,
+    fallback: Boolean(requestedProvider),
     model,
     token: payload.name,
     websocketUrl: `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContentConstrained?access_token=${encodeURIComponent(payload.name)}`,
