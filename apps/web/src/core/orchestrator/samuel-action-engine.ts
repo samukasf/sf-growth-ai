@@ -61,6 +61,25 @@ export type SamuelActionResult<TOutput> = {
   durationMs: number;
 };
 
+export type SamuelActionLedgerReservation = {
+  actionId: string;
+  risk: SamuelActionRisk;
+  context: SamuelActionExecutionContext;
+  confirmation?: SamuelActionConfirmation;
+};
+
+export type SamuelActionLedgerCompletion = SamuelActionLedgerReservation & {
+  status: SamuelActionResult<unknown>["status"];
+  evidence?: Record<string, unknown>;
+  error?: { code: string; message: string };
+  durationMs: number;
+};
+
+export interface SamuelActionExecutionLedger {
+  reserve(input: SamuelActionLedgerReservation): Promise<boolean>;
+  finish(input: SamuelActionLedgerCompletion): Promise<void>;
+}
+
 export class SamuelActionNotRegisteredError extends Error {
   constructor(actionId: string) {
     super(`Ação não registrada no Samuel Action Engine: ${actionId}.`);
@@ -70,7 +89,7 @@ export class SamuelActionNotRegisteredError extends Error {
 
 export class SamuelActionConfirmationRequiredError extends Error {
   constructor(actionId: string) {
-    super(`A ação ${actionId} exige confirmação explícita.`);
+    super(`A ação ${actionId} exige confirmação explícita do utilizador autenticado.`);
     this.name = "SamuelActionConfirmationRequiredError";
   }
 }
@@ -82,12 +101,29 @@ export class SamuelActionIdempotencyRequiredError extends Error {
   }
 }
 
+export class SamuelActionLedgerRequiredError extends Error {
+  constructor(actionId: string) {
+    super(`A ação ${actionId} exige um ledger persistente de idempotência.`);
+    this.name = "SamuelActionLedgerRequiredError";
+  }
+}
+
+export class SamuelActionDuplicateRequestError extends Error {
+  constructor(actionId: string) {
+    super(`A ação ${actionId} já foi processada para esta chave de idempotência.`);
+    this.name = "SamuelActionDuplicateRequestError";
+  }
+}
+
 type InternalActionDefinition = SamuelActionDefinition<unknown, unknown>;
 
 export class SamuelActionEngine {
   private readonly definitions = new Map<string, InternalActionDefinition>();
 
-  constructor(private readonly telemetry?: SamuelTelemetrySink) {}
+  constructor(
+    private readonly telemetry?: SamuelTelemetrySink,
+    private readonly ledger?: SamuelActionExecutionLedger,
+  ) {}
 
   register<TInput, TOutput>(definition: SamuelActionDefinition<TInput, TOutput>) {
     if (this.definitions.has(definition.actionId)) {
@@ -110,11 +146,15 @@ export class SamuelActionEngine {
     if (!definition) throw new SamuelActionNotRegisteredError(request.actionId);
 
     const startedAt = Date.now();
+    const mutating = actionRiskRequiresConfirmation(definition.risk);
     const requiresConfirmation =
-      definition.requiresConfirmation === true ||
-      actionRiskRequiresConfirmation(definition.risk);
+      definition.requiresConfirmation === true || mutating;
 
-    if (requiresConfirmation && !request.confirmation?.approved) {
+    if (
+      requiresConfirmation &&
+      (!request.confirmation?.approved ||
+        request.confirmation.approvedBy !== request.context.userId)
+    ) {
       await this.emit(request, definition.risk, {
         event: "action.blocked",
         outcome: "blocked",
@@ -123,16 +163,39 @@ export class SamuelActionEngine {
       throw new SamuelActionConfirmationRequiredError(request.actionId);
     }
 
-    if (
-      actionRiskRequiresConfirmation(definition.risk) &&
-      !request.context.idempotencyKey
-    ) {
+    if (mutating && !request.context.idempotencyKey) {
       await this.emit(request, definition.risk, {
         event: "action.blocked",
         outcome: "blocked",
         errorCode: "IDEMPOTENCY_KEY_REQUIRED",
       });
       throw new SamuelActionIdempotencyRequiredError(request.actionId);
+    }
+
+    if (mutating && !this.ledger) {
+      await this.emit(request, definition.risk, {
+        event: "action.blocked",
+        outcome: "blocked",
+        errorCode: "IDEMPOTENCY_LEDGER_REQUIRED",
+      });
+      throw new SamuelActionLedgerRequiredError(request.actionId);
+    }
+
+    if (mutating && this.ledger) {
+      const reserved = await this.ledger.reserve({
+        actionId: request.actionId,
+        risk: definition.risk,
+        context: request.context,
+        confirmation: request.confirmation,
+      });
+      if (!reserved) {
+        await this.emit(request, definition.risk, {
+          event: "action.blocked",
+          outcome: "blocked",
+          errorCode: "DUPLICATE_REQUEST",
+        });
+        throw new SamuelActionDuplicateRequestError(request.actionId);
+      }
     }
 
     await this.emit(request, definition.risk, {
@@ -151,8 +214,8 @@ export class SamuelActionEngine {
       });
 
       if (!definition.verify) {
-        const canClaimCompletion = !actionRiskRequiresConfirmation(definition.risk);
-        return {
+        const canClaimCompletion = !mutating;
+        const result: SamuelActionResult<TOutput> = {
           actionId: request.actionId,
           requestId: request.context.requestId,
           risk: definition.risk,
@@ -161,6 +224,8 @@ export class SamuelActionEngine {
           canClaimCompletion,
           durationMs,
         };
+        await this.finishLedger(request, definition.risk, result);
+        return result;
       }
 
       const verification = await definition.verify(
@@ -177,7 +242,7 @@ export class SamuelActionEngine {
           durationMs: totalDurationMs,
           errorCode: "VERIFICATION_FAILED",
         });
-        return {
+        const result: SamuelActionResult<TOutput> = {
           actionId: request.actionId,
           requestId: request.context.requestId,
           risk: definition.risk,
@@ -191,6 +256,8 @@ export class SamuelActionEngine {
           canClaimCompletion: false,
           durationMs: totalDurationMs,
         };
+        await this.finishLedger(request, definition.risk, result);
+        return result;
       }
 
       await this.emit(request, definition.risk, {
@@ -198,7 +265,7 @@ export class SamuelActionEngine {
         outcome: "success",
         durationMs: totalDurationMs,
       });
-      return {
+      const result: SamuelActionResult<TOutput> = {
         actionId: request.actionId,
         requestId: request.context.requestId,
         risk: definition.risk,
@@ -208,6 +275,8 @@ export class SamuelActionEngine {
         canClaimCompletion: true,
         durationMs: totalDurationMs,
       };
+      await this.finishLedger(request, definition.risk, result);
+      return result;
     } catch (error) {
       const durationMs = Date.now() - startedAt;
       const message = error instanceof Error ? error.message : "Falha desconhecida na ação.";
@@ -217,7 +286,7 @@ export class SamuelActionEngine {
         durationMs,
         errorCode: "EXECUTION_FAILED",
       });
-      return {
+      const result: SamuelActionResult<TOutput> = {
         actionId: request.actionId,
         requestId: request.context.requestId,
         risk: definition.risk,
@@ -226,7 +295,27 @@ export class SamuelActionEngine {
         canClaimCompletion: false,
         durationMs,
       };
+      await this.finishLedger(request, definition.risk, result);
+      return result;
     }
+  }
+
+  private async finishLedger<TInput, TOutput>(
+    request: SamuelActionRequest<TInput>,
+    risk: SamuelActionRisk,
+    result: SamuelActionResult<TOutput>,
+  ) {
+    if (!actionRiskRequiresConfirmation(risk) || !this.ledger) return;
+    await this.ledger.finish({
+      actionId: request.actionId,
+      risk,
+      context: request.context,
+      confirmation: request.confirmation,
+      status: result.status,
+      evidence: result.evidence,
+      error: result.error,
+      durationMs: result.durationMs,
+    });
   }
 
   private async emit<TInput>(
@@ -257,5 +346,21 @@ export class InMemorySamuelTelemetrySink implements SamuelTelemetrySink {
 
   emit(event: SamuelTelemetryEvent) {
     this.events.push(event);
+  }
+}
+
+export class InMemorySamuelActionExecutionLedger implements SamuelActionExecutionLedger {
+  readonly reservations = new Set<string>();
+  readonly completions: SamuelActionLedgerCompletion[] = [];
+
+  async reserve(input: SamuelActionLedgerReservation) {
+    const key = `${input.context.companyId}:${input.context.idempotencyKey}`;
+    if (this.reservations.has(key)) return false;
+    this.reservations.add(key);
+    return true;
+  }
+
+  async finish(input: SamuelActionLedgerCompletion) {
+    this.completions.push(input);
   }
 }
