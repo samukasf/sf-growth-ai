@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 
 import {
-  executeCalendarTool,
   verifyCalendarConfirmation,
   type CalendarActionArgs,
   type CalendarActionId,
 } from "@/features/google-calendar";
 import { authorizeCompanyRequest } from "@/features/auth/server/authorization";
+import {
+  executeSamuelCalendarAction,
+  SamuelActionDuplicateRequestError,
+} from "@/features/samuel-ai/actions/samuel-tool-action-executor.server";
 
 export const dynamic = "force-dynamic";
 
@@ -49,19 +52,38 @@ export async function POST(request: Request) {
     const auth = await authorizeCompanyRequest(payload.companyId);
     if (!auth.ok) return auth.response;
 
-    const result = await executeCalendarTool(
-      payload.companyId,
-      payload.actionId,
-      body.args ?? payload.args,
-    );
+    const execution = await executeSamuelCalendarAction({
+      identity: {
+        companyId: payload.companyId,
+        userId: auth.user.id,
+        sessionId: `calendar-confirmation:${payload.companyId}`,
+        turnId: `${payload.actionId}:${payload.issuedAt}`,
+      },
+      actionId: payload.actionId,
+      args: payload.args,
+      confirmation: {
+        confirmationToken: body.confirmationToken,
+      },
+    });
 
-    return NextResponse.json(result, {
-      status: result.ok ? 200 : 502,
+    return NextResponse.json(execution.result, {
+      status: execution.result.ok ? 200 : 502,
       headers: { "Cache-Control": "private, no-store" },
     });
   } catch (error) {
+    if (error instanceof SamuelActionDuplicateRequestError) {
+      return NextResponse.json(
+        { error: "Esta ação já foi processada e não será executada novamente." },
+        { status: 409, headers: { "Cache-Control": "private, no-store" } },
+      );
+    }
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Falha ao executar ação Google Agenda" },
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Falha ao executar ação Google Agenda",
+      },
       { status: 400 },
     );
   }
