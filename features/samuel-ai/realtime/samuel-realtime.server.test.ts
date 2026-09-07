@@ -51,15 +51,17 @@ describe("Realtime voice server configuration", () => {
       type: "server_vad",
       create_response: true,
       interrupt_response: true,
-      silence_duration_ms: 900,
+      silence_duration_ms: 650,
     });
     expect(session.audio.output.voice).toBe("cedar");
     expect(session).not.toHaveProperty("input_audio_transcription");
     expect(session).not.toHaveProperty("turn_detection");
     expect(session.instructions).toContain("Empresa de teste");
-    expect(session.instructions).toContain("voz masculina adulta");
-    expect(session.instructions).toContain("Sr. Samuel");
-    expect(session.instructions).toContain("evento real e verificável");
-    expect(session.instructions).toContain("nunca fale por cima dele");
+    expect(session.instructions).toContain("Voz masculina adulta");
+    expect(session.instructions).toContain("pare de falar imediatamente");
+    expect(session.instructions).toContain("Nunca invente ações");
+    expect(session.instructions).toContain(
+      "Só diga que executou algo quando houver confirmação real do sistema",
+    );
   });
 });

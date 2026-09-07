@@ -53,7 +53,10 @@ export function samuelRealtimeReducer(
     case "set_muted":
       return { ...state, muted: action.muted };
     case "set_text_mode":
-      return { ...state, textMode: action.textMode };
+      return {
+        ...state,
+        textMode: "textMode" in action ? action.textMode : action.enabled,
+      };
     case "set_audio_level":
       return { ...state, audioLevel: Math.max(0, Math.min(1, action.audioLevel)) };
     case "set_output_audio_level":
