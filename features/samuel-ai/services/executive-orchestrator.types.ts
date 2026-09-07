@@ -5,6 +5,10 @@ import type {
   ExecutiveReasoning,
   ReasoningStepStatus,
 } from "../executive-brain/types";
+import type {
+  SamuelActionExecution,
+  SamuelActionStatus,
+} from "../actions/samuel-action-engine";
 
 export type QueryIntent = "sales" | "marketing" | "growth" | "general";
 
@@ -39,7 +43,11 @@ export type OrchestratorPhase =
   | "running_analysis"
   | "building_consensus"
   | "building_action_plan"
-  | "complete";
+  | "awaiting_confirmation"
+  | "executing"
+  | "verifying"
+  | "complete"
+  | "failed";
 
 export type AnalysisPipelineStep = {
   id: string;
@@ -72,6 +80,7 @@ export type OrchestratorSnapshot = {
   analysis: ExecutiveAnalysisResult | null;
   consensus: string | null;
   actionPlan: ExecutiveActionPlan | null;
+  actionExecution?: SamuelActionExecution | null;
   confidence: ExecutiveConfidence | null;
   memory: ExecutiveMemory | null;
 };
@@ -82,9 +91,30 @@ export type OrchestratorResult = {
   analysis: ExecutiveAnalysisResult;
   consensus: string;
   actionPlan: ExecutiveActionPlan;
+  actionExecution?: SamuelActionExecution | null;
   confidence: ExecutiveConfidence;
   memory: ExecutiveMemory;
 };
+
+export function orchestratorPhaseForActionStatus(
+  status: SamuelActionStatus,
+): OrchestratorPhase {
+  switch (status) {
+    case "awaiting_confirmation":
+      return "awaiting_confirmation";
+    case "executing":
+      return "executing";
+    case "verifying":
+      return "verifying";
+    case "failed":
+      return "failed";
+    case "verified":
+      return "complete";
+    case "pending":
+    default:
+      return "building_action_plan";
+  }
+}
 
 /** @deprecated Use ConsultedExecutive */
 export type SelectedExecutive = ConsultedExecutive;
