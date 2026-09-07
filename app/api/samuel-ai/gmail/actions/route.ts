@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 
 import {
-  executeGmailTool,
   verifyGmailConfirmation,
   type GmailActionArgs,
   type GmailActionId,
 } from "@/features/gmail";
 import { authorizeCompanyRequest } from "@/features/auth/server/authorization";
+import {
+  executeSamuelGmailAction,
+  SamuelActionDuplicateRequestError,
+} from "@/features/samuel-ai/actions/samuel-tool-action-executor.server";
 
 export const dynamic = "force-dynamic";
 
@@ -49,17 +52,31 @@ export async function POST(request: Request) {
     const auth = await authorizeCompanyRequest(payload.companyId);
     if (!auth.ok) return auth.response;
 
-    const result = await executeGmailTool(
-      payload.companyId,
-      payload.actionId,
-      body.args ?? payload.args,
-    );
+    const execution = await executeSamuelGmailAction({
+      identity: {
+        companyId: payload.companyId,
+        userId: auth.user.id,
+        sessionId: `gmail-confirmation:${payload.companyId}`,
+        turnId: `${payload.actionId}:${payload.issuedAt}`,
+      },
+      actionId: payload.actionId,
+      args: payload.args,
+      confirmation: {
+        confirmationToken: body.confirmationToken,
+      },
+    });
 
-    return NextResponse.json(result, {
-      status: result.ok ? 200 : 502,
+    return NextResponse.json(execution.result, {
+      status: execution.result.ok ? 200 : 502,
       headers: { "Cache-Control": "private, no-store" },
     });
   } catch (error) {
+    if (error instanceof SamuelActionDuplicateRequestError) {
+      return NextResponse.json(
+        { error: "Esta ação já foi processada e não será executada novamente." },
+        { status: 409, headers: { "Cache-Control": "private, no-store" } },
+      );
+    }
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Falha ao executar ação Gmail" },
       { status: 400 },

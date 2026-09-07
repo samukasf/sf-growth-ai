@@ -2,12 +2,25 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 
 import type { CalendarActionArgs, CalendarActionId } from "./types";
 
+const CALENDAR_ACTION_IDS = new Set<CalendarActionId>([
+  "calendar_today",
+  "calendar_week",
+  "calendar_search",
+  "calendar_create",
+  "calendar_update",
+  "calendar_delete",
+  "calendar_availability",
+]);
+
 function secret() {
-  return (
+  const configured =
+    process.env.SAMUEL_ACTION_CONFIRMATION_SECRET ||
     process.env.GOOGLE_CLIENT_SECRET ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    "sf-growth-ai-calendar-dev-secret"
-  );
+    process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (configured) return configured;
+  if (process.env.NODE_ENV === "test") return "sf-growth-ai-test-confirmation-secret";
+  throw new Error("Segredo de confirmação de ações não configurado.");
 }
 
 export type CalendarConfirmationPayload = {
@@ -36,10 +49,17 @@ export function verifyCalendarConfirmation(token: string): CalendarConfirmationP
     throw new Error("Assinatura do token Google Agenda inválida.");
   }
 
-  const payload = JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as CalendarConfirmationPayload;
+  const payload = JSON.parse(
+    Buffer.from(body, "base64url").toString("utf8"),
+  ) as CalendarConfirmationPayload;
   const maxAgeMs = 15 * 60 * 1000;
-  if (!payload.companyId || !payload.actionId || !payload.issuedAt) {
-    throw new Error("Payload de confirmação Google Agenda incompleto.");
+  if (
+    !payload.companyId ||
+    !payload.actionId ||
+    !CALENDAR_ACTION_IDS.has(payload.actionId) ||
+    !payload.issuedAt
+  ) {
+    throw new Error("Payload de confirmação Google Agenda incompleto ou inválido.");
   }
   if (Date.now() - payload.issuedAt > maxAgeMs || payload.issuedAt > Date.now() + 60_000) {
     throw new Error("Token de confirmação Google Agenda expirado. Peça a ação novamente.");
