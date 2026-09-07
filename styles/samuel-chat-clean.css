@@ -1,143 +1,311 @@
-/* Samuel conversation — clean production cockpit.
-   Technical/provider diagnostics remain available in code but are intentionally
-   removed from the primary conversation surface. */
+/* Samuel conversation — production cockpit.
+   The primary surface exposes only presence, conversation and input.
+   Transport/provider diagnostics stay out of the normal user experience. */
 
-.samuel-chat-shell--hologram {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 12px !important;
-  padding: 12px !important;
-  min-height: 0 !important;
-  background: radial-gradient(circle at 50% 0%, rgba(16,80,150,.10), transparent 34%), #f7f9fc !important;
-}
-
-.samuel-chat-shell--hologram .samuel-chat-presence {
-  order: 1;
-  min-height: 250px !important;
-  max-height: 38dvh;
-  padding: 8px 12px 12px !important;
-  border-radius: 24px !important;
-  overflow: hidden;
-}
-
-/* The nucleus communicates state. Explanatory copy/captions only created noise. */
-.samuel-chat-shell--hologram .samuel-chat-presence__copy > span,
-.samuel-chat-shell--hologram .samuel-chat-presence__copy > p,
-.samuel-chat-shell--hologram .samuel-chat-presence__caption {
-  display: none !important;
-}
-.samuel-chat-shell--hologram .samuel-chat-presence__copy > strong {
-  display: block;
-  margin-top: 4px;
-  font-size: 13px !important;
-  letter-spacing: .01em;
-}
-
-.samuel-chat-shell--hologram .samuel-chat-log {
-  order: 2;
-  flex: 1 1 auto !important;
-  min-height: 180px !important;
-  max-height: 38dvh !important;
-  overflow-y: auto !important;
-  border: 1px solid rgba(20,55,100,.09) !important;
-  border-radius: 22px !important;
-  background: rgba(255,255,255,.94) !important;
-  padding: 12px !important;
-  box-shadow: 0 10px 30px rgba(20,55,100,.06) !important;
-}
-
-/* History controls are secondary; keep the transcript itself visually dominant. */
-.samuel-chat-history-header,
-.samuel-chat-history-hint {
-  display: none !important;
-}
-
-.samuel-chat-shell--hologram .samuel-chat-composer {
-  order: 3;
-  position: sticky;
-  bottom: calc(74px + env(safe-area-inset-bottom));
-  z-index: 20;
-  padding: 10px !important;
-  border: 1px solid rgba(20,55,100,.10) !important;
-  border-radius: 22px !important;
-  background: rgba(255,255,255,.96) !important;
-  backdrop-filter: blur(18px);
-  box-shadow: 0 12px 36px rgba(10,35,75,.12) !important;
-}
-
-/* Remove provider names, channel labels, Realtime errors and the engineering console
-   from the normal user experience. Voice is accessed by the microphone in composer. */
-.samuel-chat-composer__heading,
-.samuel-voice-console,
-.samuel-chat-voice-options,
-.samuel-chat-composer__helper,
-.samuel-chat-notice--voice,
-.samuel-chat-notice--warning {
-  display: none !important;
-}
-
-.samuel-chat-input-grid {
+.samuel-focus-cockpit .samuel-chat-shell--hologram {
   display: grid !important;
-  grid-template-columns: 1fr auto !important;
-  align-items: end !important;
-  gap: 8px !important;
-}
-.samuel-chat-textarea {
-  min-height: 48px !important;
-  max-height: 120px !important;
-  resize: none !important;
-  border-radius: 16px !important;
-  padding: 13px 14px !important;
-  background: #f4f7fb !important;
-  border: 1px solid rgba(20,55,100,.12) !important;
-  font-size: 16px !important;
-}
-.samuel-chat-input-actions {
-  display: flex !important;
-  gap: 7px !important;
-}
-.samuel-chat-dictation,
-.samuel-chat-send {
-  min-width: 48px !important;
-  width: 48px !important;
-  height: 48px !important;
+  grid-template-rows: minmax(190px, 34dvh) minmax(0, 1fr) auto !important;
+  gap: 0 !important;
+  height: 100% !important;
+  min-height: 0 !important;
   padding: 0 !important;
-  border-radius: 50% !important;
-  display: inline-flex !important;
+  overflow: hidden !important;
+  background: transparent !important;
+  color: #f8fafc !important;
+}
+
+.samuel-focus-cockpit .samuel-chat-presence {
+  order: 1;
+  position: relative !important;
+  display: flex !important;
+  min-height: 190px !important;
+  max-height: none !important;
   align-items: center !important;
   justify-content: center !important;
-  font-size: 0 !important;
+  padding: 10px 12px 2px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
 }
-.samuel-chat-dictation svg,
-.samuel-chat-send svg { width: 20px !important; height: 20px !important; }
 
-/* Genuine send/action failures remain visible; internal transport diagnostics do not. */
-.samuel-chat-notice--error {
-  margin: 8px 0 !important;
-  border-radius: 14px !important;
-  font-size: 12px !important;
+.samuel-focus-cockpit .samuel-chat-presence::before {
+  content: "";
+  position: absolute;
+  inset: 3% 18% 0;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(255,255,255,.07), rgba(96,165,250,.035) 35%, transparent 68%);
+  filter: blur(24px);
+  pointer-events: none;
+}
+
+.samuel-focus-cockpit .samuel-chat-presence__copy > span,
+.samuel-focus-cockpit .samuel-chat-presence__copy > p,
+.samuel-focus-cockpit .samuel-chat-presence__caption,
+.samuel-focus-cockpit .samuel-chat-presence__copy > strong {
+  display: none !important;
+}
+
+.samuel-focus-cockpit .samuel-chat-presence .samuel-hologram {
+  transform: scale(.82);
+  transform-origin: center;
+}
+
+.samuel-focus-cockpit .samuel-chat-log {
+  order: 2;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  border: 0 !important;
+  border-top: 1px solid rgba(255,255,255,.055) !important;
+  border-radius: 0 !important;
+  background: rgba(3,4,6,.50) !important;
+  padding: 18px 14px 24px !important;
+  box-shadow: none !important;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,.12) transparent;
+}
+
+.samuel-focus-cockpit .samuel-chat-history-header,
+.samuel-focus-cockpit .samuel-chat-history-hint,
+.samuel-focus-cockpit .samuel-message__status,
+.samuel-focus-cockpit .samuel-message__avatar,
+.samuel-focus-cockpit .samuel-message__time,
+.samuel-focus-cockpit .samuel-chat-composer__heading,
+.samuel-focus-cockpit .samuel-voice-console,
+.samuel-focus-cockpit .samuel-chat-voice-options,
+.samuel-focus-cockpit .samuel-chat-composer__helper,
+.samuel-focus-cockpit .samuel-chat-notice--voice,
+.samuel-focus-cockpit .samuel-chat-notice--warning,
+.samuel-focus-cockpit [class*="provider"],
+.samuel-focus-cockpit [data-provider] {
+  display: none !important;
+}
+
+.samuel-focus-cockpit .samuel-message-row {
+  width: 100% !important;
+  max-width: 760px !important;
+  margin: 0 auto 16px !important;
+}
+
+.samuel-focus-cockpit .samuel-message-row--user {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-end !important;
+}
+
+.samuel-focus-cockpit .samuel-message-row--assistant {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+}
+
+.samuel-focus-cockpit .samuel-message {
+  max-width: min(88%, 680px) !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.samuel-focus-cockpit .samuel-message--user {
+  border-radius: 20px 20px 6px 20px !important;
+  background: rgba(255,255,255,.11) !important;
+  color: rgba(255,255,255,.92) !important;
+  padding: 11px 14px !important;
+}
+
+.samuel-focus-cockpit .samuel-message--assistant {
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: rgba(255,255,255,.88) !important;
+  padding: 4px 2px !important;
+}
+
+.samuel-focus-cockpit .samuel-message__header {
+  min-height: 0 !important;
+  margin: 0 0 6px !important;
+  padding: 0 !important;
+}
+
+.samuel-focus-cockpit .samuel-message__name,
+.samuel-focus-cockpit .samuel-message__author {
+  margin: 0 0 5px !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  letter-spacing: .02em !important;
+  color: rgba(255,255,255,.33) !important;
+}
+
+.samuel-focus-cockpit .samuel-message__content {
+  margin: 0 !important;
+  font-size: 14px !important;
+  line-height: 1.62 !important;
+  color: inherit !important;
+  white-space: pre-wrap !important;
+}
+
+.samuel-focus-cockpit .samuel-message__thinking {
+  width: 5px !important;
+  height: 5px !important;
+  margin-left: 7px !important;
+  background: rgba(255,255,255,.65) !important;
+  box-shadow: 0 0 12px rgba(255,255,255,.45) !important;
+}
+
+.samuel-focus-cockpit .samuel-chat-composer {
+  order: 3;
+  position: relative !important;
+  bottom: auto !important;
+  z-index: 30;
+  margin: 0 !important;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom)) !important;
+  border: 0 !important;
+  border-top: 1px solid rgba(255,255,255,.07) !important;
+  border-radius: 0 !important;
+  background: rgba(5,6,7,.92) !important;
+  backdrop-filter: blur(26px) saturate(130%) !important;
+  box-shadow: 0 -18px 44px rgba(0,0,0,.24) !important;
+}
+
+.samuel-focus-cockpit .samuel-chat-input-grid {
+  display: grid !important;
+  grid-template-columns: minmax(0,1fr) auto !important;
+  align-items: end !important;
+  gap: 8px !important;
+  max-width: 820px !important;
+  margin: 0 auto !important;
+}
+
+.samuel-focus-cockpit .samuel-chat-textarea {
+  min-height: 48px !important;
+  max-height: 112px !important;
+  resize: none !important;
+  border: 1px solid rgba(255,255,255,.09) !important;
+  border-radius: 18px !important;
+  outline: none !important;
+  padding: 13px 15px !important;
+  background: rgba(255,255,255,.055) !important;
+  color: rgba(255,255,255,.92) !important;
+  caret-color: white !important;
+  font-size: 16px !important;
+  line-height: 1.4 !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035) !important;
+}
+
+.samuel-focus-cockpit .samuel-chat-textarea::placeholder {
+  color: rgba(255,255,255,.27) !important;
+}
+
+.samuel-focus-cockpit .samuel-chat-textarea:focus {
+  border-color: rgba(255,255,255,.20) !important;
+  background: rgba(255,255,255,.075) !important;
+}
+
+.samuel-focus-cockpit .samuel-chat-input-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+}
+
+.samuel-focus-cockpit .samuel-chat-dictation,
+.samuel-focus-cockpit .samuel-chat-send {
+  display: inline-flex !important;
+  width: 48px !important;
+  min-width: 48px !important;
+  height: 48px !important;
+  min-height: 48px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  border: 1px solid rgba(255,255,255,.10) !important;
+  border-radius: 50% !important;
+  font-size: 0 !important;
+  transition: transform .16s ease, background .16s ease, border-color .16s ease !important;
+}
+
+.samuel-focus-cockpit .samuel-chat-dictation {
+  background: rgba(255,255,255,.055) !important;
+  color: rgba(255,255,255,.72) !important;
+}
+
+.samuel-focus-cockpit .samuel-chat-send {
+  background: rgba(255,255,255,.92) !important;
+  color: #070809 !important;
+}
+
+.samuel-focus-cockpit .samuel-chat-dictation:hover,
+.samuel-focus-cockpit .samuel-chat-send:hover {
+  transform: translateY(-1px) !important;
+}
+
+.samuel-focus-cockpit .samuel-chat-dictation svg,
+.samuel-focus-cockpit .samuel-chat-send svg {
+  width: 19px !important;
+  height: 19px !important;
+}
+
+.samuel-focus-cockpit .samuel-chat-notice--error {
+  max-width: 820px !important;
+  margin: 8px auto !important;
+  padding: 8px 10px !important;
+  border: 1px solid rgba(248,113,113,.18) !important;
+  border-radius: 12px !important;
+  background: rgba(127,29,29,.10) !important;
+  color: rgba(254,202,202,.82) !important;
+  font-size: 11px !important;
 }
 
 @media (max-width: 767px) {
-  .samuel-chat-shell--hologram {
-    padding: 8px !important;
-    gap: 8px !important;
-    padding-bottom: calc(92px + env(safe-area-inset-bottom)) !important;
+  .samuel-focus-cockpit .samuel-chat-shell--hologram {
+    grid-template-rows: minmax(165px, 26dvh) minmax(0, 1fr) auto !important;
   }
-  .samuel-chat-shell--hologram .samuel-chat-presence {
-    min-height: 210px !important;
-    max-height: 31dvh !important;
-    border-radius: 20px !important;
+
+  .samuel-focus-cockpit .samuel-chat-presence {
+    min-height: 165px !important;
+    padding: 2px 8px 0 !important;
   }
-  .samuel-chat-shell--hologram .samuel-chat-log {
-    min-height: 190px !important;
-    max-height: 40dvh !important;
-    border-radius: 18px !important;
+
+  .samuel-focus-cockpit .samuel-chat-presence .samuel-hologram {
+    transform: scale(.68);
   }
-  .samuel-chat-shell--hologram .samuel-chat-composer {
-    bottom: calc(82px + env(safe-area-inset-bottom));
-    border-radius: 18px !important;
-    padding: 8px !important;
+
+  .samuel-focus-cockpit .samuel-chat-log {
+    padding: 14px 12px 18px !important;
   }
-  .samuel-chat-textarea { rows: 1; }
+
+  .samuel-focus-cockpit .samuel-message-row {
+    margin-bottom: 13px !important;
+  }
+
+  .samuel-focus-cockpit .samuel-message {
+    max-width: 91% !important;
+  }
+
+  .samuel-focus-cockpit .samuel-message__content {
+    font-size: 14px !important;
+    line-height: 1.55 !important;
+  }
+
+  .samuel-focus-cockpit .samuel-chat-composer {
+    padding: 8px 9px calc(8px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .samuel-focus-cockpit .samuel-chat-textarea {
+    min-height: 46px !important;
+    padding: 12px 13px !important;
+    border-radius: 16px !important;
+  }
+
+  .samuel-focus-cockpit .samuel-chat-dictation,
+  .samuel-focus-cockpit .samuel-chat-send {
+    width: 46px !important;
+    min-width: 46px !important;
+    height: 46px !important;
+    min-height: 46px !important;
+  }
+
+  .samuel-focus-shortcuts {
+    padding-bottom: calc(6px + env(safe-area-inset-bottom)) !important;
+  }
 }
