@@ -39,6 +39,7 @@ export type SamuelRealtimeAction =
   | { type: "paused" }
   | { type: "set_muted"; muted: boolean }
   | { type: "set_text_mode"; textMode: boolean }
+  | { type: "set_text_mode"; enabled: boolean }
   | { type: "set_audio_level"; audioLevel: number }
   | { type: "set_output_audio_level"; audioLevel: number }
   | { type: "user_transcript"; content: string; final?: boolean }
