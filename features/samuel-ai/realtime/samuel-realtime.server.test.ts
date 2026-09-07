@@ -51,7 +51,7 @@ describe("Realtime voice server configuration", () => {
       type: "server_vad",
       create_response: true,
       interrupt_response: true,
-      silence_duration_ms: 900,
+      silence_duration_ms: 650,
     });
     expect(session.audio.output.voice).toBe("cedar");
     expect(session).not.toHaveProperty("input_audio_transcription");
