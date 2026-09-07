@@ -1,0 +1,143 @@
+/* Samuel conversation — clean production cockpit.
+   Technical/provider diagnostics remain available in code but are intentionally
+   removed from the primary conversation surface. */
+
+.samuel-chat-shell--hologram {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+  padding: 12px !important;
+  min-height: 0 !important;
+  background: radial-gradient(circle at 50% 0%, rgba(16,80,150,.10), transparent 34%), #f7f9fc !important;
+}
+
+.samuel-chat-shell--hologram .samuel-chat-presence {
+  order: 1;
+  min-height: 250px !important;
+  max-height: 38dvh;
+  padding: 8px 12px 12px !important;
+  border-radius: 24px !important;
+  overflow: hidden;
+}
+
+/* The nucleus communicates state. Explanatory copy/captions only created noise. */
+.samuel-chat-shell--hologram .samuel-chat-presence__copy > span,
+.samuel-chat-shell--hologram .samuel-chat-presence__copy > p,
+.samuel-chat-shell--hologram .samuel-chat-presence__caption {
+  display: none !important;
+}
+.samuel-chat-shell--hologram .samuel-chat-presence__copy > strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px !important;
+  letter-spacing: .01em;
+}
+
+.samuel-chat-shell--hologram .samuel-chat-log {
+  order: 2;
+  flex: 1 1 auto !important;
+  min-height: 180px !important;
+  max-height: 38dvh !important;
+  overflow-y: auto !important;
+  border: 1px solid rgba(20,55,100,.09) !important;
+  border-radius: 22px !important;
+  background: rgba(255,255,255,.94) !important;
+  padding: 12px !important;
+  box-shadow: 0 10px 30px rgba(20,55,100,.06) !important;
+}
+
+/* History controls are secondary; keep the transcript itself visually dominant. */
+.samuel-chat-history-header,
+.samuel-chat-history-hint {
+  display: none !important;
+}
+
+.samuel-chat-shell--hologram .samuel-chat-composer {
+  order: 3;
+  position: sticky;
+  bottom: calc(74px + env(safe-area-inset-bottom));
+  z-index: 20;
+  padding: 10px !important;
+  border: 1px solid rgba(20,55,100,.10) !important;
+  border-radius: 22px !important;
+  background: rgba(255,255,255,.96) !important;
+  backdrop-filter: blur(18px);
+  box-shadow: 0 12px 36px rgba(10,35,75,.12) !important;
+}
+
+/* Remove provider names, channel labels, Realtime errors and the engineering console
+   from the normal user experience. Voice is accessed by the microphone in composer. */
+.samuel-chat-composer__heading,
+.samuel-voice-console,
+.samuel-chat-voice-options,
+.samuel-chat-composer__helper,
+.samuel-chat-notice--voice,
+.samuel-chat-notice--warning {
+  display: none !important;
+}
+
+.samuel-chat-input-grid {
+  display: grid !important;
+  grid-template-columns: 1fr auto !important;
+  align-items: end !important;
+  gap: 8px !important;
+}
+.samuel-chat-textarea {
+  min-height: 48px !important;
+  max-height: 120px !important;
+  resize: none !important;
+  border-radius: 16px !important;
+  padding: 13px 14px !important;
+  background: #f4f7fb !important;
+  border: 1px solid rgba(20,55,100,.12) !important;
+  font-size: 16px !important;
+}
+.samuel-chat-input-actions {
+  display: flex !important;
+  gap: 7px !important;
+}
+.samuel-chat-dictation,
+.samuel-chat-send {
+  min-width: 48px !important;
+  width: 48px !important;
+  height: 48px !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 0 !important;
+}
+.samuel-chat-dictation svg,
+.samuel-chat-send svg { width: 20px !important; height: 20px !important; }
+
+/* Genuine send/action failures remain visible; internal transport diagnostics do not. */
+.samuel-chat-notice--error {
+  margin: 8px 0 !important;
+  border-radius: 14px !important;
+  font-size: 12px !important;
+}
+
+@media (max-width: 767px) {
+  .samuel-chat-shell--hologram {
+    padding: 8px !important;
+    gap: 8px !important;
+    padding-bottom: calc(92px + env(safe-area-inset-bottom)) !important;
+  }
+  .samuel-chat-shell--hologram .samuel-chat-presence {
+    min-height: 210px !important;
+    max-height: 31dvh !important;
+    border-radius: 20px !important;
+  }
+  .samuel-chat-shell--hologram .samuel-chat-log {
+    min-height: 190px !important;
+    max-height: 40dvh !important;
+    border-radius: 18px !important;
+  }
+  .samuel-chat-shell--hologram .samuel-chat-composer {
+    bottom: calc(82px + env(safe-area-inset-bottom));
+    border-radius: 18px !important;
+    padding: 8px !important;
+  }
+  .samuel-chat-textarea { rows: 1; }
+}
