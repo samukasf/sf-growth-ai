@@ -1,409 +1,55 @@
-/* Samuel — voice-first cockpit.
-   One-screen interaction: presence + live voice + compact transcript + text fallback.
-   Historical/technical detail must never turn the Samuel surface into a long page. */
+/* Samuel full-screen voice experience. */
+.samuel-focus-cockpit { height:100dvh!important; min-height:0!important; overflow:hidden!important; }
+.samuel-focus-cockpit .samuel-chat-shell--hologram { display:grid!important; grid-template-rows:minmax(0,1fr) auto!important; height:calc(100dvh - 64px)!important; min-height:0!important; padding:0!important; overflow:hidden!important; background:transparent!important; color:#fff!important; }
 
-.samuel-focus-cockpit {
-  height: 100% !important;
-  min-height: 0 !important;
-  max-height: 100% !important;
-  overflow: hidden !important;
-  background: #040506 !important;
-}
+/* The live Samuel core is the hero. */
+.samuel-focus-cockpit .samuel-chat-presence { grid-row:1; position:absolute!important; inset:0 0 42%!important; display:flex!important; align-items:center!important; justify-content:center!important; border:0!important; background:transparent!important; box-shadow:none!important; pointer-events:none; overflow:hidden!important; }
+.samuel-focus-cockpit .samuel-chat-presence::before { content:""; position:absolute; width:min(72vw,620px); aspect-ratio:1; border-radius:50%; background:radial-gradient(circle,rgba(43,155,255,.10),rgba(19,76,180,.035) 42%,transparent 68%); filter:blur(18px); }
+.samuel-focus-cockpit .samuel-chat-presence__copy { display:none!important; }
+.samuel-focus-cockpit .samuel-chat-presence .samuel-hologram { transform:scale(.9); transform-origin:center; }
 
-.samuel-focus-cockpit .samuel-chat-shell--hologram {
-  display: grid !important;
-  grid-template-rows: minmax(200px, 42%) minmax(120px, 1fr) auto !important;
-  height: 100% !important;
-  min-height: 0 !important;
-  max-height: 100% !important;
-  gap: 0 !important;
-  padding: 0 !important;
-  overflow: hidden !important;
-  background: transparent !important;
-  color: #f8fafc !important;
-}
+/* Conversation floats below the core, never becomes a page. */
+.samuel-focus-cockpit .samuel-chat-log { grid-row:1; align-self:end; z-index:12; width:min(100%,760px)!important; height:32%!important; min-height:105px!important; margin:0 auto!important; padding:14px 18px 8px!important; overflow-y:auto!important; overscroll-behavior:contain; border:0!important; background:linear-gradient(180deg,transparent,rgba(3,5,8,.78) 25%,rgba(3,5,8,.94))!important; box-shadow:none!important; scrollbar-width:none; -webkit-mask-image:linear-gradient(to bottom,transparent,#000 20px,#000 100%); }
+.samuel-focus-cockpit .samuel-chat-log::-webkit-scrollbar { display:none; }
+.samuel-focus-cockpit .samuel-chat-history-header,.samuel-focus-cockpit .samuel-chat-history-hint,.samuel-focus-cockpit .samuel-message__status,.samuel-focus-cockpit .samuel-message__avatar,.samuel-focus-cockpit .samuel-message__time,.samuel-focus-cockpit .samuel-chat-empty__icon,.samuel-focus-cockpit .samuel-chat-notice--voice,.samuel-focus-cockpit .samuel-chat-notice--warning { display:none!important; }
+.samuel-focus-cockpit .samuel-chat-empty { display:flex!important; height:100%!important; flex-direction:column!important; align-items:center!important; justify-content:flex-end!important; gap:4px!important; padding:0 0 8px!important; border:0!important; background:transparent!important; text-align:center; }
+.samuel-focus-cockpit .samuel-chat-empty strong { font-size:13px!important; font-weight:500!important; color:rgba(255,255,255,.62)!important; }
+.samuel-focus-cockpit .samuel-chat-empty p { margin:0!important; font-size:10px!important; color:rgba(255,255,255,.28)!important; }
+.samuel-focus-cockpit .samuel-message-row { width:100%!important; margin:0 auto 9px!important; }
+.samuel-focus-cockpit .samuel-message-row--user { display:flex!important; justify-content:flex-end!important; }
+.samuel-focus-cockpit .samuel-message-row--assistant { display:flex!important; justify-content:flex-start!important; }
+.samuel-focus-cockpit .samuel-message { max-width:82%!important; border:0!important; box-shadow:none!important; }
+.samuel-focus-cockpit .samuel-message--user { padding:8px 11px!important; border-radius:16px 16px 5px 16px!important; background:rgba(255,255,255,.10)!important; color:rgba(255,255,255,.88)!important; }
+.samuel-focus-cockpit .samuel-message--assistant { padding:2px!important; background:transparent!important; color:rgba(255,255,255,.82)!important; }
+.samuel-focus-cockpit .samuel-message__header { display:none!important; }
+.samuel-focus-cockpit .samuel-message__content { margin:0!important; font-size:13px!important; line-height:1.48!important; white-space:pre-wrap!important; color:inherit!important; }
 
-/* Presence stays visually dominant. */
-.samuel-focus-cockpit .samuel-chat-presence {
-  order: 1;
-  position: relative !important;
-  display: flex !important;
-  min-height: 0 !important;
-  max-height: none !important;
-  align-items: center !important;
-  justify-content: center !important;
-  padding: 4px 12px 0 !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  overflow: hidden !important;
-  background: transparent !important;
-  box-shadow: none !important;
-}
+/* Bottom interaction dock: voice first, typing secondary. */
+.samuel-focus-cockpit .samuel-chat-composer { grid-row:2; z-index:30; display:grid!important; grid-template-columns:auto minmax(0,1fr) auto!important; align-items:center!important; gap:9px!important; width:min(calc(100% - 24px),760px)!important; margin:0 auto!important; padding:10px 0 calc(12px + env(safe-area-inset-bottom))!important; border:0!important; background:transparent!important; box-shadow:none!important; }
+.samuel-focus-cockpit .samuel-chat-composer__heading,.samuel-focus-cockpit .samuel-chat-voice-options,.samuel-focus-cockpit .samuel-chat-composer__helper,.samuel-focus-cockpit .samuel-voice-console__topline,.samuel-focus-cockpit .samuel-voice-console__settings,.samuel-focus-cockpit .samuel-voice-console__details,.samuel-focus-cockpit .samuel-voice-console__error { display:none!important; }
+.samuel-focus-cockpit .samuel-voice-console { grid-column:1; grid-row:1; display:block!important; margin:0!important; padding:0!important; border:0!important; background:transparent!important; box-shadow:none!important; }
+.samuel-focus-cockpit .samuel-voice-console__primary-actions { display:block!important; }
+.samuel-focus-cockpit .samuel-voice-console__start { display:flex!important; width:54px!important; height:54px!important; min-width:54px!important; min-height:54px!important; align-items:center!important; justify-content:center!important; padding:0!important; border:1px solid rgba(125,211,252,.30)!important; border-radius:50%!important; background:radial-gradient(circle at 38% 30%,#7dd3fc,#2563eb 45%,#102453 75%)!important; color:white!important; font-size:0!important; box-shadow:0 0 0 5px rgba(59,130,246,.06),0 0 30px rgba(56,189,248,.20)!important; }
+.samuel-focus-cockpit .samuel-voice-console__start::after { content:"Falar"; position:absolute; transform:translateY(38px); font-size:8px; font-weight:600; letter-spacing:.08em; color:rgba(255,255,255,.35); }
+.samuel-focus-cockpit .samuel-voice-console__start svg { width:20px!important; height:20px!important; }
+.samuel-focus-cockpit .samuel-voice-console--active .samuel-voice-console__start { background:radial-gradient(circle at 38% 30%,#67e8f9,#0891b2 48%,#083344 78%)!important; box-shadow:0 0 0 6px rgba(34,211,238,.08),0 0 38px rgba(34,211,238,.32)!important; animation:samuelVoicePulse 1.8s ease-in-out infinite; }
+@keyframes samuelVoicePulse { 50% { transform:scale(1.04); box-shadow:0 0 0 10px rgba(34,211,238,.035),0 0 44px rgba(34,211,238,.36); } }
+.samuel-focus-cockpit .samuel-chat-input-grid { grid-column:2/4; grid-row:1; display:grid!important; grid-template-columns:minmax(0,1fr) auto!important; align-items:center!important; gap:7px!important; margin:0!important; }
+.samuel-focus-cockpit .samuel-chat-textarea { min-height:52px!important; max-height:80px!important; resize:none!important; padding:15px 16px!important; border:1px solid rgba(255,255,255,.09)!important; border-radius:22px!important; outline:0!important; background:rgba(255,255,255,.055)!important; backdrop-filter:blur(22px); color:rgba(255,255,255,.9)!important; caret-color:#fff; font-size:15px!important; line-height:1.35!important; }
+.samuel-focus-cockpit .samuel-chat-textarea::placeholder { color:rgba(255,255,255,.25)!important; }
+.samuel-focus-cockpit .samuel-chat-input-actions { display:flex!important; gap:6px!important; }
+.samuel-focus-cockpit .samuel-chat-dictation { display:none!important; }
+.samuel-focus-cockpit .samuel-chat-send { display:flex!important; width:48px!important; height:48px!important; min-width:48px!important; align-items:center!important; justify-content:center!important; padding:0!important; border:0!important; border-radius:50%!important; background:rgba(255,255,255,.92)!important; color:#071018!important; font-size:0!important; }
+.samuel-focus-cockpit .samuel-chat-send svg { width:17px!important; height:17px!important; }
+.samuel-focus-cockpit .samuel-chat-notice--error { position:absolute; left:50%; bottom:82px; z-index:50; width:min(calc(100% - 30px),600px); transform:translateX(-50%); padding:9px 12px!important; border:1px solid rgba(248,113,113,.18)!important; border-radius:12px!important; background:rgba(40,8,12,.88)!important; color:#fecaca!important; font-size:10px!important; }
 
-.samuel-focus-cockpit .samuel-chat-presence::before {
-  content: "";
-  position: absolute;
-  inset: 0 12%;
-  border-radius: 999px;
-  background: radial-gradient(circle, rgba(255,255,255,.08), rgba(96,165,250,.04) 34%, transparent 68%);
-  filter: blur(28px);
-  pointer-events: none;
-}
-
-.samuel-focus-cockpit .samuel-chat-presence__copy > span,
-.samuel-focus-cockpit .samuel-chat-presence__copy > p,
-.samuel-focus-cockpit .samuel-chat-presence__caption,
-.samuel-focus-cockpit .samuel-chat-presence__copy > strong {
-  display: none !important;
-}
-
-.samuel-focus-cockpit .samuel-chat-presence .samuel-hologram {
-  transform: scale(.82);
-  transform-origin: center;
-}
-
-/* Transcript is intentionally compact and scrolls internally. */
-.samuel-focus-cockpit .samuel-chat-log {
-  order: 2;
-  position: relative !important;
-  min-height: 0 !important;
-  max-height: none !important;
-  overflow-y: auto !important;
-  overscroll-behavior: contain !important;
-  border: 0 !important;
-  border-top: 1px solid rgba(255,255,255,.055) !important;
-  border-radius: 0 !important;
-  background: linear-gradient(180deg, rgba(2,3,5,.34), rgba(2,3,5,.72)) !important;
-  padding: 14px 14px 18px !important;
-  box-shadow: none !important;
-  scrollbar-width: none !important;
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14px, #000 calc(100% - 8px));
-}
-
-.samuel-focus-cockpit .samuel-chat-log::-webkit-scrollbar { display: none !important; }
-
-.samuel-focus-cockpit .samuel-chat-history-header,
-.samuel-focus-cockpit .samuel-chat-history-hint,
-.samuel-focus-cockpit .samuel-message__status,
-.samuel-focus-cockpit .samuel-message__avatar,
-.samuel-focus-cockpit .samuel-message__time,
-.samuel-focus-cockpit .samuel-chat-composer__heading,
-.samuel-focus-cockpit .samuel-chat-voice-options,
-.samuel-focus-cockpit .samuel-chat-composer__helper,
-.samuel-focus-cockpit .samuel-chat-notice--voice,
-.samuel-focus-cockpit .samuel-chat-notice--warning,
-.samuel-focus-cockpit [class*="provider"],
-.samuel-focus-cockpit [data-provider] {
-  display: none !important;
-}
-
-.samuel-focus-cockpit .samuel-chat-empty {
-  min-height: 100% !important;
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 4px !important;
-  padding: 8px !important;
-  text-align: center !important;
-  background: transparent !important;
-  border: 0 !important;
-}
-.samuel-focus-cockpit .samuel-chat-empty__icon { display: none !important; }
-.samuel-focus-cockpit .samuel-chat-empty strong {
-  font-size: 12px !important;
-  font-weight: 600 !important;
-  color: rgba(255,255,255,.62) !important;
-}
-.samuel-focus-cockpit .samuel-chat-empty p {
-  max-width: 420px !important;
-  margin: 0 !important;
-  font-size: 10px !important;
-  line-height: 1.5 !important;
-  color: rgba(255,255,255,.28) !important;
-}
-
-.samuel-focus-cockpit .samuel-message-row {
-  width: 100% !important;
-  max-width: 720px !important;
-  margin: 0 auto 10px !important;
-}
-.samuel-focus-cockpit .samuel-message-row--user {
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: flex-end !important;
-}
-.samuel-focus-cockpit .samuel-message-row--assistant {
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: flex-start !important;
-}
-.samuel-focus-cockpit .samuel-message {
-  max-width: min(86%, 640px) !important;
-  border: 0 !important;
-  box-shadow: none !important;
-}
-.samuel-focus-cockpit .samuel-message--user {
-  border-radius: 17px 17px 5px 17px !important;
-  padding: 9px 12px !important;
-  background: rgba(255,255,255,.10) !important;
-  color: rgba(255,255,255,.88) !important;
-}
-.samuel-focus-cockpit .samuel-message--assistant {
-  border-radius: 0 !important;
-  padding: 2px !important;
-  background: transparent !important;
-  color: rgba(255,255,255,.84) !important;
-}
-.samuel-focus-cockpit .samuel-message__header {
-  min-height: 0 !important;
-  margin: 0 0 4px !important;
-  padding: 0 !important;
-}
-.samuel-focus-cockpit .samuel-message__name,
-.samuel-focus-cockpit .samuel-message__author {
-  margin: 0 0 4px !important;
-  font-size: 9px !important;
-  font-weight: 600 !important;
-  color: rgba(255,255,255,.28) !important;
-}
-.samuel-focus-cockpit .samuel-message__content {
-  margin: 0 !important;
-  font-size: 13px !important;
-  line-height: 1.5 !important;
-  color: inherit !important;
-  white-space: pre-wrap !important;
-}
-.samuel-focus-cockpit .samuel-message__thinking {
-  width: 5px !important;
-  height: 5px !important;
-  margin-left: 6px !important;
-  background: rgba(255,255,255,.65) !important;
-  box-shadow: 0 0 12px rgba(255,255,255,.45) !important;
-}
-
-/* Composer owns the voice action. */
-.samuel-focus-cockpit .samuel-chat-composer {
-  order: 3;
-  position: relative !important;
-  bottom: auto !important;
-  z-index: 40;
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 8px !important;
-  margin: 0 !important;
-  padding: 10px 12px calc(10px + env(safe-area-inset-bottom)) !important;
-  border: 0 !important;
-  border-top: 1px solid rgba(255,255,255,.07) !important;
-  border-radius: 0 !important;
-  background: rgba(4,5,6,.96) !important;
-  backdrop-filter: blur(28px) saturate(125%) !important;
-  box-shadow: 0 -16px 44px rgba(0,0,0,.30) !important;
-}
-
-/* Realtime voice is no longer hidden. Only the primary talk button is exposed. */
-.samuel-focus-cockpit .samuel-voice-console {
-  display: block !important;
-  max-width: 820px !important;
-  width: 100% !important;
-  margin: 0 auto !important;
-  padding: 0 !important;
-  border: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-}
-.samuel-focus-cockpit .samuel-voice-console__topline,
-.samuel-focus-cockpit .samuel-voice-console__settings,
-.samuel-focus-cockpit .samuel-voice-console__details,
-.samuel-focus-cockpit .samuel-voice-console__error {
-  display: none !important;
-}
-.samuel-focus-cockpit .samuel-voice-console__primary-actions {
-  display: block !important;
-  margin: 0 !important;
-}
-.samuel-focus-cockpit .samuel-voice-console__start {
-  display: flex !important;
-  width: 100% !important;
-  min-height: 52px !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 9px !important;
-  margin: 0 !important;
-  padding: 0 18px !important;
-  border: 1px solid rgba(255,255,255,.14) !important;
-  border-radius: 18px !important;
-  background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(225,232,240,.92)) !important;
-  color: #050607 !important;
-  font-size: 13px !important;
-  font-weight: 700 !important;
-  letter-spacing: -.01em !important;
-  box-shadow: 0 10px 30px rgba(0,0,0,.28), 0 0 28px rgba(255,255,255,.04) !important;
-  transition: transform .16s ease, box-shadow .16s ease !important;
-}
-.samuel-focus-cockpit .samuel-voice-console__start:hover { transform: translateY(-1px) !important; }
-.samuel-focus-cockpit .samuel-voice-console--active .samuel-voice-console__start {
-  background: rgba(12,18,28,.96) !important;
-  border-color: rgba(96,165,250,.35) !important;
-  color: #dbeafe !important;
-  box-shadow: 0 0 32px rgba(59,130,246,.14) !important;
-}
-.samuel-focus-cockpit .samuel-voice-console--speaking .samuel-voice-console__start {
-  border-color: rgba(34,211,238,.42) !important;
-  box-shadow: 0 0 34px rgba(34,211,238,.14) !important;
-}
-.samuel-focus-cockpit .samuel-voice-console__start svg {
-  width: 18px !important;
-  height: 18px !important;
-}
-
-.samuel-focus-cockpit .samuel-chat-input-grid {
-  display: grid !important;
-  grid-template-columns: minmax(0,1fr) auto !important;
-  align-items: end !important;
-  gap: 7px !important;
-  max-width: 820px !important;
-  width: 100% !important;
-  margin: 0 auto !important;
-}
-.samuel-focus-cockpit .samuel-chat-textarea {
-  min-height: 44px !important;
-  max-height: 84px !important;
-  resize: none !important;
-  border: 1px solid rgba(255,255,255,.08) !important;
-  border-radius: 16px !important;
-  outline: none !important;
-  padding: 11px 13px !important;
-  background: rgba(255,255,255,.045) !important;
-  color: rgba(255,255,255,.90) !important;
-  caret-color: white !important;
-  font-size: 15px !important;
-  line-height: 1.4 !important;
-  box-shadow: none !important;
-}
-.samuel-focus-cockpit .samuel-chat-textarea::placeholder { color: rgba(255,255,255,.24) !important; }
-.samuel-focus-cockpit .samuel-chat-textarea:focus {
-  border-color: rgba(255,255,255,.18) !important;
-  background: rgba(255,255,255,.065) !important;
-}
-.samuel-focus-cockpit .samuel-chat-input-actions {
-  display: flex !important;
-  align-items: center !important;
-  gap: 6px !important;
-}
-.samuel-focus-cockpit .samuel-chat-dictation,
-.samuel-focus-cockpit .samuel-chat-send {
-  display: inline-flex !important;
-  width: 44px !important;
-  min-width: 44px !important;
-  height: 44px !important;
-  min-height: 44px !important;
-  align-items: center !important;
-  justify-content: center !important;
-  padding: 0 !important;
-  border: 1px solid rgba(255,255,255,.09) !important;
-  border-radius: 50% !important;
-  font-size: 0 !important;
-}
-.samuel-focus-cockpit .samuel-chat-dictation {
-  background: rgba(255,255,255,.045) !important;
-  color: rgba(255,255,255,.65) !important;
-}
-.samuel-focus-cockpit .samuel-chat-dictation.is-listening {
-  border-color: rgba(34,211,238,.35) !important;
-  color: #a5f3fc !important;
-  box-shadow: 0 0 18px rgba(34,211,238,.13) !important;
-}
-.samuel-focus-cockpit .samuel-chat-send {
-  background: rgba(255,255,255,.90) !important;
-  color: #050607 !important;
-}
-.samuel-focus-cockpit .samuel-chat-dictation svg,
-.samuel-focus-cockpit .samuel-chat-send svg { width: 17px !important; height: 17px !important; }
-
-.samuel-focus-cockpit .samuel-chat-notice--error {
-  max-width: 820px !important;
-  margin: 6px auto !important;
-  padding: 8px 10px !important;
-  border: 1px solid rgba(248,113,113,.18) !important;
-  border-radius: 12px !important;
-  background: rgba(127,29,29,.10) !important;
-  color: rgba(254,202,202,.82) !important;
-  font-size: 11px !important;
-}
-
-/* When Samuel is the active surface, neutralize the old white application chrome. */
-.samuel-shell:has(.samuel-focus-cockpit) {
-  background: #040506 !important;
-}
-.samuel-shell:has(.samuel-focus-cockpit) > div[aria-hidden="true"] {
-  opacity: 0 !important;
-}
-.samuel-shell:has(.samuel-focus-cockpit) .samuel-topbar {
-  border-color: rgba(255,255,255,.07) !important;
-  background: rgba(4,5,6,.92) !important;
-  color: white !important;
-  box-shadow: none !important;
-}
-.samuel-shell:has(.samuel-focus-cockpit) .samuel-topbar h1 { color: rgba(255,255,255,.92) !important; }
-.samuel-shell:has(.samuel-focus-cockpit) .samuel-topbar p,
-.samuel-shell:has(.samuel-focus-cockpit) .samuel-topbar span { color: rgba(255,255,255,.38) !important; }
-
-@media (max-width: 1023px) {
-  .samuel-shell:has(.samuel-focus-cockpit) main {
-    height: calc(100dvh - 74px) !important;
-    min-height: 0 !important;
-    max-height: calc(100dvh - 74px) !important;
-    padding: 0 0 78px !important;
-    overflow: hidden !important;
-  }
-  .samuel-shell:has(.samuel-focus-cockpit) .samuel-mobile-bar {
-    border-color: rgba(255,255,255,.08) !important;
-    background: rgba(5,6,8,.88) !important;
-    color: rgba(255,255,255,.58) !important;
-    box-shadow: 0 18px 55px rgba(0,0,0,.42) !important;
-  }
-}
-
-@media (max-width: 767px) {
-  .samuel-focus-cockpit .samuel-chat-shell--hologram {
-    grid-template-rows: minmax(150px, 34%) minmax(92px, 1fr) auto !important;
-  }
-  .samuel-focus-cockpit .samuel-chat-presence {
-    padding: 0 8px !important;
-  }
-  .samuel-focus-cockpit .samuel-chat-presence .samuel-hologram {
-    transform: scale(.65);
-  }
-  .samuel-focus-cockpit .samuel-chat-log {
-    padding: 10px 11px 12px !important;
-  }
-  .samuel-focus-cockpit .samuel-message-row { margin-bottom: 8px !important; }
-  .samuel-focus-cockpit .samuel-message { max-width: 91% !important; }
-  .samuel-focus-cockpit .samuel-message__content { font-size: 12.5px !important; line-height: 1.45 !important; }
-  .samuel-focus-cockpit .samuel-chat-composer {
-    gap: 7px !important;
-    padding: 8px 9px calc(8px + env(safe-area-inset-bottom)) !important;
-  }
-  .samuel-focus-cockpit .samuel-voice-console__start {
-    min-height: 48px !important;
-    border-radius: 16px !important;
-    font-size: 12px !important;
-  }
-  .samuel-focus-cockpit .samuel-chat-textarea {
-    min-height: 42px !important;
-    max-height: 72px !important;
-    padding: 10px 12px !important;
-    border-radius: 15px !important;
-  }
-  .samuel-focus-cockpit .samuel-chat-dictation,
-  .samuel-focus-cockpit .samuel-chat-send {
-    width: 42px !important;
-    min-width: 42px !important;
-    height: 42px !important;
-    min-height: 42px !important;
-  }
-  .samuel-focus-shortcuts {
-    display: none !important;
-  }
+@media (max-width:767px) {
+ .samuel-focus-cockpit .samuel-chat-presence { inset:0 0 45%!important; }
+ .samuel-focus-cockpit .samuel-chat-presence .samuel-hologram { transform:scale(.7); }
+ .samuel-focus-cockpit .samuel-chat-log { height:30%!important; min-height:90px!important; padding:10px 13px 6px!important; }
+ .samuel-focus-cockpit .samuel-message__content { font-size:12px!important; }
+ .samuel-focus-cockpit .samuel-chat-composer { width:calc(100% - 18px)!important; gap:7px!important; padding-bottom:calc(9px + env(safe-area-inset-bottom))!important; }
+ .samuel-focus-cockpit .samuel-voice-console__start { width:50px!important; min-width:50px!important; height:50px!important; min-height:50px!important; }
+ .samuel-focus-cockpit .samuel-chat-textarea { min-height:48px!important; padding:13px 14px!important; border-radius:20px!important; font-size:16px!important; }
+ .samuel-focus-cockpit .samuel-chat-send { width:44px!important; min-width:44px!important; height:44px!important; }
 }
