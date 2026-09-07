@@ -28,7 +28,6 @@ import type { ExecutiveRecommendation } from "../services/executive-recommendati
 import type { ExecutiveStrategy } from "../services/executive-strategy.service";
 
 import { SamuelAiShell } from "./samuel-ai-shell";
-import { VoiceStartLauncher } from "./voice-start-launcher";
 import type { ExecutiveBriefing } from "../executive-brain/types";
 
 type SamuelAiPageProps = {
@@ -95,39 +94,36 @@ export function SamuelAiPage({
   seoWatcher = null,
 }: SamuelAiPageProps) {
   return (
-    <>
-      <SamuelAiShell
-        executiveBriefing={executiveBriefing}
-        executiveContext={executiveContext}
-        executiveIntelligence={executiveIntelligence}
-        executiveDecisions={executiveDecisions}
-        executionPlans={executionPlans}
-        executiveMonitoring={executiveMonitoring}
-        executiveLearning={executiveLearning}
-        executiveForecast={executiveForecast}
-        executiveStrategy={executiveStrategy}
-        executiveCompetitor={executiveCompetitor}
-        executiveAction={executiveAction}
-        executivePriority={executivePriority}
-        executiveRecommendation={executiveRecommendation}
-        executiveCeo={executiveCeo}
-        crmExecutive={crmExecutive}
-        marketingExecutive={marketingExecutive}
-        salesExecutive={salesExecutive}
-        financeExecutive={financeExecutive}
-        operationsExecutive={operationsExecutive}
-        hrExecutive={hrExecutive}
-        legalExecutive={legalExecutive}
-        googleBusinessExecutive={googleBusinessExecutive}
-        googleAnalyticsExecutive={googleAnalyticsExecutive}
-        searchConsoleExecutive={searchConsoleExecutive}
-        metaExecutive={metaExecutive}
-        linkedInExecutive={linkedInExecutive}
-        watcherExecutive={watcherExecutive}
-        marketWatcher={marketWatcher}
-        seoWatcher={seoWatcher}
-      />
-      <VoiceStartLauncher />
-    </>
+    <SamuelAiShell
+      executiveBriefing={executiveBriefing}
+      executiveContext={executiveContext}
+      executiveIntelligence={executiveIntelligence}
+      executiveDecisions={executiveDecisions}
+      executionPlans={executionPlans}
+      executiveMonitoring={executiveMonitoring}
+      executiveLearning={executiveLearning}
+      executiveForecast={executiveForecast}
+      executiveStrategy={executiveStrategy}
+      executiveCompetitor={executiveCompetitor}
+      executiveAction={executiveAction}
+      executivePriority={executivePriority}
+      executiveRecommendation={executiveRecommendation}
+      executiveCeo={executiveCeo}
+      crmExecutive={crmExecutive}
+      marketingExecutive={marketingExecutive}
+      salesExecutive={salesExecutive}
+      financeExecutive={financeExecutive}
+      operationsExecutive={operationsExecutive}
+      hrExecutive={hrExecutive}
+      legalExecutive={legalExecutive}
+      googleBusinessExecutive={googleBusinessExecutive}
+      googleAnalyticsExecutive={googleAnalyticsExecutive}
+      searchConsoleExecutive={searchConsoleExecutive}
+      metaExecutive={metaExecutive}
+      linkedInExecutive={linkedInExecutive}
+      watcherExecutive={watcherExecutive}
+      marketWatcher={marketWatcher}
+      seoWatcher={seoWatcher}
+    />
   );
 }
