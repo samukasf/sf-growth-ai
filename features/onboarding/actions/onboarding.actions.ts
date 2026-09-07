@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 
-import { createAuthServerSupabase } from "@/lib/supabase/auth-server";
+import { requireAuthenticatedUser } from "@/features/auth/server/authorization";
 import { createServerSupabaseAdmin } from "@/lib/supabase/server";
 
 export type OnboardingFormState = {
@@ -28,34 +28,17 @@ export async function completeOnboardingAction(
   const website = String(formData.get("website") ?? "").trim();
   const city = String(formData.get("city") ?? "").trim();
   const country = String(formData.get("country") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim();
-  const password = String(formData.get("password") ?? "");
-  const fullName = String(formData.get("fullName") ?? "").trim();
 
   if (!companyName || !industry) {
     return { error: "Nome da empresa e segmento são obrigatórios." };
   }
+  if (companyName.length > 160 || industry.length > 160) {
+    return { error: "Nome da empresa ou segmento excede o limite permitido." };
+  }
 
+  let createdCompanyId: string | null = null;
   try {
-    const auth = await createAuthServerSupabase();
-    let userId: string | null = null;
-
-    const existing = await auth.auth.getUser();
-    if (existing.data.user) {
-      userId = existing.data.user.id;
-    } else if (email && password) {
-      if (password.length < 8) {
-        return { error: "A senha deve ter pelo menos 8 caracteres." };
-      }
-      const { data, error } = await auth.auth.signUp({
-        email,
-        password,
-        options: { data: { full_name: fullName || undefined } },
-      });
-      if (error) return { error: error.message };
-      userId = data.user?.id ?? null;
-    }
-
+    const user = await requireAuthenticatedUser();
     const admin = createServerSupabaseAdmin();
     const baseSlug = slugify(companyName) || `empresa-${Date.now()}`;
     const slug = `${baseSlug}-${Math.random().toString(36).slice(2, 7)}`;
@@ -77,51 +60,53 @@ export async function completeOnboardingAction(
     if (companyError || !company) {
       return { error: companyError?.message ?? "Falha ao criar empresa." };
     }
+    createdCompanyId = company.id;
 
-    await admin.from("portfolio_companies").insert({
-      name: companyName,
-      industry,
-      website: website || null,
-      city: city || null,
-      country: country || null,
-      email: email || null,
-      responsible_name: fullName || null,
-    });
-
-    await admin.from("business_profiles").upsert(
-      {
-        company_id: company.id,
+    const fullName = String(user.user_metadata.full_name ?? "").trim() || null;
+    const operations = await Promise.all([
+      admin.from("company_members").upsert(
+        { company_id: company.id, user_id: user.id, role: "owner" },
+        { onConflict: "company_id,user_id" },
+      ),
+      admin.from("portfolio_companies").insert({
+        name: companyName,
         industry,
-        business_model: `Empresa de ${industry}`,
-        goals: "Crescimento sustentável\nClareza executiva",
-      },
-      { onConflict: "company_id" },
-    );
-
-    if (userId) {
-      await admin.from("company_members").upsert(
+        website: website || null,
+        city: city || null,
+        country: country || null,
+        email: user.email ?? null,
+        responsible_name: fullName,
+        operational_company_id: company.id,
+      }),
+      admin.from("business_profiles").upsert(
         {
           company_id: company.id,
-          user_id: userId,
-          role: "owner",
+          industry,
+          business_model: `Empresa de ${industry}`,
+          goals: "Crescimento sustentável\nClareza executiva",
         },
-        { onConflict: "company_id,user_id" },
-      );
+        { onConflict: "company_id" },
+      ),
+      admin.from("user_profiles").upsert(
+        { id: user.id, company_id: company.id, full_name: fullName, role: "owner" },
+        { onConflict: "id" },
+      ),
+    ]);
 
-      await admin
-        .from("user_profiles")
-        .update({
-          company_id: company.id,
-          full_name: fullName || null,
-          role: "owner",
-        })
-        .eq("id", userId);
+    const failed = operations.find((operation) => operation.error);
+    if (failed?.error) {
+      await admin.from("companies").delete().eq("id", company.id);
+      createdCompanyId = null;
+      return { error: failed.error.message };
     }
 
     redirect(`/samuel-ai?companyId=${company.id}`);
   } catch (error) {
     if (error && typeof error === "object" && "digest" in error) {
       throw error;
+    }
+    if (createdCompanyId) {
+      await createServerSupabaseAdmin().from("companies").delete().eq("id", createdCompanyId);
     }
     return {
       error: error instanceof Error ? error.message : "Falha no onboarding.",

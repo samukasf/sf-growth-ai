@@ -6,6 +6,7 @@ import type {
   InboxStatus,
 } from "@/features/executive-inbox/executive-inbox.types";
 import { getWorkspaceSessionIdentity } from "@/features/samuel-ai/server/workspace-session";
+import { authorizeCompanyRequest } from "@/features/auth/server/authorization";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -103,6 +104,9 @@ export async function GET(request: Request) {
     );
   }
 
+  const auth = await authorizeCompanyRequest(companyId, { allowWorkspaceFallback: true });
+  if (!auth.ok) return auth.response;
+
   if (!hasServerSupabaseConfiguration()) {
     return Response.json(
       { actions: [], persistence: "client" },
@@ -115,6 +119,7 @@ export async function GET(request: Request) {
     .from("executive_inbox_actions")
     .select("id, item_id, item_title, item_type, action, status, action_at, origin, area")
     .eq("session_hash", sessionHash)
+    .eq("user_id", auth.user.id)
     .eq("company_ref", companyId)
     .order("action_at", { ascending: true })
     .limit(1000);
@@ -150,6 +155,9 @@ export async function POST(request: Request) {
     );
   }
 
+  const auth = await authorizeCompanyRequest(companyId, { allowWorkspaceFallback: true });
+  if (!auth.ok) return auth.response;
+
   if (!hasServerSupabaseConfiguration()) {
     return Response.json({ record, persistence: "client" });
   }
@@ -160,6 +168,7 @@ export async function POST(request: Request) {
     .upsert(
       {
         session_hash: sessionHash,
+        user_id: auth.user.id,
         company_ref: companyId,
         company_id: isUuid(companyId) ? companyId : null,
         id: record.id,
@@ -172,7 +181,7 @@ export async function POST(request: Request) {
         origin: record.origin,
         area: record.area,
       },
-      { onConflict: "session_hash,company_ref,id" },
+      { onConflict: "user_id,session_hash,company_ref,id" },
     );
 
   return Response.json({

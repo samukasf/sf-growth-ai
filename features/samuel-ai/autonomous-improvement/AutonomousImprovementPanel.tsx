@@ -190,9 +190,9 @@ export function AutonomousImprovementPanel() {
 
         <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <MetricCard
-            label="Agentes ativos"
+            label="Agentes catalogados"
             value={`${report.agentCatalog.activeAgents}`}
-            detail="Especialistas por domínio com rota de trabalho e saída auditável."
+            detail="Especialistas disponíveis para gerar diagnósticos e planos auditáveis."
             icon={Bot}
           />
           <MetricCard

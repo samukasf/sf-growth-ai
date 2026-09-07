@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 
 import { resolveMetaOAuthConfig } from "@/integrations/meta/meta.auth";
 import { buildSignedMetaOAuthAuthorizeUrl } from "@/integrations/meta/meta.oauth";
-import { resolveActiveCompany } from "@/services/executive-context.service";
+import { resolveActiveCompany } from "@/services/executive-context.server";
+import {
+  authorizeAuthenticatedRequest,
+  authorizeCompanyRequest,
+} from "@/features/auth/server/authorization";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -20,6 +24,11 @@ export async function GET(request: Request) {
   }
 
   const companyIdParam = new URL(request.url).searchParams.get("companyId")?.trim();
+
+  const auth = companyIdParam && UUID_PATTERN.test(companyIdParam)
+    ? await authorizeCompanyRequest(companyIdParam)
+    : await authorizeAuthenticatedRequest();
+  if (!auth.ok) return auth.response;
 
   try {
     const company = await resolveActiveCompany(

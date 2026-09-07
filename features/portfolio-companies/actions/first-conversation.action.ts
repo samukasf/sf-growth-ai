@@ -2,7 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 
-import { createServerSupabase } from "@/lib/supabase/server";
+import {
+  requireAuthenticatedUser,
+  requireCompanyAccess,
+} from "@/features/auth/server/authorization";
+import { createServerSupabaseAdmin } from "@/lib/supabase/server";
 
 import type { PortfolioCompanyRecord } from "@/features/executive-home/actions/create-company.action";
 
@@ -22,10 +26,25 @@ function revalidateCompanyPaths(companyId: string) {
   revalidatePath(`/empresas/${companyId}/conversa`);
 }
 
+async function getAuthorizedCompany(companyId: string) {
+  const user = await requireAuthenticatedUser();
+  const admin = createServerSupabaseAdmin();
+  const { data, error } = await admin
+    .from("portfolio_companies")
+    .select("operational_company_id")
+    .eq("id", companyId)
+    .single();
+  if (error || !data?.operational_company_id) {
+    throw new Error(error?.message ?? "Empresa sem vínculo operacional.");
+  }
+  await requireCompanyAccess(user.id, data.operational_company_id as string);
+  return admin;
+}
+
 export async function deferFirstConversationAction(
   companyId: string,
 ): Promise<PortfolioCompanyRecord> {
-  const supabase = createServerSupabase();
+  const supabase = await getAuthorizedCompany(companyId);
   const updatedAt = new Date().toISOString();
 
   const { data, error } = await supabase
@@ -50,7 +69,7 @@ export async function saveFirstConversationStepAction(
   companyId: string,
   answers: FirstConversationAnswers,
 ): Promise<PortfolioCompanyRecord> {
-  const supabase = createServerSupabase();
+  const supabase = await getAuthorizedCompany(companyId);
   const updatedAt = new Date().toISOString();
 
   const { data: existing, error: fetchError } = await supabase

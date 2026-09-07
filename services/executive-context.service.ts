@@ -1,15 +1,4 @@
-import { supabase } from "@/lib/supabase/client";
-
-import {
-  getCompanyMemory,
-  type CompanyMemoryRecord,
-} from "./executive-memory.service";
-
-export {
-  getFirstCompany,
-  getCompanyById,
-  resolveActiveCompany,
-} from "./executive-memory.service";
+import type { CompanyMemoryRecord } from "./executive-memory.service";
 
 export type CompanyRecord = {
   id: string;
@@ -55,7 +44,7 @@ function formatMemoryContent(content: CompanyMemoryRecord["content"]) {
   return JSON.stringify(content);
 }
 
-function buildExecutiveSummary(
+export function buildExecutiveSummary(
   company: CompanyRecord,
   businessProfile: BusinessProfileRecord | null,
   memories: CompanyMemoryRecord[],
@@ -109,57 +98,6 @@ function buildExecutiveSummary(
   }
 
   return lines.join("\n");
-}
-
-async function getCompany(companyId: string): Promise<CompanyRecord> {
-  const { data, error } = await supabase
-    .from("companies")
-    .select(
-      "id, name, industry, city, country, website, annual_revenue",
-    )
-    .eq("id", companyId)
-    .single();
-
-  if (error) throw error;
-
-  return {
-    ...(data as Omit<CompanyRecord, "description" | "business_stage">),
-    description: null,
-    business_stage: null,
-  };
-}
-
-async function getBusinessProfile(
-  companyId: string,
-): Promise<BusinessProfileRecord | null> {
-  const { data, error } = await supabase
-    .from("business_profiles")
-    .select(
-      "id, company_id, segment:industry, positioning:business_model, differentiators:differentials, objectives:goals, mission, vision, value_proposition:services",
-    )
-    .eq("company_id", companyId)
-    .maybeSingle();
-
-  if (error) throw error;
-
-  return (data as BusinessProfileRecord | null) ?? null;
-}
-
-export async function buildExecutiveContext(
-  companyId: string,
-): Promise<ExecutiveContext> {
-  const [company, businessProfile, memories] = await Promise.all([
-    getCompany(companyId),
-    getBusinessProfile(companyId),
-    getCompanyMemory(companyId),
-  ]);
-
-  return {
-    company,
-    businessProfile,
-    memories,
-    summary: buildExecutiveSummary(company, businessProfile, memories),
-  };
 }
 
 export function enrichPromptWithExecutiveContext(

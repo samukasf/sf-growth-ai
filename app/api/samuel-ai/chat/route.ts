@@ -36,9 +36,13 @@ import {
 import { SamuelConversationRepository } from "@/features/samuel-ai/server/samuel-conversation.repository";
 import { getWorkspaceSessionIdentity } from "@/features/samuel-ai/server/workspace-session";
 import type { ChatMessage } from "@/features/samuel-ai/types";
+import { authorizeCompanyRequest } from "@/features/auth/server/authorization";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function stringifyMemoryContent(value: unknown) {
   return typeof value === "string" ? value : JSON.stringify(value);
@@ -148,6 +152,9 @@ export async function GET(request: Request) {
     return jsonError("Empresa inválida.", 400);
   }
 
+  const auth = await authorizeCompanyRequest(companyId, { allowWorkspaceFallback: true });
+  if (!auth.ok) return auth.response;
+
   const { sessionHash } = await getWorkspaceSessionIdentity();
   const repository = new SamuelConversationRepository();
 
@@ -159,7 +166,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const history = await repository.loadLatest(sessionHash, companyId);
+    const history = await repository.loadLatest(sessionHash, companyId, auth.user.id);
     return Response.json(
       {
         conversationId: history?.conversationId ?? null,
@@ -187,6 +194,11 @@ export async function POST(request: Request) {
     );
   }
 
+  const auth = await authorizeCompanyRequest(chatRequest.companyId, {
+    allowWorkspaceFallback: true,
+  });
+  if (!auth.ok) return auth.response;
+
   const { sessionKey, sessionHash } = await getWorkspaceSessionIdentity();
   const repository = new SamuelConversationRepository();
   let persistence: "supabase" | "client" = repository.available
@@ -201,6 +213,7 @@ export async function POST(request: Request) {
         sessionHash,
         companyRef: chatRequest.companyId,
         title: chatRequest.query,
+        userId: auth.user.id,
       })) ?? conversationId;
   } catch {
     persistence = "client";
@@ -249,13 +262,15 @@ export async function POST(request: Request) {
           chatRequest.companyId,
         );
 
-        const gmailPlan = buildGmailActionPlan(
-          chatRequest.query,
-          chatRequest.companyId,
-        );
+        const canUseCompanyIntegrations = UUID_PATTERN.test(chatRequest.companyId);
+        const gmailPlan = canUseCompanyIntegrations
+          ? buildGmailActionPlan(chatRequest.query, chatRequest.companyId)
+          : null;
         const calendarPlan = gmailPlan
           ? null
-          : buildCalendarActionPlan(chatRequest.query, chatRequest.companyId);
+          : canUseCompanyIntegrations
+            ? buildCalendarActionPlan(chatRequest.query, chatRequest.companyId)
+            : null;
         const toolFragments: string[] = [];
         let pendingAction: SamuelToolActionPlan | null = null;
 
@@ -315,7 +330,7 @@ export async function POST(request: Request) {
           query: chatRequest.query,
           tenantId: `workspace-${chatRequest.companyId}`,
           companyId: chatRequest.companyId,
-          userId: `session-${sessionHash.slice(0, 16)}`,
+          userId: auth.user.id,
           sessionId: sessionKey,
           company: mapRuntimeCompany(
             chatRequest.companyId,

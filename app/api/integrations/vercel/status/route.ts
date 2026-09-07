@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 
 import { getVercelDeploymentStatus } from "@/features/vercel-deployment/vercel-deployment.server";
+import { authorizeAuthenticatedRequest } from "@/features/auth/server/authorization";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  const auth = await authorizeAuthenticatedRequest();
+  if (!auth.ok) return auth.response;
   try {
     const status = await getVercelDeploymentStatus();
     return NextResponse.json(status, {

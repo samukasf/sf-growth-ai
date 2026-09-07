@@ -77,6 +77,15 @@ describe("Samuel autonomous improvement engine", () => {
     expect(serialized).not.toContain("moon-secret-that-must-not-leak");
   });
 
+  it("recognizes Gemini as an enabled live voice provider", () => {
+    const report = buildAutonomousImprovementReport({
+      env: { GEMINI_API_KEY: "gemini-secret-that-must-not-leak" },
+    });
+
+    expect(report.intelligence.realtimeConfigured).toBe(true);
+    expect(JSON.stringify(report)).not.toContain("gemini-secret-that-must-not-leak");
+  });
+
   it("prioritizes supervised PR-based autonomy over unsafe self-modification", () => {
     const report = buildAutonomousImprovementReport({
       now: new Date("2026-07-16T12:00:00.000Z"),

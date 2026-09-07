@@ -6,6 +6,7 @@ import {
   resolveSamuelLiveProvider,
 } from "@/apps/web/src/core/orchestrator/live-provider.server";
 import { getWorkspaceSessionIdentity } from "@/features/samuel-ai/server/workspace-session";
+import { authorizeCompanyRequest } from "@/features/auth/server/authorization";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -51,6 +52,10 @@ async function createGeminiToken(apiKey: string, body: Record<string, unknown>) 
 }
 
 export async function GET(request: Request) {
+  const companyId = request.headers.get("x-samuel-company-id")?.trim() || "default-company";
+  const auth = await authorizeCompanyRequest(companyId, { allowWorkspaceFallback: true });
+  if (!auth.ok) return auth.response;
+
   let provider: "openai" | "gemini";
   const requestedProvider = new URL(request.url).searchParams.get("provider")?.trim().toLowerCase();
   try {
@@ -108,7 +113,6 @@ export async function GET(request: Request) {
   const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) return jsonError("Gemini Live não configurado.", 503, "GEMINI_NOT_CONFIGURED");
 
-  const companyId = request.headers.get("x-samuel-company-id")?.trim() || "default-company";
   const { sessionHash } = await getWorkspaceSessionIdentity();
   if (rateLimited(digest(`${sessionHash}:${companyId}`))) {
     return jsonError("Limite de sessões Live atingido.", 429, "LIVE_RATE_LIMITED");

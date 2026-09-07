@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { buildSkillExecutionPlan, type SkillExecutionRequest } from "@/features/samuel-ai/skills/skill-executor";
+import { authorizeCompanyRequest } from "@/features/auth/server/authorization";
 
 export async function POST(request:Request){
   try{
     const body=await request.json() as Partial<SkillExecutionRequest>;
     if(!body.skillId || !body.companyId || body.autonomy===undefined) return NextResponse.json({error:"skillId, companyId and autonomy are required"},{status:400});
+    const auth=await authorizeCompanyRequest(body.companyId,{allowWorkspaceFallback:true});
+    if(!auth.ok) return auth.response;
     const plan=buildSkillExecutionPlan({skillId:body.skillId,companyId:body.companyId,autonomy:body.autonomy,approved:body.approved,input:body.input ?? {}});
     return NextResponse.json({plan},{status:plan.status==="blocked"?409:200});
   }catch(error){

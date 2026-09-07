@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 
 import { buildGmailOAuthAuthorizeUrl, resolveGoogleOAuthConfig } from "@/integrations/gmail";
-import { resolveActiveCompany } from "@/services/executive-context.service";
+import { resolveActiveCompany } from "@/services/executive-context.server";
+import {
+  authorizeAuthenticatedRequest,
+  authorizeCompanyRequest,
+} from "@/features/auth/server/authorization";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -10,6 +14,11 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const companyIdParam = url.searchParams.get("companyId")?.trim();
+
+  const auth = companyIdParam && UUID_PATTERN.test(companyIdParam)
+    ? await authorizeCompanyRequest(companyIdParam)
+    : await authorizeAuthenticatedRequest();
+  if (!auth.ok) return auth.response;
 
   if (!resolveGoogleOAuthConfig()) {
     return NextResponse.json(

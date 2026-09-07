@@ -5,6 +5,7 @@ import {
   completeMetaOAuthConnection,
   verifyMetaOAuthState,
 } from "@/integrations/meta/meta.oauth";
+import { authorizeCompanyRequest } from "@/features/auth/server/authorization";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +31,12 @@ export async function GET(request: Request) {
 
   try {
     const companyId = verifyMetaOAuthState(state, config);
-    await completeMetaOAuthConnection(code, companyId);
+    const auth = await authorizeCompanyRequest(companyId);
+    if (!auth.ok) {
+      redirect.searchParams.set("error", "company_access_denied");
+      return NextResponse.redirect(redirect);
+    }
+    await completeMetaOAuthConnection(code, companyId, auth.user.id);
     redirect.searchParams.set("connected", "1");
     redirect.searchParams.set("companyId", companyId);
     return NextResponse.redirect(redirect);

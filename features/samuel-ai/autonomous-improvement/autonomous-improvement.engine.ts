@@ -82,7 +82,8 @@ function buildSignals(env: RuntimeEnv): ImprovementSignal[] {
         hasValue(env, "META_AD_ACCOUNT_ID") ||
         hasValue(env, "META_INSTAGRAM_BUSINESS_ID")));
   const rufloConfigured = hasUsableRufloBridge(env);
-  const cronSecretConfigured = hasValue(env, "SAMUEL_AUTONOMY_CRON_SECRET");
+  const cronSecretConfigured =
+    hasValue(env, "CRON_SECRET") || hasValue(env, "SAMUEL_AUTONOMY_CRON_SECRET");
 
   const signals: ImprovementSignal[] = [
     {
@@ -192,11 +193,11 @@ function buildSignals(env: RuntimeEnv): ImprovementSignal[] {
     signals.push({
       id: "cron-secret-recommended",
       title: "Chave de cron recomendada",
-      detail: "O endpoint é somente leitura por padrão; ações futuras de escrita devem exigir SAMUEL_AUTONOMY_CRON_SECRET.",
+      detail: "O agendamento precisa de CRON_SECRET para aceitar apenas chamadas assinadas pela Vercel.",
       severity: "notice",
       source: "Autonomy safety scan",
       agentIds: ["security-webhook-guard-agent-4", "operations-incident-commander-4"],
-      evidence: ["SAMUEL_AUTONOMY_CRON_SECRET ausente"],
+      evidence: ["CRON_SECRET ausente"],
     });
   }
 
@@ -272,7 +273,8 @@ export function buildAutonomousImprovementReport({
   mode = "status",
 }: BuildReportInput = {}): AutonomousImprovementReport {
   const providerConfigured = hasUsableResponsesProvider(env);
-  const realtimeConfigured = hasAll(env, ["OPENAI_REALTIME_MODEL", "OPENAI_API_KEY"]);
+  const realtimeConfigured =
+    hasValue(env, "GEMINI_API_KEY") || hasValue(env, "OPENAI_API_KEY");
   const memoryConfigured = hasUsableSupabaseMemory(env);
   const rufloBridgeConfigured = hasUsableRufloBridge(env);
   const signals = buildSignals(env);
@@ -308,7 +310,7 @@ export function buildAutonomousImprovementReport({
     },
     loop: {
       enabled: true,
-      cadence: "hourly",
+      cadence: "daily",
       runner: mode === "cron" ? "vercel_cron" : "manual",
       writeMode: "proposal_only",
       safety: [

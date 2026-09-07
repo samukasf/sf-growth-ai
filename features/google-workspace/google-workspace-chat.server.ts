@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getCompanyById } from "@/services/executive-context.service";
+import { getCompanyById } from "@/services/executive-context.server";
 
 import { createGoogleWorkspaceChatSignal } from "./google-workspace-chat";
 import { buildGoogleWorkspaceSummary } from "./google-workspace-summary.server";

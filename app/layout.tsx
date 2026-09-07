@@ -10,6 +10,7 @@ export const metadata: Metadata = {
   title: APP_NAME,
   description: APP_DESCRIPTION,
   applicationName: "Samuel AI",
+  robots: { index: false, follow: false },
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,

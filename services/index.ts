@@ -1,5 +1,4 @@
 export {
-  buildExecutiveContext,
   enrichPromptWithExecutiveContext,
   type BusinessProfileRecord,
   type CompanyRecord,

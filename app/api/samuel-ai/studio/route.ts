@@ -14,10 +14,13 @@ import type {
   SamuelStudioGenerateResponse,
   SamuelStudioStatus,
 } from "@/features/samuel-ai/studio/samuel-studio.types";
+import { authorizeAuthenticatedRequest } from "@/features/auth/server/authorization";
 
 export const runtime = "nodejs";
 
 export async function GET() {
+  const auth = await authorizeAuthenticatedRequest();
+  if (!auth.ok) return auth.response;
   const gatewayConfigured = Boolean(createConfiguredResponsesProvider());
   const openHandsConfigured = Boolean(
     process.env.OPENHANDS_BASE_URL && process.env.OPENHANDS_API_KEY,
@@ -60,6 +63,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const auth = await authorizeAuthenticatedRequest();
+  if (!auth.ok) return auth.response;
   try {
     const contentLength = Number(request.headers.get("content-length") ?? 0);
     if (contentLength > 160_000) {

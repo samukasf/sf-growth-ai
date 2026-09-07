@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 
 import { runDiscovery } from "@/apps/web/src/core/discovery";
+import {
+  authorizeAuthenticatedRequest,
+  authorizeCompanyRequest,
+} from "@/features/auth/server/authorization";
 
 export async function POST(request: Request) {
   try {
@@ -20,15 +24,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "companyName is required" }, { status: 400 });
     }
 
+    const auth = body.companyId
+      ? await authorizeCompanyRequest(body.companyId)
+      : await authorizeAuthenticatedRequest();
+    if (!auth.ok) return auth.response;
+
     const result = await runDiscovery({
       companyName,
       website: body.website,
       instagram: body.instagram,
       facebook: body.facebook,
       city: body.city,
-      tenantId: body.tenantId,
+      tenantId: body.companyId ? `company-${body.companyId}` : `user-${auth.user.id}`,
       companyId: body.companyId,
-      userId: body.userId,
+      userId: auth.user.id,
     });
 
     return NextResponse.json(result);

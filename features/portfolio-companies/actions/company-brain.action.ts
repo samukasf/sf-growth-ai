@@ -8,7 +8,11 @@ import { summarizeCompanyBrain } from "@/apps/web/src/core/company-brain/company
 import type { CompanyBrainBuildResponse } from "@/apps/web/src/core/company-brain/company-brain.types";
 import { validateCompanyBrain } from "@/apps/web/src/core/company-brain/company-brain.validator";
 import { runDiscovery } from "@/apps/web/src/core/discovery";
-import { createServerSupabase } from "@/lib/supabase/server";
+import {
+  requireAuthenticatedUser,
+  requireCompanyAccess,
+} from "@/features/auth/server/authorization";
+import { createServerSupabaseAdmin } from "@/lib/supabase/server";
 
 import type { PortfolioCompanyRecord } from "@/features/executive-home/actions/create-company.action";
 
@@ -24,8 +28,9 @@ export type CompanyBrainViewData = {
 export async function getPortfolioCompanyAction(
   companyId: string,
 ): Promise<PortfolioCompanyRecord | null> {
-  const supabase = createServerSupabase();
-  const { data, error } = await supabase
+  const user = await requireAuthenticatedUser();
+  const admin = createServerSupabaseAdmin();
+  const { data, error } = await admin
     .from("portfolio_companies")
     .select("*")
     .eq("id", companyId)
@@ -34,6 +39,11 @@ export async function getPortfolioCompanyAction(
   if (error) {
     throw new Error(error.message);
   }
+  if (data?.operational_company_id) {
+    await requireCompanyAccess(user.id, data.operational_company_id as string);
+  } else if (data) {
+    throw new Error("Empresa sem vínculo operacional. Refaça o cadastro.");
+  }
 
   return (data as PortfolioCompanyRecord | null) ?? null;
 }
@@ -41,10 +51,12 @@ export async function getPortfolioCompanyAction(
 export async function activateCompanyBrainAction(
   companyId: string,
 ): Promise<PortfolioCompanyRecord> {
-  const supabase = createServerSupabase();
+  const company = await getPortfolioCompanyAction(companyId);
+  if (!company) throw new Error("Empresa não encontrada.");
+  const admin = createServerSupabaseAdmin();
   const activatedAt = new Date().toISOString();
 
-  const { data, error } = await supabase
+  const { data, error } = await admin
     .from("portfolio_companies")
     .update({
       brain_status: "active",

@@ -4,17 +4,15 @@ import Link from "next/link";
 import {
   Building2,
   Calendar,
-  FolderKanban,
   Home,
-  Settings,
   Sparkles,
 } from "lucide-react";
 
 import { APP_NAME } from "@/constants";
 import { DsBadge, DsCard, DsSidebar, DsTopNavigation, type DsSidebarItem } from "@/components/design-system";
 import type { PortfolioCompanyRecord } from "@/features/executive-home/actions/create-company.action";
+import { signOutAction } from "@/features/auth";
 
-const ACTIVE_AGENCY = "Influence Publicidade";
 const ICON_SIZE = 18;
 const ICON_STROKE = 2;
 
@@ -44,22 +42,10 @@ function portfolioSidebar(
       icon: <Sparkles size={ICON_SIZE} strokeWidth={ICON_STROKE} />,
     },
     {
-      id: "projects",
-      label: "Projetos",
-      disabled: true,
-      icon: <FolderKanban size={ICON_SIZE} strokeWidth={ICON_STROKE} />,
-    },
-    {
       id: "calendar",
       label: "Agenda",
-      disabled: true,
+      href: "/integrations/google/connect",
       icon: <Calendar size={ICON_SIZE} strokeWidth={ICON_STROKE} />,
-    },
-    {
-      id: "settings",
-      label: "Configurações",
-      disabled: true,
-      icon: <Settings size={ICON_SIZE} strokeWidth={ICON_STROKE} />,
     },
   ];
 }
@@ -81,6 +67,7 @@ type PortfolioShellProps = {
   title: string;
   subtitle?: string;
   samuelHref?: string;
+  companyName?: string;
   children: React.ReactNode;
 };
 
@@ -88,18 +75,30 @@ export function PortfolioShell({
   title,
   subtitle,
   samuelHref = "/samuel-ai",
+  companyName = "Portfólio executivo",
   children,
 }: PortfolioShellProps) {
   return (
     <div className="ds-root flex min-h-dvh bg-[var(--ds-background)]">
       <DsSidebar
         title={APP_NAME}
-        subtitle={ACTIVE_AGENCY}
+        subtitle={companyName}
         items={portfolioSidebar("companies", samuelHref)}
         className="hidden lg:flex"
       />
       <div className="flex min-w-0 flex-1 flex-col">
-        <DsTopNavigation brand={<BrandLogo />} title={title} subtitle={subtitle} />
+        <DsTopNavigation
+          brand={<BrandLogo />}
+          title={title}
+          subtitle={subtitle}
+          actions={
+            <form action={signOutAction}>
+              <button type="submit" className="text-xs font-medium text-[var(--ds-text-muted)] hover:text-[var(--ds-text)]">
+                Sair
+              </button>
+            </form>
+          }
+        />
         <main className="ds-container flex-1 overflow-y-auto py-8">{children}</main>
       </div>
     </div>
@@ -119,9 +118,9 @@ function brainBadge(status: PortfolioCompanyRecord["brain_status"]) {
 }
 
 export function CompanyListPage({ companies }: CompanyListPageProps) {
-  const samuelHref =
-    companies.find((company) => company.operational_company_id)?.operational_company_id
-      ? `/samuel-ai?companyId=${companies.find((company) => company.operational_company_id)!.operational_company_id}`
+  const primaryCompany = companies.find((company) => company.operational_company_id);
+  const samuelHref = primaryCompany?.operational_company_id
+      ? `/samuel-ai?companyId=${primaryCompany.operational_company_id}`
       : "/samuel-ai";
 
   return (
@@ -129,6 +128,7 @@ export function CompanyListPage({ companies }: CompanyListPageProps) {
       title="Empresas"
       subtitle="Lista de empresas cadastradas"
       samuelHref={samuelHref}
+      companyName={primaryCompany?.name}
     >
       <div className="mx-auto flex max-w-4xl flex-col gap-6">
         <div>

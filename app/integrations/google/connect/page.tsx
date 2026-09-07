@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { resolveActiveCompany } from "@/services/executive-context.service";
+import { resolveActiveCompany } from "@/services/executive-context.server";
 import { findGoogleOAuthConnection, resolveGoogleOAuthConfig } from "@/integrations/gmail";
 
 export const dynamic = "force-dynamic";

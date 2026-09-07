@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 
 import { runSuperbrain } from "@/apps/web/src/core/superbrain";
+import {
+  authorizeAuthenticatedRequest,
+  authorizeCompanyRequest,
+} from "@/features/auth/server/authorization";
 
 export async function POST(request: Request) {
   try {
@@ -16,11 +20,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "query is required" }, { status: 400 });
     }
 
+    const auth = body.companyId
+      ? await authorizeCompanyRequest(body.companyId)
+      : await authorizeAuthenticatedRequest();
+    if (!auth.ok) return auth.response;
+
     const result = await runSuperbrain({
       query,
-      tenantId: body.tenantId,
+      tenantId: body.companyId ? `company-${body.companyId}` : `user-${auth.user.id}`,
       companyId: body.companyId,
-      userId: body.userId,
+      userId: auth.user.id,
     });
 
     return NextResponse.json(result);

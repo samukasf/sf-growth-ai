@@ -3,12 +3,10 @@ import type { Metadata } from "next";
 import { samuelAi } from "@/features";
 import {
   buildCrmExecutive,
-  fetchCrmExecutiveInput,
   type CrmExecutive,
 } from "@/features/crm/services/crm-executive.service";
 import {
   buildMarketingExecutive,
-  fetchMarketingExecutiveInput,
   type MarketingExecutive,
 } from "@/features/marketing/services/marketing-executive.service";
 import type { MetaExecutive } from "@/features/meta/services/meta-executive.service";
@@ -33,27 +31,22 @@ import {
 } from "@/integrations/google-search-console";
 import {
   buildLegalExecutive,
-  fetchLegalExecutiveInput,
   type LegalExecutive,
 } from "@/features/legal/services/legal-executive.service";
 import {
   buildHrExecutive,
-  fetchHrExecutiveInput,
   type HrExecutive,
 } from "@/features/hr/services/hr-executive.service";
 import {
   buildOperationsExecutive,
-  fetchOperationsExecutiveInput,
   type OperationsExecutive,
 } from "@/features/operations/services/operations-executive.service";
 import {
   buildFinanceExecutive,
-  fetchFinanceExecutiveInput,
   type FinanceExecutive,
 } from "@/features/finance/services/finance-executive.service";
 import {
   buildSalesExecutive,
-  fetchSalesExecutiveInput,
   type SalesExecutive,
 } from "@/features/sales/services/sales-executive.service";
 import { buildExecutiveAction } from "@/features/samuel-ai/services/executive-action.service";
@@ -77,11 +70,11 @@ import {
   hasOperationsSourceData,
   hasSalesSourceData,
 } from "@/features/samuel-ai/services/real-data-gates";
+import type { ExecutiveContext } from "@/services/executive-context.service";
 import {
   buildExecutiveContext,
   resolveActiveCompany,
-  type ExecutiveContext,
-} from "@/services/executive-context.service";
+} from "@/services/executive-context.server";
 import {
   buildCombinedWatcherExecutive,
   enrichIntelligenceWithMarketWatcher,
@@ -95,6 +88,15 @@ import {
 import { buildLinkedInExecutiveForCompany } from "@/integrations/linkedin";
 import type { LinkedInExecutive } from "@/features/linkedin/services/linkedin-executive.service";
 import { buildExecutiveCompetitorFromContext } from "@/features/samuel-ai/services/executive-competitor.live";
+import {
+  fetchCrmExecutiveInput,
+  fetchFinanceExecutiveInput,
+  fetchHrExecutiveInput,
+  fetchLegalExecutiveInput,
+  fetchMarketingExecutiveInput,
+  fetchOperationsExecutiveInput,
+  fetchSalesExecutiveInput,
+} from "@/features/samuel-ai/server/executive-data.server";
 
 export const metadata: Metadata = {
   title: "Samuel AI™ | SF Growth AI",

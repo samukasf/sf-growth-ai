@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { buildGoogleWorkspaceSummary } from "@/features/google-workspace/google-workspace-summary.server";
-import { getCompanyById } from "@/services/executive-context.service";
+import { getCompanyById } from "@/services/executive-context.server";
+import { authorizeCompanyRequest } from "@/features/auth/server/authorization";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -13,6 +14,9 @@ export async function GET(request: Request) {
   if (!companyId || !UUID_PATTERN.test(companyId)) {
     return NextResponse.json({ error: "Empresa inválida" }, { status: 400 });
   }
+
+  const auth = await authorizeCompanyRequest(companyId);
+  if (!auth.ok) return auth.response;
 
   try {
     const company = await getCompanyById(companyId);

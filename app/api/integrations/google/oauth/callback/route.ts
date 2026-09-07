@@ -5,6 +5,7 @@ import {
   resolveGoogleOAuthConfig,
   verifyGmailOAuthState,
 } from "@/integrations/gmail";
+import { authorizeCompanyRequest } from "@/features/auth/server/authorization";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +32,12 @@ export async function GET(request: Request) {
 
   try {
     const companyId = verifyGmailOAuthState(state, config);
-    await completeGmailOAuthConnection(code, companyId);
+    const auth = await authorizeCompanyRequest(companyId);
+    if (!auth.ok) {
+      errorRedirect.searchParams.set("error", "company_access_denied");
+      return NextResponse.redirect(errorRedirect);
+    }
+    await completeGmailOAuthConnection(code, companyId, auth.user.id);
     successRedirect.searchParams.set("connected", "1");
     successRedirect.searchParams.set("companyId", companyId);
     return NextResponse.redirect(successRedirect);

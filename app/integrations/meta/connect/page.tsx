@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { findMetaOAuthConnection } from "@/integrations/meta/meta-token.repository";
 import { resolveMetaOAuthConfig } from "@/integrations/meta/meta.auth";
-import { resolveActiveCompany } from "@/services/executive-context.service";
+import { resolveActiveCompany } from "@/services/executive-context.server";
 
 export const dynamic = "force-dynamic";
 

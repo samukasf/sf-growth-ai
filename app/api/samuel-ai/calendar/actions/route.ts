@@ -6,6 +6,7 @@ import {
   type CalendarActionArgs,
   type CalendarActionId,
 } from "@/features/google-calendar";
+import { authorizeCompanyRequest } from "@/features/auth/server/authorization";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,9 @@ export async function POST(request: Request) {
     if (body.actionId && body.actionId !== payload.actionId) {
       return NextResponse.json({ error: "Ação não corresponde ao token." }, { status: 403 });
     }
+
+    const auth = await authorizeCompanyRequest(payload.companyId);
+    if (!auth.ok) return auth.response;
 
     const result = await executeCalendarTool(
       payload.companyId,

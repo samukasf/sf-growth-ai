@@ -3,6 +3,10 @@ import { NextResponse } from "next/server";
 import { buildCompanyBrain } from "@/apps/web/src/core/company-brain";
 import type { DiscoveryResult } from "@/apps/web/src/core/discovery";
 import { runDiscovery } from "@/apps/web/src/core/discovery";
+import {
+  authorizeAuthenticatedRequest,
+  authorizeCompanyRequest,
+} from "@/features/auth/server/authorization";
 
 export async function POST(request: Request) {
   try {
@@ -17,6 +21,14 @@ export async function POST(request: Request) {
       companyId?: string;
       userId?: string;
     };
+
+    const auth = body.companyId
+      ? await authorizeCompanyRequest(body.companyId)
+      : await authorizeAuthenticatedRequest();
+    if (!auth.ok) return auth.response;
+    const tenantId = body.companyId
+      ? `company-${body.companyId}`
+      : `user-${auth.user.id}`;
 
     let discoveryResult = body.discoveryResult;
 
@@ -35,15 +47,15 @@ export async function POST(request: Request) {
         instagram: body.instagram,
         facebook: body.facebook,
         city: body.city,
-        tenantId: body.tenantId,
+        tenantId,
         companyId: body.companyId,
-        userId: body.userId,
+        userId: auth.user.id,
       });
     }
 
     const response = await buildCompanyBrain({
       discoveryResult,
-      tenantId: body.tenantId,
+      tenantId,
       companyId: body.companyId,
     });
 

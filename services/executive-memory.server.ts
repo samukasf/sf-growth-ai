@@ -1,37 +1,29 @@
-import { supabase } from "@/lib/supabase/client";
+import "server-only";
 
-export type CompanyMemoryRecord = {
-  id: string;
-  company_id: string;
-  category: string;
-  title: string;
-  content: string;
-  importance: number | string;
-  source: string | null;
-};
+import { createAuthenticatedDataClient } from "@/lib/supabase/data-client";
+
+import type { CompanyMemoryRecord } from "./executive-memory.service";
 
 export async function getFirstCompany() {
+  const supabase = await createAuthenticatedDataClient();
   const { data, error } = await supabase
     .from("companies")
     .select("id, name")
     .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle();
-
   if (error) throw error;
-
   return data;
 }
 
 export async function getCompanyById(companyId: string) {
+  const supabase = await createAuthenticatedDataClient();
   const { data, error } = await supabase
     .from("companies")
     .select("id, name")
     .eq("id", companyId)
     .maybeSingle();
-
   if (error) throw error;
-
   return data;
 }
 
@@ -46,38 +38,12 @@ export async function resolveActiveCompany(companyId?: string | null) {
 export async function getCompanyMemory(
   companyId: string,
 ): Promise<CompanyMemoryRecord[]> {
+  const supabase = await createAuthenticatedDataClient();
   const { data, error } = await supabase
     .from("company_memory")
     .select("id, company_id, category, title, content, importance, source")
     .eq("company_id", companyId)
     .order("importance", { ascending: false });
-
   if (error) throw error;
-
   return (data ?? []) as CompanyMemoryRecord[];
-}
-
-export async function getMemoryByCategory(
-  companyId: string,
-  category: string
-) {
-  const { data, error } = await supabase
-    .from("company_memory")
-    .select("*")
-    .eq("company_id", companyId)
-    .eq("category", category);
-
-  if (error) throw error;
-
-  return data;
-}
-
-export async function addMemory(
-  memory: Omit<CompanyMemoryRecord, "id"> & { id?: string },
-) {
-  return supabase
-    .from("company_memory")
-    .insert(memory)
-    .select()
-    .single();
 }

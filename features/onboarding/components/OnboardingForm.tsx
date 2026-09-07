@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useActionState } from "react";
 
 import { Button, Card, Input } from "@/components/ui";
@@ -22,7 +21,7 @@ export function OnboardingForm() {
           Configurar empresa
         </h2>
         <p className="mt-2 text-sm text-zinc-400">
-          Crie a empresa operacional do Samuel AI e, se quiser, a sua conta.
+          Cadastre a empresa que será administrada pelo Samuel AI.
         </p>
       </div>
 
@@ -33,17 +32,6 @@ export function OnboardingForm() {
         <div className="grid gap-4 sm:grid-cols-2">
           <Input label="Cidade" name="city" placeholder="São Paulo" />
           <Input label="País" name="country" placeholder="Brasil" />
-        </div>
-
-        <div className="my-2 border-t border-white/10 pt-4">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-            Conta (opcional)
-          </p>
-          <div className="flex flex-col gap-4">
-            <Input label="Seu nome" name="fullName" placeholder="Samuel Founder" />
-            <Input label="Email" name="email" type="email" placeholder="voce@empresa.com" />
-            <Input label="Senha" name="password" type="password" placeholder="mín. 8 caracteres" />
-          </div>
         </div>
 
         {state.error ? (
@@ -57,12 +45,6 @@ export function OnboardingForm() {
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-zinc-500">
-        Já tem conta?{" "}
-        <Link href="/login" className="text-zinc-300 transition hover:text-white">
-          Entrar
-        </Link>
-      </p>
     </Card>
   );
 }

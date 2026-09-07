@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { isLinkedInConfigured } from "@/integrations/linkedin";
-import { resolveActiveCompany } from "@/services/executive-context.service";
+import { resolveActiveCompany } from "@/services/executive-context.server";
 
 export const dynamic = "force-dynamic";
 

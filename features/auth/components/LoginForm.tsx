@@ -9,7 +9,7 @@ import { signInWithPasswordAction, type AuthFormState } from "../actions/auth.ac
 
 const initialState: AuthFormState = {};
 
-export function AuthLoginForm() {
+export function AuthLoginForm({ next = "/" }: { next?: string }) {
   const [state, formAction, pending] = useActionState(signInWithPasswordAction, initialState);
 
   return (
@@ -22,6 +22,7 @@ export function AuthLoginForm() {
       </div>
 
       <form action={formAction} className="flex flex-col gap-5">
+        <input type="hidden" name="next" value={next} />
         <Input
           label="Email"
           name="email"
@@ -52,11 +53,11 @@ export function AuthLoginForm() {
       </form>
 
       <div className="mt-6 flex flex-col items-center gap-4 text-sm">
-        <Link href="/onboarding" className="text-zinc-400 transition hover:text-zinc-200">
-          Criar conta e configurar empresa
+        <Link href="/forgot-password" className="text-zinc-300 transition hover:text-white">
+          Esqueci a senha
         </Link>
-        <Link href="/samuel-ai" className="text-zinc-500 transition hover:text-zinc-300">
-          Continuar sem autenticação
+        <Link href="/signup" className="text-zinc-400 transition hover:text-zinc-200">
+          Criar conta
         </Link>
       </div>
     </Card>

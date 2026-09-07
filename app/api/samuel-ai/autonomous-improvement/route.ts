@@ -1,4 +1,5 @@
 import { buildAutonomousImprovementReport } from "@/features/samuel-ai/autonomous-improvement";
+import { authorizeAuthenticatedRequest } from "@/features/auth/server/authorization";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,15 +13,25 @@ function modeFromRequest(request: Request) {
   return "status" as const;
 }
 
-function isAuthorizedWrite(request: Request) {
-  const secret = process.env.SAMUEL_AUTONOMY_CRON_SECRET;
-  if (!secret) return true;
-  return request.headers.get("x-samuel-autonomy-secret") === secret;
+function isAuthorizedCron(request: Request) {
+  const secret = process.env.CRON_SECRET ?? process.env.SAMUEL_AUTONOMY_CRON_SECRET;
+  if (!secret) return false;
+  return request.headers.get("authorization") === `Bearer ${secret}`;
 }
 
 export async function GET(request: Request) {
+  const mode = modeFromRequest(request);
+  if (mode === "cron") {
+    if (!isAuthorizedCron(request)) {
+      return Response.json({ error: "Cron não autorizado." }, { status: 401 });
+    }
+  } else {
+    const auth = await authorizeAuthenticatedRequest();
+    if (!auth.ok) return auth.response;
+  }
+
   const report = buildAutonomousImprovementReport({
-    mode: modeFromRequest(request),
+    mode,
   });
 
   return Response.json(report, {
@@ -30,13 +41,9 @@ export async function GET(request: Request) {
   });
 }
 
-export async function POST(request: Request) {
-  if (!isAuthorizedWrite(request)) {
-    return Response.json(
-      { error: "A execução manual exige x-samuel-autonomy-secret." },
-      { status: 401 },
-    );
-  }
+export async function POST() {
+  const auth = await authorizeAuthenticatedRequest();
+  if (!auth.ok) return auth.response;
 
   const report = buildAutonomousImprovementReport({
     mode: "manual",
@@ -48,4 +55,3 @@ export async function POST(request: Request) {
     },
   });
 }
-

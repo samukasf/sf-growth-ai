@@ -10,30 +10,30 @@ import {
 
 describe("Samuel Live provider resolver", () => {
   it("keeps OpenAI as the safe default", () => {
-    expect(resolveSamuelLiveProvider({} as NodeJS.ProcessEnv)).toBe("openai");
+    expect(resolveSamuelLiveProvider({} as unknown as NodeJS.ProcessEnv)).toBe("openai");
   });
 
   it("accepts Gemini explicitly", () => {
     expect(
-      resolveSamuelLiveProvider({ SAMUEL_LIVE_PROVIDER: "gemini" } as NodeJS.ProcessEnv),
+      resolveSamuelLiveProvider({ SAMUEL_LIVE_PROVIDER: "gemini" } as unknown as NodeJS.ProcessEnv),
     ).toBe("gemini");
   });
 
   it("rejects unknown providers", () => {
     expect(() =>
-      resolveSamuelLiveProvider({ SAMUEL_LIVE_PROVIDER: "other" } as NodeJS.ProcessEnv),
+      resolveSamuelLiveProvider({ SAMUEL_LIVE_PROVIDER: "other" } as unknown as NodeJS.ProcessEnv),
     ).toThrow(InvalidLiveProviderError);
   });
 
   it("uses the current Gemini Live model by default", () => {
-    expect(resolveGeminiLiveModel({} as NodeJS.ProcessEnv)).toBe(
+    expect(resolveGeminiLiveModel({} as unknown as NodeJS.ProcessEnv)).toBe(
       DEFAULT_GEMINI_LIVE_MODEL,
     );
   });
 
   it("reports missing Gemini credentials without exposing secrets", () => {
     expect(
-      liveProviderReadiness({ SAMUEL_LIVE_PROVIDER: "gemini" } as NodeJS.ProcessEnv),
+      liveProviderReadiness({ SAMUEL_LIVE_PROVIDER: "gemini" } as unknown as NodeJS.ProcessEnv),
     ).toEqual({
       provider: "gemini",
       configured: false,

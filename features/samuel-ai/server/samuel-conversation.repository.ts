@@ -36,6 +36,7 @@ export class SamuelConversationRepository {
   async loadLatest(
     sessionHash: string,
     companyRef: string,
+    userId: string,
   ): Promise<ConversationHistory | null> {
     if (!this.available) return null;
 
@@ -44,6 +45,7 @@ export class SamuelConversationRepository {
       .select("id")
       .eq("session_hash", sessionHash)
       .eq("company_ref", companyRef)
+      .eq("user_id", userId)
       .eq("status", "active")
       .order("last_message_at", { ascending: false })
       .limit(1)
@@ -79,6 +81,7 @@ export class SamuelConversationRepository {
     sessionHash: string;
     companyRef: string;
     title: string;
+    userId: string;
   }): Promise<string | null> {
     if (!this.available) return null;
 
@@ -89,6 +92,7 @@ export class SamuelConversationRepository {
         .eq("id", input.conversationId)
         .eq("session_hash", input.sessionHash)
         .eq("company_ref", input.companyRef)
+        .eq("user_id", input.userId)
         .maybeSingle();
 
       if (error) throw error;
@@ -100,6 +104,7 @@ export class SamuelConversationRepository {
       .insert({
         company_id: isUuid(input.companyRef) ? input.companyRef : null,
         company_ref: input.companyRef,
+        user_id: input.userId,
         session_hash: input.sessionHash,
         title: input.title.slice(0, 120),
       })

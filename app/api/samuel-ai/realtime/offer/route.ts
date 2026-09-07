@@ -7,6 +7,7 @@ import {
   resolveRealtimeModel,
 } from "@/features/samuel-ai/realtime/samuel-realtime.server";
 import { getWorkspaceSessionIdentity } from "@/features/samuel-ai/server/workspace-session";
+import { authorizeCompanyRequest } from "@/features/auth/server/authorization";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -80,6 +81,9 @@ export async function POST(request: Request) {
   if (!companyId || companyId.length > 160) {
     return jsonError("Empresa inválida para voz Realtime.", 400, "COMPANY_INVALID");
   }
+
+  const auth = await authorizeCompanyRequest(companyId, { allowWorkspaceFallback: true });
+  if (!auth.ok) return auth.response;
 
   const contextSummary =
     request.headers.get("x-samuel-context-summary")?.slice(0, 600) ?? null;
