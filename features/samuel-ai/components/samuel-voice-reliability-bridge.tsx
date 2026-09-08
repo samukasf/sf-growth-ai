@@ -41,16 +41,40 @@ function dispatchTranscript(cockpit: HTMLElement, transcript: string) {
   setTextareaValue(textarea, transcript);
   textarea.focus();
 
-  // React processes the input event before this task runs. The normal ChatPanel
-  // send button then uses the exact same chat path as typed messages.
-  window.setTimeout(() => {
+  const trySend = (attempt = 0) => {
     const sendButton = cockpit.querySelector<HTMLButtonElement>(
       ".samuel-chat-send:not(.is-cancel)",
     );
-    if (sendButton && !sendButton.disabled) sendButton.click();
-  }, 0);
+    if (sendButton && !sendButton.disabled) {
+      sendButton.click();
+      return;
+    }
+    if (attempt < 4) {
+      window.setTimeout(() => trySend(attempt + 1), 35);
+    }
+  };
+  window.setTimeout(() => trySend(), 0);
 
   return true;
+}
+
+function primeBrowserSpeech() {
+  if (
+    typeof window === "undefined" ||
+    !("speechSynthesis" in window) ||
+    !("SpeechSynthesisUtterance" in window)
+  ) {
+    return;
+  }
+
+  try {
+    const unlock = new SpeechSynthesisUtterance(" ");
+    unlock.volume = 0;
+    unlock.rate = 1;
+    window.speechSynthesis.speak(unlock);
+  } catch {
+    // Voice output still has its normal fallback/error handling.
+  }
 }
 
 /**
@@ -197,8 +221,24 @@ export function SamuelVoiceReliabilityBridge() {
       speechStarted = false;
       lastVoiceAt = 0;
 
+      // Prime optional audio facilities synchronously while the click still has
+      // user activation. Recording itself does not depend on either facility.
+      primeBrowserSpeech();
+      const AudioContextCtor =
+        window.AudioContext ||
+        (window as typeof window & { webkitAudioContext?: typeof AudioContext })
+          .webkitAudioContext;
+      if (AudioContextCtor) {
+        try {
+          audioContext = new AudioContextCtor({ latencyHint: "interactive" });
+          void audioContext.resume().catch(() => undefined);
+        } catch {
+          audioContext = null;
+        }
+      }
+
       try {
-        // getUserMedia is initiated directly from the trusted click below.
+        // This call is made in the same user-triggered execution path.
         stream = await navigator.mediaDevices.getUserMedia({
           audio: {
             echoCancellation: true,
@@ -233,18 +273,22 @@ export function SamuelVoiceReliabilityBridge() {
           }
         };
 
-        const AudioContextCtor =
-          window.AudioContext ||
-          (window as typeof window & { webkitAudioContext?: typeof AudioContext })
-            .webkitAudioContext;
-        if (AudioContextCtor) {
-          audioContext = new AudioContextCtor({ latencyHint: "interactive" });
-          await audioContext.resume();
-          const source = audioContext.createMediaStreamSource(stream);
-          analyser = audioContext.createAnalyser();
-          analyser.fftSize = 1024;
-          analyser.smoothingTimeConstant = 0.2;
-          source.connect(analyser);
+        // Silence detection is a convenience only. If AudioContext is blocked,
+        // MediaRecorder continues normally and the user can stop with a second
+        // click or the 30-second hard limit.
+        if (audioContext) {
+          try {
+            if (audioContext.state === "suspended") {
+              void audioContext.resume().catch(() => undefined);
+            }
+            const source = audioContext.createMediaStreamSource(stream);
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 1024;
+            analyser.smoothingTimeConstant = 0.2;
+            source.connect(analyser);
+          } catch {
+            analyser = null;
+          }
         }
 
         recorder.start(250);
@@ -271,8 +315,6 @@ export function SamuelVoiceReliabilityBridge() {
       const cockpit = primaryButton.closest<HTMLElement>(".samuel-focus-cockpit");
       if (!cockpit) return;
 
-      // The old Realtime handler is not allowed to compete with this capture
-      // path. All microphone handling begins from this same trusted click.
       event.preventDefault();
       event.stopImmediatePropagation();
 
