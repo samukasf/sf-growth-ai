@@ -77,13 +77,6 @@ export function selectSamuelPortugueseFallbackVoice<T extends SamuelVoiceCandida
     })[0] ?? null;
 }
 
-function prefersNativeSpeech() {
-  if (typeof navigator === "undefined") return false;
-  const ua = navigator.userAgent;
-  const touchMac = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
-  return /iPad|iPhone|iPod/.test(ua) || touchMac;
-}
-
 function subscribeSupport() { return () => undefined; }
 function supportSnapshot() {
   if (typeof window === "undefined") return false;
@@ -158,7 +151,7 @@ export function useSamuelSpeech({ enabled = true }: UseSamuelSpeechInput = {}) {
     const utterance = new SpeechSynthesisUtterance(text);
     if (voice) utterance.voice = voice;
     utterance.lang = voice?.lang ?? "pt-BR";
-    utterance.rate = 0.9;
+    utterance.rate = 0.92;
     utterance.pitch = voice && selectSamuelMasculineVoice([voice]) ? 0.72 : 0.82;
     utterance.volume = 1;
     setEngine("browser-male");
@@ -170,7 +163,7 @@ export function useSamuelSpeech({ enabled = true }: UseSamuelSpeechInput = {}) {
       setStatus("speaking");
       options.onStart?.();
       const startedAt = performance.now();
-      const estimated = Math.max(1_500, textWords.length * 330);
+      const estimated = Math.max(1_500, textWords.length * 320);
       progressTimerRef.current = setInterval(() => {
         const progress = Math.min(0.98, (performance.now() - startedAt) / estimated);
         const wordIndex = Math.min(Math.max(0, textWords.length - 1), Math.floor(progress * Math.max(1, textWords.length)));
@@ -196,7 +189,7 @@ export function useSamuelSpeech({ enabled = true }: UseSamuelSpeechInput = {}) {
       setErrorMessage(
         event.error === "not-allowed"
           ? "O navegador bloqueou o áudio. Toque novamente em Ouvir Samuel."
-          : "A voz nativa foi interrompida. Tente novamente ou use Conversa ao vivo.",
+          : "A voz nativa foi interrompida.",
       );
       options.onError?.();
     };
@@ -250,22 +243,20 @@ export function useSamuelSpeech({ enabled = true }: UseSamuelSpeechInput = {}) {
       };
       audio.onended = () => finish(requestId, text, textWords.length, options);
       audio.onerror = () => {
-        if (browserSpeak(text, requestId, options)) return;
         setStatus("idle");
-        setErrorMessage("Não foi possível reproduzir a voz. Use Conversa ao vivo.");
+        setErrorMessage("Não foi possível reproduzir a voz local.");
         options.onError?.();
       };
       await audio.play();
     } catch {
       if (requestRef.current !== requestId) return;
-      if (browserSpeak(text, requestId, options)) return;
       setStatus("unsupported");
       setEngine(null);
       setVoiceLabel(null);
-      setErrorMessage("Voz local indisponível. Use Conversa ao vivo para falar com Samuel.");
+      setErrorMessage("Voz local indisponível.");
       options.onError?.();
     }
-  }, [browserSpeak, finish]);
+  }, [finish]);
 
   const speak = useCallback((content: string, options: SpeakOptions = {}) => {
     if (!enabled || typeof window === "undefined") return false;
@@ -278,7 +269,6 @@ export function useSamuelSpeech({ enabled = true }: UseSamuelSpeechInput = {}) {
     setPlayback({ ...EMPTY, text });
     setErrorMessage(null);
 
-    // Proactive events are visual-only. The user explicitly decides when Samuel speaks.
     if (options.automatic) {
       setStatus("idle");
       setEngine(null);
@@ -287,17 +277,18 @@ export function useSamuelSpeech({ enabled = true }: UseSamuelSpeechInput = {}) {
       return true;
     }
 
-    // iPhone/iPad Safari is more reliable with the native SpeechSynthesis engine.
-    // Do not attempt the heavier WebAssembly voice first on those devices.
-    if (prefersNativeSpeech() && browserSpeak(text, requestId, options)) return true;
+    // Conversation must speak immediately. Prefer the native system voice,
+    // selecting a Portuguese masculine voice when available. The heavier local
+    // neural engine remains a fallback instead of delaying every reply.
+    if (browserSpeak(text, requestId, options)) return true;
 
     if ("WebAssembly" in window && "Audio" in window) {
       void piperSpeak(text, requestId, options);
       return true;
     }
-    if (browserSpeak(text, requestId, options)) return true;
+
     setStatus("unsupported");
-    setErrorMessage("Este navegador não oferece uma voz compatível. Use Conversa ao vivo.");
+    setErrorMessage("Este navegador não oferece uma voz compatível.");
     return false;
   }, [browserSpeak, cleanup, enabled, piperSpeak]);
 
