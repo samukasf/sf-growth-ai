@@ -20,10 +20,24 @@ function normalizeOrigin(value: string) {
     : `https://${trimmed}`;
 }
 
+function isLocalOrigin(value: string) {
+  try {
+    const url = new URL(value);
+    return url.hostname === "localhost" || url.hostname === "127.0.0.1";
+  } catch {
+    return false;
+  }
+}
+
 async function requestOrigin() {
-  const configuredOrigin =
-    process.env.NEXT_PUBLIC_SITE_URL?.trim() || process.env.SITE_URL?.trim();
-  if (configuredOrigin) return normalizeOrigin(configuredOrigin);
+  const configuredOrigin = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (configuredOrigin) {
+    const normalized = normalizeOrigin(configuredOrigin);
+    if (process.env.VERCEL_ENV === "production" && isLocalOrigin(normalized)) {
+      return PRODUCTION_ORIGIN;
+    }
+    return normalized;
+  }
 
   if (process.env.VERCEL_ENV === "production") return PRODUCTION_ORIGIN;
 
