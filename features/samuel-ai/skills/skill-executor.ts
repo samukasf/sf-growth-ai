@@ -8,6 +8,7 @@ export type SkillExecutionRequest = {
   approved?: boolean;
   companyId: string;
   input: Record<string, unknown>;
+  satisfiedRequirements?: string[];
 };
 
 export type SkillExecutionPlan = {
@@ -57,6 +58,7 @@ export function buildSkillExecutionPlan(request: SkillExecutionRequest): SkillEx
     autonomy: request.autonomy,
     approved: request.approved,
     input: request.input,
+    satisfiedRequirements: request.satisfiedRequirements,
   });
 
   if (capabilityPlan.status !== "ready" || !capabilityPlan.executor) {
