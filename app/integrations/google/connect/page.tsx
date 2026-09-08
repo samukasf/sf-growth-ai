@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, CheckCircle2, ContactRound, Drive, Mail, MapPin, RefreshCw, Store, TriangleAlert } from "lucide-react";
+import { CalendarDays, CheckCircle2, FolderOpen, Mail, MapPin, RefreshCw, Store, TriangleAlert, UsersRound } from "lucide-react";
 
 import { resolveActiveCompany } from "@/services/executive-context.server";
 import { getGoogleIntegrationStatus, type GoogleCapabilityKey } from "@/features/google-integrations/google-capabilities.server";
@@ -27,8 +27,8 @@ const CAPABILITIES: Array<{
 }> = [
   { key: "gmail", label: "Gmail", description: "Ler, pesquisar, preparar, enviar e organizar e-mails.", icon: Mail },
   { key: "calendar", label: "Google Agenda", description: "Consultar, criar e alterar compromissos e reuniões.", icon: CalendarDays },
-  { key: "drive", label: "Google Drive", description: "Pesquisar e usar arquivos como contexto operacional.", icon: Drive },
-  { key: "contacts", label: "Google Contatos", description: "Resolver pessoas e contatos da conta autorizada.", icon: ContactRound },
+  { key: "drive", label: "Google Drive", description: "Pesquisar e usar arquivos como contexto operacional.", icon: FolderOpen },
+  { key: "contacts", label: "Google Contatos", description: "Resolver pessoas e contatos da conta autorizada.", icon: UsersRound },
   { key: "businessProfile", label: "Google Business Profile", description: "Acessar os perfis empresariais exibidos no Google e Maps.", icon: Store },
   { key: "places", label: "Google Maps / Places", description: "Pesquisar empresas, locais, telefones, sites e endereços.", icon: MapPin },
   { key: "geocoding", label: "Geocoding", description: "Transformar endereços em coordenadas e contexto geográfico.", icon: MapPin },
