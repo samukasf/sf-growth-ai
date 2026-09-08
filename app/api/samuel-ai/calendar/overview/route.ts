@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { authorizeCompanyRequest } from "@/features/auth/server/authorization";
-import { executeCalendarTool } from "@/features/google-calendar";
+import { getGoogleCalendarProviderForCompany } from "@/features/google-calendar";
 
 export const dynamic = "force-dynamic";
 
@@ -19,14 +19,32 @@ export async function GET(request: Request) {
   const auth = await authorizeCompanyRequest(companyId);
   if (!auth.ok) return auth.response;
 
-  const result = await executeCalendarTool(
-    companyId,
-    view === "today" ? "calendar_today" : "calendar_week",
-    { maxResults: view === "today" ? 12 : 30 },
-  );
+  try {
+    const provider = await getGoogleCalendarProviderForCompany(companyId);
+    const rawEvents = view === "today" ? await provider.getTodayEvents() : await provider.getWeekEvents();
+    const maxResults = view === "today" ? 12 : 30;
+    const events = rawEvents.slice(0, maxResults).map((event) => ({
+      id: event.id,
+      title: event.summary,
+      start: event.start.dateTime ?? event.start.date ?? "",
+      end: event.end.dateTime ?? event.end.date ?? "",
+      allDay: Boolean(event.start.date && !event.start.dateTime),
+      location: event.location,
+    }));
 
-  return NextResponse.json(result, {
-    status: result.ok ? 200 : 502,
-    headers: { "Cache-Control": "private, no-store" },
-  });
+    return NextResponse.json(
+      {
+        ok: true,
+        summary: view === "today" ? "Google Agenda — hoje" : "Google Agenda — semana",
+        data: { events },
+      },
+      { headers: { "Cache-Control": "private, no-store" } },
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Não foi possível carregar a Google Agenda.";
+    return NextResponse.json(
+      { ok: false, summary: message, error: message },
+      { status: 502, headers: { "Cache-Control": "private, no-store" } },
+    );
+  }
 }
