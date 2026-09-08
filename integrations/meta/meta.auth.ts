@@ -6,13 +6,22 @@ export type MetaOAuthConfig = {
   redirectUri: string;
 };
 
-const META_OAUTH_SCOPES = [
+/**
+ * Permissões solicitadas pelo SF Growth AI para o ecossistema Meta.
+ * Algumas permissões exigem App Review/Advanced Access na Meta antes de
+ * funcionarem para utilizadores fora da equipa de desenvolvimento.
+ */
+export const META_OAUTH_SCOPES = [
   "pages_show_list",
   "pages_read_engagement",
   "pages_read_user_content",
+  "pages_manage_posts",
+  "pages_manage_metadata",
   "instagram_basic",
   "instagram_manage_insights",
+  "instagram_content_publish",
   "ads_read",
+  "ads_management",
   "business_management",
 ].join(",");
 
@@ -69,7 +78,6 @@ export function resolveMetaClientConfig(
   };
 }
 
-/** Resolve config from env or from an already-loaded OAuth connection override. */
 export async function resolveMetaClientConfigForCompany(
   companyId: string,
 ): Promise<MetaClientConfig | null> {
