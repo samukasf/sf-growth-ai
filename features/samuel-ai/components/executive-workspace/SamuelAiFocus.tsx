@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent, type LucideIcon } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import Link from "next/link";
 import {
   Activity,
@@ -10,7 +10,6 @@ import {
   CalendarDays,
   Check,
   FileText,
-  Gauge,
   Home,
   Keyboard,
   ListChecks,
@@ -21,13 +20,12 @@ import {
   MonitorCog,
   Search,
   Settings,
-  Sparkles,
   Square,
   Sun,
   UserRoundSearch,
   UsersRound,
   WandSparkles,
-  Zap,
+  type LucideIcon,
 } from "lucide-react";
 
 import { ChatPanel } from "../chat-panel";
@@ -96,7 +94,6 @@ function setNativeTextareaValue(textarea: HTMLTextAreaElement, value: string) {
 
 export function SamuelAiFocus({ data, handlers, onNavigate }: SamuelAiFocusProps) {
   const companyId = data.executiveContext?.company.id ?? "default-company";
-  const companyName = data.executiveContext?.company.name ?? data.briefing.companyName ?? "SF Growth AI";
   const [typingOpen, setTypingOpen] = useState(false);
   const [typedMessage, setTypedMessage] = useState("");
 
@@ -342,7 +339,7 @@ export function SamuelAiFocus({ data, handlers, onNavigate }: SamuelAiFocusProps
   );
 }
 
-function StatusPoint({ className, icon: Icon, title, text, color, align = "left" }: { className: string; icon: LucideIcon; title: string; text: React.ReactNode; color: string; align?: "left" | "right" }) {
+function StatusPoint({ className, icon: Icon, title, text, color, align = "left" }: { className: string; icon: LucideIcon; title: string; text: ReactNode; color: string; align?: "left" | "right" }) {
   return (
     <div className={`absolute ${className} w-[22%] ${align === "right" ? "text-left" : "text-left"}`}>
       <Icon className="mb-3 size-9" style={{ color, filter: `drop-shadow(0 0 10px ${color})` }} strokeWidth={1.7} />
