@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { authorizeCompanyRequest } from "@/features/auth/server/authorization";
+import { resolveWhatsAppConfig } from "@/features/whatsapp/whatsapp-config.server";
 
 export const dynamic = "force-dynamic";
 
@@ -33,13 +34,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Confirmação explícita obrigatória." }, { status: 400 });
   }
 
-  const token = process.env.WHATSAPP_ACCESS_TOKEN;
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  const apiVersion = process.env.WHATSAPP_GRAPH_API_VERSION;
-
-  if (!token || !phoneNumberId || !apiVersion) {
+  const config = resolveWhatsAppConfig(companyId);
+  if (!config) {
     return NextResponse.json(
-      { error: "WhatsApp Business ainda não está configurado no ambiente." },
+      { error: "WhatsApp Business não está configurado para esta empresa." },
       { status: 503 },
     );
   }
@@ -49,13 +47,19 @@ export async function POST(request: Request) {
   if (!to || !message) {
     return NextResponse.json({ error: "Número e mensagem são obrigatórios." }, { status: 400 });
   }
+  if (to.length < 8 || to.length > 15) {
+    return NextResponse.json({ error: "Número de WhatsApp inválido." }, { status: 400 });
+  }
+  if (message.length > 4096) {
+    return NextResponse.json({ error: "Mensagem excede o limite de 4096 caracteres." }, { status: 400 });
+  }
 
   const response = await fetch(
-    `https://graph.facebook.com/${encodeURIComponent(apiVersion)}/${encodeURIComponent(phoneNumberId)}/messages`,
+    `https://graph.facebook.com/${encodeURIComponent(config.graphApiVersion)}/${encodeURIComponent(config.phoneNumberId)}/messages`,
     {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${config.accessToken}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
