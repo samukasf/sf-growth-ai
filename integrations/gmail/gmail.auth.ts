@@ -7,9 +7,20 @@ const GOOGLE_OAUTH_AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth
 const GOOGLE_OAUTH_TOKEN_URL = "https://oauth2.googleapis.com/token";
 
 /**
- * Scopes Gmail completos para o Samuel operar a caixa:
- * ler, redigir, enviar, arquivar, apagar (trash), labels e marcar lido.
- * Contas já ligadas precisam reconectar para conceder `gmail.modify`.
+ * Uma única autorização Google alimenta as capacidades operacionais do Samuel.
+ *
+ * Workspace:
+ * - Gmail: leitura, composição, envio, labels/arquivo/lixeira.
+ * - Calendar: leitura e escrita de compromissos.
+ * - Drive/Contacts: contexto e pesquisa.
+ *
+ * Local/Maps:
+ * - Business Profile: gestão dos perfis/locais do Google Business.
+ * - Places: pesquisa de empresas/locais para prospecção e contexto.
+ * - Geocoding: endereços/coordenadas para rotas e contexto geográfico.
+ *
+ * Contas ligadas antes da inclusão de novos scopes devem usar "Reconectar Google"
+ * para conceder as permissões adicionais.
  */
 export const GMAIL_OAUTH_SCOPES = [
   "https://www.googleapis.com/auth/gmail.readonly",
@@ -19,6 +30,9 @@ export const GMAIL_OAUTH_SCOPES = [
   "https://www.googleapis.com/auth/calendar",
   "https://www.googleapis.com/auth/contacts.readonly",
   "https://www.googleapis.com/auth/drive.readonly",
+  "https://www.googleapis.com/auth/business.manage",
+  "https://www.googleapis.com/auth/maps-platform.places",
+  "https://www.googleapis.com/auth/maps-platform.geocode",
 ].join(" ");
 
 export function resolveGoogleOAuthConfig(): GoogleOAuthConfig | null {
@@ -33,13 +47,6 @@ export function resolveGoogleOAuthConfig(): GoogleOAuthConfig | null {
   return { clientId, clientSecret, redirectUri };
 }
 
-/**
- * Assina `companyId` com HMAC-SHA256 (chave: client secret) para uso como
- * parâmetro `state` do OAuth. Impede que o callback associe tokens a um
- * companyId arbitrário forjado pelo usuário. Não é uma proteção completa de
- * CSRF (não há nonce único de sessão) — ver riscos documentados no plano da
- * Sprint 86; aceitável para uma ferramenta interna de conexão de conta.
- */
 export function signGmailOAuthState(companyId: string, config: GoogleOAuthConfig): string {
   const payload = Buffer.from(
     JSON.stringify({ companyId, issuedAt: Date.now() }),
@@ -95,7 +102,7 @@ export function buildGmailOAuthAuthorizeUrl(companyId: string): string {
   if (!config) {
     throw new GmailApiError(
       "NOT_CONFIGURED",
-      "Integração Gmail não configurada (GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET/GOOGLE_OAUTH_REDIRECT_URI ausentes).",
+      "Integração Google não configurada (GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET/GOOGLE_OAUTH_REDIRECT_URI ausentes).",
     );
   }
 
@@ -142,7 +149,6 @@ async function requestGoogleToken(body: URLSearchParams): Promise<GoogleTokenRes
   return (await response.json()) as GoogleTokenResponse;
 }
 
-/** Troca o `code` do redirect do Google por access_token + refresh_token. */
 export function exchangeGmailAuthorizationCode(
   code: string,
   config: GoogleOAuthConfig,
@@ -158,7 +164,6 @@ export function exchangeGmailAuthorizationCode(
   return requestGoogleToken(body);
 }
 
-/** Troca um refresh_token por um novo access_token quando o atual expira. */
 export async function refreshGmailAccessToken(
   refreshToken: string,
   config: GoogleOAuthConfig,
@@ -176,7 +181,7 @@ export async function refreshGmailAccessToken(
     if (error instanceof GmailApiError) {
       throw new GmailApiError(
         "TOKEN_REFRESH_FAILED",
-        "Falha ao renovar access_token do Gmail — pode ser necessário reconectar a conta.",
+        "Falha ao renovar access_token do Google — pode ser necessário reconectar a conta.",
         { status: error.status, cause: error },
       );
     }
