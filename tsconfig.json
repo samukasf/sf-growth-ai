@@ -39,6 +39,7 @@
   "exclude": [
     "node_modules",
     "node_modules.failed-install",
-    "apps/mobile"
+    "apps/mobile",
+    "apps/samuel-desktop-agent"
   ]
 }
