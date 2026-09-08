@@ -3,14 +3,12 @@
 import { useEffect } from "react";
 
 /**
- * Keeps Samuel's primary microphone useful even when a provider Realtime
- * session cannot be established. The existing ChatPanel already has a tested
- * browser SpeechRecognition path (dictation -> auto send -> spoken reply),
- * but the immersive UI previously hid that control and exposed only Realtime.
+ * Routes the visible primary microphone to ChatPanel's browser
+ * SpeechRecognition control without leaving the original user-activation task.
  *
- * In the immersive Samuel surface, route the visible microphone to that
- * browser voice path. Realtime remains available internally and can be
- * re-enabled later without making basic conversation depend on WebRTC.
+ * SpeechRecognition can be rejected when start() is triggered after a timer or
+ * another async boundary. Keep this dispatch synchronous so the browser still
+ * considers it part of the user's click and can open/use the microphone.
  */
 export function SamuelVoiceReliabilityBridge() {
   useEffect(() => {
@@ -30,14 +28,13 @@ export function SamuelVoiceReliabilityBridge() {
 
       if (!dictationButton || dictationButton.disabled) return;
 
-      // Stop the Realtime button handler from becoming the single point of
-      // failure. Trigger ChatPanel's browser speech-recognition handler instead.
       event.preventDefault();
       event.stopImmediatePropagation();
 
-      window.setTimeout(() => {
-        if (!dictationButton.disabled) dictationButton.click();
-      }, 0);
+      // IMPORTANT: no setTimeout / Promise / async boundary here. The nested
+      // click must happen inside the original trusted user activation so Chrome
+      // can start SpeechRecognition and request microphone permission.
+      dictationButton.click();
     };
 
     window.addEventListener("click", onPrimaryVoiceClick, true);
