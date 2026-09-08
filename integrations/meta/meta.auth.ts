@@ -6,11 +6,6 @@ export type MetaOAuthConfig = {
   redirectUri: string;
 };
 
-/**
- * Permissões solicitadas pelo SF Growth AI para o ecossistema Meta.
- * Algumas permissões exigem App Review/Advanced Access na Meta antes de
- * funcionarem para utilizadores fora da equipa de desenvolvimento.
- */
 export const META_OAUTH_SCOPES = [
   "pages_show_list",
   "pages_read_engagement",
@@ -24,6 +19,12 @@ export const META_OAUTH_SCOPES = [
   "ads_management",
   "business_management",
 ].join(",");
+
+export function resolveMetaGraphApiVersion(): string {
+  const configured = process.env.META_GRAPH_API_VERSION?.trim();
+  if (configured) return configured.startsWith("v") ? configured : `v${configured}`;
+  return "v26.0";
+}
 
 export function resolveMetaPageId(companyId?: string): string {
   const mapJson = process.env.META_PAGE_MAP;
@@ -124,7 +125,7 @@ export function buildMetaOAuthAuthorizeUrl(state?: string): string | null {
     ...(state ? { state } : {}),
   });
 
-  return `https://www.facebook.com/v21.0/dialog/oauth?${params.toString()}`;
+  return `https://www.facebook.com/${resolveMetaGraphApiVersion()}/dialog/oauth?${params.toString()}`;
 }
 
 export function isMetaTokenExpiredError(code?: number, message?: string): boolean {
