@@ -10,11 +10,35 @@ export type AuthFormState = {
   success?: string;
 };
 
+const PRODUCTION_ORIGIN = "https://sf-growth-ai.vercel.app";
+
+function normalizeOrigin(value: string) {
+  const trimmed = value.trim().replace(/\/$/, "");
+  if (!trimmed) throw new Error("Origem da aplicação indisponível.");
+  return trimmed.startsWith("http://") || trimmed.startsWith("https://")
+    ? trimmed
+    : `https://${trimmed}`;
+}
+
 async function requestOrigin() {
+  const configuredOrigin =
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() || process.env.SITE_URL?.trim();
+  if (configuredOrigin) return normalizeOrigin(configuredOrigin);
+
+  if (process.env.VERCEL_ENV === "production") return PRODUCTION_ORIGIN;
+
+  const vercelProductionUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
+  if (vercelProductionUrl) return normalizeOrigin(vercelProductionUrl);
+
   const headerStore = await headers();
   const host = headerStore.get("x-forwarded-host") ?? headerStore.get("host");
   const protocol = headerStore.get("x-forwarded-proto") ?? "https";
   if (!host) throw new Error("Origem da aplicação indisponível.");
+
+  if (process.env.VERCEL && /^localhost(?::\d+)?$/i.test(host)) {
+    return PRODUCTION_ORIGIN;
+  }
+
   return `${protocol}://${host}`;
 }
 
@@ -145,7 +169,7 @@ export async function updatePasswordAction(
     };
   }
 
-  redirect("/");
+  redirect("/samuel-ai");
 }
 
 export async function signOutAction(): Promise<void> {
