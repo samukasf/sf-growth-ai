@@ -210,8 +210,21 @@ export function useSamuelRealtimeVoice({
     dispatch({ type: "set_output_audio_level", audioLevel: 0 });
   }, []);
 
+  const cancelActiveDesktopCommand = useCallback(() => {
+    const commandId = activeDesktopCommandRef.current;
+    if (!commandId) return;
+    activeDesktopCommandRef.current = null;
+    void fetch("/api/samuel-desktop/control", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ operation: "cancel", commandId }),
+      keepalive: true,
+    }).catch(() => undefined);
+  }, []);
+
   const cleanup = useCallback(() => {
     closingRef.current = true;
+    cancelActiveDesktopCommand();
     abortRef.current?.abort();
     abortRef.current = null;
     dataChannelRef.current?.close();
@@ -254,7 +267,7 @@ export function useSamuelRealtimeVoice({
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = null;
     handledToolCallsRef.current.clear();
-  }, [stopGeminiOutput]);
+  }, [cancelActiveDesktopCommand, stopGeminiOutput]);
 
   const end = useCallback(() => {
     cleanup();
@@ -793,15 +806,7 @@ export function useSamuelRealtimeVoice({
   }, [attachAudioAnalyser, cleanup, companyId, end, startGemini, startOpenAi]);
 
   const interrupt = useCallback(() => {
-    const commandId = activeDesktopCommandRef.current;
-    if (commandId) {
-      void fetch("/api/samuel-desktop/control", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ operation: "cancel", commandId }),
-      }).catch(() => undefined);
-      activeDesktopCommandRef.current = null;
-    }
+    cancelActiveDesktopCommand();
 
     if (providerRef.current === "gemini") {
       stopGeminiOutput();
@@ -809,7 +814,7 @@ export function useSamuelRealtimeVoice({
       dataChannelRef.current.send(JSON.stringify({ type: "response.cancel" }));
     }
     dispatch({ type: "listening" });
-  }, [stopGeminiOutput]);
+  }, [cancelActiveDesktopCommand, stopGeminiOutput]);
 
   const setMuted = useCallback((muted: boolean) => {
     localStreamRef.current?.getAudioTracks().forEach((track) => {
