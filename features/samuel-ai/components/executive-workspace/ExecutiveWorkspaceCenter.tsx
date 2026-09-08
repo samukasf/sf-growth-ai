@@ -165,6 +165,7 @@ export function ExecutiveWorkspaceCenter({
       case "site-builder":
         return (
           <SamuelSiteBuilder
+            companyId={companyId}
             companyName={data.executiveContext?.company.name ?? data.briefing.companyName}
             companySegment={
               data.executiveContext?.businessProfile?.segment ??
