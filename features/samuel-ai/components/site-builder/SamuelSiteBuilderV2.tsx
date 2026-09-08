@@ -28,6 +28,7 @@ import {
 } from "./site-builder-preview";
 
 type SamuelSiteBuilderProps = {
+  companyId?: string;
   companyName?: string;
   companySegment?: string;
   companyLocation?: string;
@@ -44,7 +45,9 @@ type SiteProject = {
   updatedAt: string;
 };
 
-const STORAGE_KEY = "sf-growth-ai:site-builder-projects:v2";
+type ScopeResponse = { ok?: boolean; scope?: string; error?: string };
+
+const STORAGE_PREFIX = "sf-growth-ai:site-builder-projects:v2";
 
 const MODE_OPTIONS: Array<{ value: SiteBuilderMode; label: string; description: string }> = [
   { value: "website", label: "Site", description: "Site responsivo pronto para validação e exportação." },
@@ -120,6 +123,7 @@ function fieldClass() {
 }
 
 export function SamuelSiteBuilderV2({
+  companyId = "default-company",
   companyName = "A sua empresa",
   companySegment = "serviços profissionais",
   companyLocation = "Portugal",
@@ -135,12 +139,26 @@ export function SamuelSiteBuilderV2({
   const [previewPage, setPreviewPage] = useState<PreviewPage>("home");
   const [showArchived, setShowArchived] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const [storageKey, setStorageKey] = useState<string | null>(null);
   const [saveNotice, setSaveNotice] = useState<string | null>(null);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
+    let cancelled = false;
+
+    const hydrate = async () => {
+      let scopedKey: string | null = null;
       try {
-        const raw = window.localStorage.getItem(STORAGE_KEY);
+        const response = await fetch(
+          `/api/samuel-ai/site-builder/scope?companyId=${encodeURIComponent(companyId)}`,
+          { cache: "no-store" },
+        );
+        const payload = (await response.json()) as ScopeResponse;
+        if (!response.ok || !payload.scope) throw new Error(payload.error || "Escopo indisponível.");
+        scopedKey = `${STORAGE_PREFIX}:${payload.scope}`;
+        if (cancelled) return;
+        setStorageKey(scopedKey);
+
+        const raw = window.localStorage.getItem(scopedKey);
         const parsed = raw ? (JSON.parse(raw) as SiteProject[]) : [];
         if (Array.isArray(parsed) && parsed.length > 0) {
           setProjects(parsed);
@@ -156,23 +174,34 @@ export function SamuelSiteBuilderV2({
           setCurrentId(initial.id);
           setDraft(initial.draft);
           setProjectName(initial.name);
-          window.localStorage.setItem(STORAGE_KEY, JSON.stringify([initial]));
+          window.localStorage.setItem(scopedKey, JSON.stringify([initial]));
         }
       } catch {
+        if (cancelled) return;
+        // Never fall back to the old global storage key: doing so could expose
+        // another account/company's projects in a shared browser profile.
         const initial = makeProject(baseDraft, companyName);
         setProjects([initial]);
         setCurrentId(initial.id);
+        setDraft(initial.draft);
+        setProjectName(initial.name);
+        setStorageKey(null);
       } finally {
-        setHydrated(true);
+        if (!cancelled) setHydrated(true);
       }
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, [baseDraft, companyName]);
+    };
+
+    void hydrate();
+    return () => {
+      cancelled = true;
+    };
+  }, [baseDraft, companyId, companyName]);
 
   const persist = (nextProjects: SiteProject[]) => {
     setProjects(nextProjects);
+    if (!storageKey) return;
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextProjects));
+      window.localStorage.setItem(storageKey, JSON.stringify(nextProjects));
     } catch {
       // Browser storage can be unavailable in private/restricted contexts.
     }
@@ -197,7 +226,7 @@ export function SamuelSiteBuilderV2({
       );
       persist(next);
     }
-    setSaveNotice("Projeto salvo neste navegador");
+    setSaveNotice(storageKey ? "Projeto salvo para esta conta e empresa" : "Projeto mantido apenas nesta sessão");
     window.setTimeout(() => setSaveNotice(null), 2200);
   };
 
@@ -267,7 +296,7 @@ export function SamuelSiteBuilderV2({
           <div className="mt-3 max-h-[260px] space-y-1.5 overflow-y-auto xl:max-h-[calc(100dvh-285px)]">
             {!hydrated ? <div className="h-16 animate-pulse rounded-xl bg-white/[.025]" /> : visibleProjects.length === 0 ? <div className="rounded-xl border border-dashed border-white/[.08] p-4 text-center text-[10px] text-white/28">Nenhum projeto aqui.</div> : visibleProjects.map((project) => <button key={project.id} type="button" onClick={() => openProject(project)} className={cn("w-full rounded-xl border p-3 text-left transition", currentId === project.id ? "border-cyan-300/20 bg-cyan-300/[.06]" : "border-white/[.05] bg-white/[.018] hover:bg-white/[.035]")}><div className="flex items-center gap-2"><FolderOpen className="size-4 shrink-0 text-cyan-200/45" /><strong className="truncate text-xs text-white/70">{project.name}</strong></div><p className="mt-1 truncate text-[9px] text-white/24">{project.draft.mode === "app" ? "Mini-app" : "Site"} · {project.draft.segment}</p></button>)}
           </div>
-          <p className="mt-3 text-[9px] leading-relaxed text-white/20">Os projetos são persistidos neste navegador. Exportar HTML continua disponível para cópia externa.</p>
+          <p className="mt-3 text-[9px] leading-relaxed text-white/20">Projetos isolados por conta e empresa neste navegador. O armazenamento global antigo não é reutilizado.</p>
         </aside>
 
         <section className="border-b border-white/[.06] p-4 xl:border-b-0 xl:border-r xl:p-5">
@@ -276,13 +305,13 @@ export function SamuelSiteBuilderV2({
           <div className="mt-4 grid gap-3"><Field label="Empresa" value={draft.businessName} onChange={(value) => updateDraft("businessName", value)} /><Field label="Segmento" value={draft.segment} onChange={(value) => updateDraft("segment", value)} /><Field label="Oferta principal" value={draft.offer} onChange={(value) => updateDraft("offer", value)} /><Field label="Objetivo comercial" value={draft.goal} onChange={(value) => updateDraft("goal", value)} /><div className="grid grid-cols-2 gap-2"><Field label="Local" value={draft.location} onChange={(value) => updateDraft("location", value)} /><Field label="Botão" value={draft.cta} onChange={(value) => updateDraft("cta", value)} /></div><div className="grid grid-cols-2 gap-2"><Field label="WhatsApp" value={draft.whatsapp} placeholder="+351..." onChange={(value) => updateDraft("whatsapp", value)} /><Field label="Google Maps" value={draft.mapsQuery} onChange={(value) => updateDraft("mapsQuery", value)} /></div></div>
           <div className="mt-4 flex flex-wrap gap-2">{TONE_OPTIONS.map((option) => <button key={option.value} type="button" onClick={() => updateDraft("tone", option.value)} className={cn("rounded-full border px-3 py-2 text-[10px] font-semibold", draft.tone === option.value ? "border-blue-400 bg-blue-500/20 text-white" : "border-white/[.07] text-white/35")}>{option.label}</button>)}</div>
           <div className="mt-5 grid grid-cols-2 gap-2"><button type="button" onClick={() => openHtmlPreview(html)} className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/[.08] bg-white/[.025] text-xs font-semibold text-white/60 hover:bg-white/[.05]"><ExternalLink className="size-4" /> Abrir preview</button><button type="button" onClick={() => downloadHtml(html, filename)} className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-xs font-semibold text-white"><Download className="size-4" /> Exportar HTML</button></div>
-          <div className="mt-5 grid gap-2 text-[10px] text-white/35">{[{ icon: LayoutTemplate, label: "Preview", value: draft.mode === "app" ? "Site + mini-app" : "Site responsivo" },{ icon: FileCode2, label: "Arquivo", value: filename },{ icon: MessageCircle, label: "WhatsApp", value: draft.whatsapp ? "Configurado no projeto" : "Pendente" },{ icon: MapPinned, label: "Maps", value: draft.mapsQuery ? "Configurado" : "Pendente" },{ icon: ShieldCheck, label: "Persistência", value: "Salvo localmente no navegador" }].map((item) => <div key={item.label} className="flex items-center gap-3 rounded-xl border border-white/[.05] bg-white/[.018] p-3"><item.icon className="size-4 shrink-0 text-cyan-200/45" /><div className="min-w-0"><strong className="block text-white/55">{item.label}</strong><span className="block truncate">{item.value}</span></div></div>)}</div>
+          <div className="mt-5 grid gap-2 text-[10px] text-white/35">{[{ icon: LayoutTemplate, label: "Preview", value: draft.mode === "app" ? "Site + mini-app" : "Site responsivo" },{ icon: FileCode2, label: "Arquivo", value: filename },{ icon: MessageCircle, label: "WhatsApp", value: draft.whatsapp ? "Configurado no projeto" : "Pendente" },{ icon: MapPinned, label: "Maps", value: draft.mapsQuery ? "Configurado" : "Pendente" },{ icon: ShieldCheck, label: "Persistência", value: storageKey ? "Isolada por conta + empresa" : "Somente nesta sessão" }].map((item) => <div key={item.label} className="flex items-center gap-3 rounded-xl border border-white/[.05] bg-white/[.018] p-3"><item.icon className="size-4 shrink-0 text-cyan-200/45" /><div className="min-w-0"><strong className="block text-white/55">{item.label}</strong><span className="block truncate">{item.value}</span></div></div>)}</div>
         </section>
 
         <section className="flex min-h-[560px] flex-col bg-[#03080e] p-3 sm:p-4">
           <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-[9px] font-bold uppercase tracking-[.18em] text-cyan-300/60">Preview navegável</p><h3 className="mt-1 text-sm font-semibold">{projectName || draft.businessName}</h3></div><div className="flex max-w-full overflow-x-auto rounded-full border border-white/10 bg-white/[.04] p-1">{previewPages.map((page) => <button key={page.id} type="button" onClick={() => setPreviewPage(page.id)} className={cn("shrink-0 rounded-full px-3 py-1.5 text-[9px] font-semibold", previewPage === page.id ? "bg-white text-slate-950" : "text-white/45")}>{page.label}</button>)}</div></div>
           <div className="relative min-h-0 flex-1 overflow-hidden rounded-[22px] border border-white/10 bg-white shadow-[0_28px_80px_rgba(0,0,0,.35)]"><iframe key={`${currentId}-${previewPage}-${draft.tone}-${draft.mode}`} title="Preview navegável do site" srcDoc={srcDoc} sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox" className="h-full min-h-[540px] w-full bg-white" /></div>
-          <div className="mt-3 flex items-center gap-2 rounded-xl border border-emerald-300/15 bg-emerald-400/[.07] px-3 py-2 text-[10px] text-emerald-100/70"><Rocket className="size-4 shrink-0" />Alterações aparecem imediatamente no preview. Salve para manter a versão neste navegador.</div>
+          <div className="mt-3 flex items-center gap-2 rounded-xl border border-emerald-300/15 bg-emerald-400/[.07] px-3 py-2 text-[10px] text-emerald-100/70"><Rocket className="size-4 shrink-0" />Alterações aparecem imediatamente no preview. Salve para manter a versão desta conta e empresa.</div>
         </section>
       </div>
     </section>
