@@ -1,6 +1,5 @@
 import type {
   ClientContract,
-  ClientExecutiveStackProps,
   ClientHealth,
   ClientJourney,
   ClientLead,

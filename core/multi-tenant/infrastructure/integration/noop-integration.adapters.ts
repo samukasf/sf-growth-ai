@@ -1,4 +1,3 @@
-import type { TenantExecutiveStackProps } from "../../domain";
 import type {
   AgencyCorePort,
   BusinessAutomationPort,
@@ -21,91 +20,56 @@ export class NoopAgencyCoreAdapter implements AgencyCorePort {
   isAvailable() {
     return false;
   }
-  async registerTenantClient(
-    _organizationId: string,
-    _agencyId: string,
-    _companyId: string,
-    _tenantName: string,
-  ) {}
+  async registerTenantClient() {}
 }
 
 export class NoopEnterpriseBrainAdapter implements EnterpriseBrainPort {
   isAvailable() {
     return false;
   }
-  async registerTenant(
-    _organizationId: string,
-    _agencyId: string,
-    _tenantId: string,
-    _companyId: string,
-  ) {}
+  async registerTenant() {}
 }
 
 export class NoopExecutiveCEOAdapter implements ExecutiveCEOPort {
   isAvailable() {
     return false;
   }
-  async assignToTenant(
-    _organizationId: string,
-    _tenantId: string,
-    _executiveStack: TenantExecutiveStackProps,
-  ) {}
+  async assignToTenant() {}
 }
 
 export class NoopExecutiveOrchestratorAdapter implements ExecutiveOrchestratorPort {
   isAvailable() {
     return false;
   }
-  async provisionTenantStack(
-    _organizationId: string,
-    _tenantId: string,
-    _executiveStack: TenantExecutiveStackProps,
-  ) {}
+  async provisionTenantStack() {}
 }
 
 export class NoopBusinessCommunicationAdapter implements BusinessCommunicationPort {
   isAvailable() {
     return false;
   }
-  async prepareTenantChannels(
-    _organizationId: string,
-    _agencyId: string,
-    _tenantId: string,
-  ) {}
+  async prepareTenantChannels() {}
 }
 
 export class NoopBusinessAutomationAdapter implements BusinessAutomationPort {
   isAvailable() {
     return false;
   }
-  async prepareTenantAutomations(
-    _organizationId: string,
-    _agencyId: string,
-    _tenantId: string,
-  ) {}
+  async prepareTenantAutomations() {}
 }
 
 export class NoopSoftwareFactoryAdapter implements SoftwareFactoryPort {
   isAvailable() {
     return false;
   }
-  async prepareTenantWorkspace(
-    _organizationId: string,
-    _agencyId: string,
-    _tenantId: string,
-  ) {}
+  async prepareTenantWorkspace() {}
 }
 
 export class NoopCompanyBrainAdapter implements CompanyBrainPort {
   isAvailable() {
     return false;
   }
-  async provisionForTenant(
-    _organizationId: string,
-    _agencyId: string,
-    _tenantId: string,
-    _companyId: string,
-  ) {
+  async provisionForTenant() {
     return { companyBrainId: "" };
   }
 }
@@ -114,75 +78,47 @@ export class NoopExecutiveMemoryAdapter implements ExecutiveMemoryPort {
   isAvailable() {
     return false;
   }
-  async provisionForTenant(
-    _organizationId: string,
-    _tenantId: string,
-    _executiveStack: TenantExecutiveStackProps,
-  ) {}
+  async provisionForTenant() {}
 }
 
 export class NoopExecutiveCouncilAdapter implements ExecutiveCouncilPort {
   isAvailable() {
     return false;
   }
-  async provisionForTenant(
-    _organizationId: string,
-    _tenantId: string,
-    _executiveStack: TenantExecutiveStackProps,
-  ) {}
+  async provisionForTenant() {}
 }
 
 export class NoopExecutiveTimelineAdapter implements ExecutiveTimelinePort {
   isAvailable() {
     return false;
   }
-  async provisionForTenant(
-    _organizationId: string,
-    _tenantId: string,
-    _executiveStack: TenantExecutiveStackProps,
-  ) {}
+  async provisionForTenant() {}
 }
 
 export class NoopExecutiveDashboardAdapter implements ExecutiveDashboardPort {
   isAvailable() {
     return false;
   }
-  async provisionForTenant(
-    _organizationId: string,
-    _tenantId: string,
-    _executiveStack: TenantExecutiveStackProps,
-  ) {}
+  async provisionForTenant() {}
 }
 
 export class NoopExecutiveMissionsAdapter implements ExecutiveMissionsPort {
   isAvailable() {
     return false;
   }
-  async provisionForTenant(
-    _organizationId: string,
-    _tenantId: string,
-    _executiveStack: TenantExecutiveStackProps,
-  ) {}
+  async provisionForTenant() {}
 }
 
 export class NoopExecutiveOpportunitiesAdapter implements ExecutiveOpportunitiesPort {
   isAvailable() {
     return false;
   }
-  async provisionForTenant(
-    _organizationId: string,
-    _tenantId: string,
-    _executiveStack: TenantExecutiveStackProps,
-  ) {}
+  async provisionForTenant() {}
 }
 
 export class NoopExecutiveProjectsAdapter implements ExecutiveProjectsPort {
   isAvailable() {
     return false;
   }
-  async provisionForTenant(
-    _organizationId: string,
-    _tenantId: string,
-    _executiveStack: TenantExecutiveStackProps,
-  ) {}
+  async provisionForTenant() {}
 }

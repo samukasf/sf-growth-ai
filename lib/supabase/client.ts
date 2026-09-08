@@ -39,17 +39,25 @@ class NoopWebSocket {
   onmessage: ((ev: MessageEvent) => void) | null = null;
   onopen: ((ev: Event) => void) | null = null;
 
-  constructor(_url?: string | URL, _protocols?: string | string[]) {}
+  constructor(url?: string | URL, protocols?: string | string[]) {
+    void url;
+    void protocols;
+  }
 
-  close(_code?: number, _reason?: string) {
+  close(code?: number, reason?: string) {
+    void code;
+    void reason;
     this.readyState = NoopWebSocket.CLOSED;
   }
 
-  send(_data: string | ArrayBufferLike | Blob | ArrayBufferView) {}
+  send(data: string | ArrayBufferLike | Blob | ArrayBufferView) {
+    void data;
+  }
 
   addEventListener() {}
   removeEventListener() {}
-  dispatchEvent(_event: Event) {
+  dispatchEvent(event: Event) {
+    void event;
     return false;
   }
 }
