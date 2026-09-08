@@ -61,9 +61,11 @@ export async function GET(request: Request) {
   try {
     provider = requestedProvider === "openai" || requestedProvider === "gemini"
       ? requestedProvider
-      : process.env.GEMINI_API_KEY?.trim()
-        ? "gemini"
-        : resolveSamuelLiveProvider();
+      : process.env.OPENAI_API_KEY?.trim()
+        ? "openai"
+        : process.env.GEMINI_API_KEY?.trim()
+          ? "gemini"
+          : resolveSamuelLiveProvider();
   } catch {
     return jsonError("Configuração do provedor Live inválida.", 500, "LIVE_PROVIDER_INVALID");
   }
@@ -86,14 +88,6 @@ export async function GET(request: Request) {
         };
 
   if (!readiness.configured) {
-    if (!requestedProvider && provider === "gemini" && process.env.OPENAI_API_KEY?.trim()) {
-      return Response.json({
-        provider: "openai",
-        configured: true,
-        fallback: true,
-        model: process.env.OPENAI_REALTIME_MODEL?.trim() || "gpt-realtime-2.1",
-      });
-    }
     return jsonError(
       `Voz Live indisponível: ${readiness.missingKey ?? "chave do provedor"} não configurada.`,
       503,
@@ -121,10 +115,6 @@ export async function GET(request: Request) {
   const now = Date.now();
   const model = resolveGeminiLiveModel();
 
-  // Use a standard single-use ephemeral token and let the browser send the
-  // complete BidiGenerateContentSetup. This follows the current Gemini Live
-  // AuthToken contract and avoids stale/legacy token constraints overriding
-  // the client's setup message.
   const tokenAttempt = await createGeminiToken(apiKey, {
     uses: 1,
     expireTime: new Date(now + TOKEN_TTL_MS).toISOString(),
