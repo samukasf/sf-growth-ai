@@ -2,7 +2,6 @@ import Link from "next/link";
 import {
   CalendarDays,
   CheckCircle2,
-  Linkedin,
   Mail,
   MapPin,
   MessageCircleMore,
@@ -10,6 +9,7 @@ import {
   Settings2,
   Store,
   TriangleAlert,
+  UsersRound,
 } from "lucide-react";
 
 import { getGoogleIntegrationStatus } from "@/features/google-integrations/google-capabilities.server";
@@ -138,7 +138,7 @@ export default async function IntegrationsPage({ searchParams }: IntegrationsPag
       title: "LinkedIn",
       description: "Página empresarial e dados de marketing/organização para presença B2B e pesquisa.",
       href: withCompany("/integrations/linkedin/connect"),
-      icon: Linkedin,
+      icon: UsersRound,
       status: linkedInStatus,
       action: linkedIn ? "Gerir LinkedIn" : "Configurar LinkedIn",
       detail: linkedIn ? "Token empresarial configurado" : "Configuração de servidor necessária",
