@@ -2,13 +2,16 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 
 import {
   META_OAUTH_SCOPES,
+  resolveMetaGraphApiVersion,
   resolveMetaOAuthConfig,
   type MetaOAuthConfig,
 } from "./meta.auth";
 import { upsertMetaOAuthConnection } from "./meta-token.repository";
 import { MetaApiError } from "./meta.types";
 
-const GRAPH_API_BASE = "https://graph.facebook.com/v21.0";
+function graphApiBase() {
+  return `https://graph.facebook.com/${resolveMetaGraphApiVersion()}`;
+}
 
 export function signMetaOAuthState(companyId: string, config: MetaOAuthConfig): string {
   const payload = Buffer.from(
@@ -75,7 +78,7 @@ export function buildSignedMetaOAuthAuthorizeUrl(companyId: string): string {
     state,
   });
 
-  return `https://www.facebook.com/v21.0/dialog/oauth?${params.toString()}`;
+  return `https://www.facebook.com/${resolveMetaGraphApiVersion()}/dialog/oauth?${params.toString()}`;
 }
 
 type MetaTokenResponse = {
@@ -95,7 +98,7 @@ async function exchangeCodeForUserToken(
     code,
   });
 
-  const response = await fetch(`${GRAPH_API_BASE}/oauth/access_token?${params}`, {
+  const response = await fetch(`${graphApiBase()}/oauth/access_token?${params}`, {
     cache: "no-store",
   });
   const text = await response.text();
@@ -121,7 +124,7 @@ async function exchangeForLongLivedToken(
     fb_exchange_token: shortLivedToken,
   });
 
-  const response = await fetch(`${GRAPH_API_BASE}/oauth/access_token?${params}`, {
+  const response = await fetch(`${graphApiBase()}/oauth/access_token?${params}`, {
     cache: "no-store",
   });
   const text = await response.text();
@@ -140,7 +143,7 @@ type MetaPageAccount = {
 
 async function listManagedPages(userAccessToken: string): Promise<MetaPageAccount[]> {
   const response = await fetch(
-    `${GRAPH_API_BASE}/me/accounts?fields=id,name,access_token&limit=25&access_token=${encodeURIComponent(userAccessToken)}`,
+    `${graphApiBase()}/me/accounts?fields=id,name,access_token&limit=25&access_token=${encodeURIComponent(userAccessToken)}`,
     { cache: "no-store" },
   );
   const text = await response.text();
@@ -159,7 +162,7 @@ async function listManagedPages(userAccessToken: string): Promise<MetaPageAccoun
 async function listGrantedPermissions(userAccessToken: string): Promise<string[]> {
   try {
     const response = await fetch(
-      `${GRAPH_API_BASE}/me/permissions?access_token=${encodeURIComponent(userAccessToken)}`,
+      `${graphApiBase()}/me/permissions?access_token=${encodeURIComponent(userAccessToken)}`,
       { cache: "no-store" },
     );
     if (!response.ok) return [];
