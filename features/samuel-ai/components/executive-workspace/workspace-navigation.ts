@@ -1,5 +1,7 @@
 export type WorkspaceSection =
   | "executive-inbox"
+  | "gmail"
+  | "whatsapp"
   | "dashboard"
   | "samuel-ai"
   | "autonomous-improvement"
@@ -32,22 +34,19 @@ export type WorkspaceNavItem = {
   icon?: string;
 };
 
-/**
- * The complete navigation registry is intentionally broader than the visible
- * shell. The shell exposes only the five primary workspaces and reveals the
- * rest progressively when the user needs them.
- */
 export const WORKSPACE_NAV_ITEMS: WorkspaceNavItem[] = [
   { id: "samuel-ai", label: "Samuel", group: "core" },
   { id: "executive-inbox", label: "Work", group: "core" },
   { id: "dashboard", label: "Growth", group: "core" },
   { id: "studio", label: "Studio", group: "core" },
   { id: "crm", label: "Clients", group: "core" },
+  { id: "gmail", label: "E-mails", group: "executive" },
+  { id: "whatsapp", label: "WhatsApp Business", group: "executive" },
   { id: "autonomous-improvement", label: "Autoevolução", group: "executive" },
   { id: "site-builder", label: "Criador de Sites", group: "executive" },
   { id: "executive-alerts", label: "Alertas executivos", group: "executive" },
   { id: "executive-timeline", label: "Linha do tempo", group: "executive" },
-  { id: "executive-agenda", label: "Agenda executiva", group: "executive" },
+  { id: "executive-agenda", label: "Google Agenda", group: "executive" },
   { id: "executive-tasks", label: "Tarefas e decisões", group: "executive" },
   { id: "executive-watchers", label: "Monitorização", group: "executive" },
   { id: "marketing", label: "Marketing", group: "modules" },

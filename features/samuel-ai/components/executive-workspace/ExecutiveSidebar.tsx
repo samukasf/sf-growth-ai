@@ -16,7 +16,9 @@ import {
   Globe2,
   Gauge,
   Inbox,
+  Mail,
   Megaphone,
+  MessageCircleMore,
   Radar,
   Scale,
   Search,
@@ -52,8 +54,10 @@ const PRIMARY_ITEMS: NavItem[] = [
 ];
 
 const ADVANCED_ITEMS: NavItem[] = [
+  { id: "gmail", label: "E-mails", icon: Mail },
+  { id: "executive-agenda", label: "Google Agenda", icon: CalendarDays },
+  { id: "whatsapp", label: "WhatsApp Business", icon: MessageCircleMore },
   { id: "executive-tasks", label: "Tarefas e decisões", icon: ShieldCheck },
-  { id: "executive-agenda", label: "Agenda executiva", icon: CalendarDays },
   { id: "executive-alerts", label: "Alertas", icon: BellRing },
   { id: "executive-watchers", label: "Monitorização", icon: Radar },
   { id: "executive-timeline", label: "Linha do tempo", icon: Activity },

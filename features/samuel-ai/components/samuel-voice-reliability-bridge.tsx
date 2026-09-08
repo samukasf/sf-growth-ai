@@ -80,11 +80,9 @@ function primeBrowserSpeech() {
 /**
  * Reliable browser voice bridge for the main Samuel microphone.
  *
- * It deliberately does not depend on Web Speech Recognition or WebRTC. Audio
- * is captured with MediaRecorder, stopped automatically after natural silence,
- * transcribed by the SF Growth AI server, and then routed through ChatPanel's
- * normal message path. The existing Samuel speech engine reads the assistant
- * response aloud.
+ * Audio is captured with MediaRecorder, stopped automatically after natural
+ * silence, transcribed by the SF Growth AI server and routed through the same
+ * ChatPanel message path used by typed conversation.
  */
 export function SamuelVoiceReliabilityBridge() {
   useEffect(() => {
@@ -105,18 +103,26 @@ export function SamuelVoiceReliabilityBridge() {
       button: HTMLButtonElement | null,
       state: "idle" | "recording" | "processing" | "error",
     ) => {
-      if (!button) return;
-      button.dataset.voiceCaptureState = state;
-      button.setAttribute(
-        "aria-label",
-        state === "recording"
-          ? "Samuel está ouvindo. Toque para parar."
-          : state === "processing"
-            ? "Samuel está transcrevendo sua fala."
-            : state === "error"
-              ? "Falha ao captar a voz. Toque para tentar novamente."
-              : "Iniciar conversa por voz",
+      const buttons = Array.from(
+        document.querySelectorAll<HTMLButtonElement>(
+          ".samuel-focus-cockpit .samuel-reference-mic",
+        ),
       );
+      if (button && !buttons.includes(button)) buttons.push(button);
+
+      for (const target of buttons) {
+        target.dataset.voiceCaptureState = state;
+        target.setAttribute(
+          "aria-label",
+          state === "recording"
+            ? "Samuel está ouvindo. Toque para parar."
+            : state === "processing"
+              ? "Samuel está transcrevendo sua fala."
+              : state === "error"
+                ? "Falha ao captar a voz. Toque para tentar novamente."
+                : "Iniciar conversa por voz",
+        );
+      }
     };
 
     const cleanupAudioGraph = () => {
@@ -221,8 +227,6 @@ export function SamuelVoiceReliabilityBridge() {
       speechStarted = false;
       lastVoiceAt = 0;
 
-      // Prime optional audio facilities synchronously while the click still has
-      // user activation. Recording itself does not depend on either facility.
       primeBrowserSpeech();
       const AudioContextCtor =
         window.AudioContext ||
@@ -238,7 +242,6 @@ export function SamuelVoiceReliabilityBridge() {
       }
 
       try {
-        // This call is made in the same user-triggered execution path.
         stream = await navigator.mediaDevices.getUserMedia({
           audio: {
             echoCancellation: true,
@@ -273,9 +276,6 @@ export function SamuelVoiceReliabilityBridge() {
           }
         };
 
-        // Silence detection is a convenience only. If AudioContext is blocked,
-        // MediaRecorder continues normally and the user can stop with a second
-        // click or the 30-second hard limit.
         if (audioContext) {
           try {
             if (audioContext.state === "suspended") {
@@ -308,7 +308,7 @@ export function SamuelVoiceReliabilityBridge() {
       if (!(target instanceof Element)) return;
 
       const primaryButton = target.closest<HTMLButtonElement>(
-        ".samuel-focus-cockpit .samuel-voice-console__start",
+        ".samuel-focus-cockpit .samuel-reference-mic",
       );
       if (!primaryButton) return;
 
