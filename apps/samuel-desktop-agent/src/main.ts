@@ -14,8 +14,8 @@ import {
   shell,
 } from "electron";
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
-import { promises as fs } from "node:fs";
 import { appendFileSync } from "node:fs";
+import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -73,6 +73,20 @@ type UiState = {
   baseUrl: string;
 };
 
+type ComputerStepResponse = {
+  action: {
+    action: string;
+    x: number | null;
+    y: number | null;
+    text: string | null;
+    keys: string[];
+    delta: number | null;
+    message: string;
+    verify: string;
+  };
+  model: string;
+};
+
 const DEFAULT_BASE_URL = "https://sf-growth-ai.vercel.app";
 const POLL_MS = 1_500;
 const MAX_FILE_READ_BYTES = 1_000_000;
@@ -85,6 +99,7 @@ let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let pollTimer: NodeJS.Timeout | null = null;
 let polling = false;
+let quitting = false;
 let currentCommandId: string | null = null;
 let stopRequested = false;
 let status = "Inicializando";
@@ -110,7 +125,7 @@ function audit(event: string, payload: Record<string, unknown> = {}) {
   try {
     appendFileSync(logPath(), `${JSON.stringify({ at: nowIso(), event, ...payload })}\n`, "utf8");
   } catch {
-    // Local audit failure should not crash the agent.
+    // Audit local nunca deve derrubar o agente.
   }
 }
 
@@ -136,7 +151,9 @@ async function loadConfig() {
     config = {
       ...defaultConfig(),
       ...parsed,
-      baseUrl: String(parsed.baseUrl || process.env.SAMUEL_DESKTOP_BASE_URL || DEFAULT_BASE_URL).replace(/\/+$/, ""),
+      baseUrl: String(
+        parsed.baseUrl || process.env.SAMUEL_DESKTOP_BASE_URL || DEFAULT_BASE_URL,
+      ).replace(/\/+$/, ""),
       allowedFolders: Array.isArray(parsed.allowedFolders)
         ? parsed.allowedFolders.filter((item): item is string => typeof item === "string")
         : [],
@@ -157,14 +174,15 @@ async function saveConfig() {
 
 function encryptSecret(value: string) {
   if (!safeStorage.isEncryptionAvailable()) {
-    throw new Error("O cofre seguro do Windows não está disponível. O Samuel não armazenará credenciais em texto puro.");
+    throw new Error(
+      "O cofre seguro do Windows não está disponível. O Samuel não armazenará credenciais em texto puro.",
+    );
   }
   return safeStorage.encryptString(value).toString("base64");
 }
 
 function decryptSecret(value: string | undefined) {
-  if (!value) return null;
-  if (!safeStorage.isEncryptionAvailable()) return null;
+  if (!value || !safeStorage.isEncryptionAvailable()) return null;
   try {
     return safeStorage.decryptString(Buffer.from(value, "base64"));
   } catch {
@@ -195,9 +213,7 @@ async function postJson<T>(pathname: string, body: unknown, authenticated = true
     signal: AbortSignal.timeout(45_000),
   });
   const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-  if (!response.ok) {
-    throw new Error(String(payload.error || `Falha HTTP ${response.status}`));
-  }
+  if (!response.ok) throw new Error(String(payload.error || `Falha HTTP ${response.status}`));
   return payload as T;
 }
 
@@ -247,7 +263,9 @@ async function registerDevice(force = false) {
 
 async function refreshPairingIfExpired() {
   if (config.paired) return;
-  if (!config.pairingExpiresAt || Date.parse(config.pairingExpiresAt) > Date.now() + 5_000) return;
+  if (!config.pairingExpiresAt || Date.parse(config.pairingExpiresAt) > Date.now() + 5_000) {
+    return;
+  }
   config.deviceId = undefined;
   config.encryptedToken = undefined;
   config.encryptedCommandSecret = undefined;
@@ -300,22 +318,32 @@ async function checkPairing() {
     await saveConfig();
     setActivity("Revogado", "Este computador foi removido no SF Growth AI");
   }
-  if (response.status === "paused") setActivity("Pausado remotamente", "Execução bloqueada pelo painel SF Growth AI");
+  if (response.status === "paused") {
+    setActivity("Pausado remotamente", "Execução bloqueada pelo painel SF Growth AI");
+  }
 }
 
 function verifyEnvelope(envelope: SignedEnvelope): DeviceCommand {
   const secret = commandSecret();
   if (!secret) throw new Error("Segredo de comando indisponível.");
   const expected = createHmac("sha256", secret).update(envelope.payload).digest("base64url");
+  const actual = String(envelope.signature || "");
   const a = Buffer.from(expected);
-  const b = Buffer.from(String(envelope.signature || ""));
-  if (a.length !== b.length || !timingSafeEqual(a, b)) throw new Error("Assinatura do comando inválida.");
+  const b = Buffer.from(actual);
+  if (a.length !== b.length || !timingSafeEqual(a, b)) {
+    throw new Error("Assinatura do comando inválida.");
+  }
 
   const decoded = Buffer.from(envelope.payload, "base64url").toString("utf8");
   const command = JSON.parse(decoded) as DeviceCommand;
-  if (!command.id || !command.action || !command.expiresAt) throw new Error("Envelope de comando inválido.");
+  if (!command.id || !command.action || !command.expiresAt) {
+    throw new Error("Envelope de comando inválido.");
+  }
   if (Date.parse(command.expiresAt) <= Date.now()) throw new Error("Comando expirado.");
-  if ((command.risk === "mutate" || command.risk === "sensitive") && !command.approvalReference) {
+  if (
+    (command.risk === "mutate" || command.risk === "sensitive") &&
+    !command.approvalReference
+  ) {
     throw new Error("Comando mutável sem aprovação vinculada.");
   }
   return command;
@@ -324,7 +352,10 @@ function verifyEnvelope(envelope: SignedEnvelope): DeviceCommand {
 function isScoped(candidate: string, root: string) {
   const normalizedCandidate = path.resolve(candidate).toLowerCase();
   const normalizedRoot = path.resolve(root).replace(/[\\/]+$/, "").toLowerCase();
-  return normalizedCandidate === normalizedRoot || normalizedCandidate.startsWith(`${normalizedRoot}${path.sep}`);
+  return (
+    normalizedCandidate === normalizedRoot ||
+    normalizedCandidate.startsWith(`${normalizedRoot}${path.sep}`)
+  );
 }
 
 async function resolveScopedPath(target: string, forWrite = false) {
@@ -335,18 +366,18 @@ async function resolveScopedPath(target: string, forWrite = false) {
     throw new Error("O caminho está fora das pastas autorizadas no Samuel Desktop.");
   }
 
+  const realRoots = await Promise.all(
+    roots.map((root) => fs.realpath(root).catch(() => root)),
+  );
   if (!forWrite) {
     const realCandidate = await fs.realpath(candidate);
-    const realRoots = await Promise.all(roots.map((root) => fs.realpath(root).catch(() => root)));
     if (!realRoots.some((root) => isScoped(realCandidate, root))) {
       throw new Error("O arquivo resolve para fora das pastas autorizadas.");
     }
     return realCandidate;
   }
 
-  const parent = path.dirname(candidate);
-  const realParent = await fs.realpath(parent);
-  const realRoots = await Promise.all(roots.map((root) => fs.realpath(root).catch(() => root)));
+  const realParent = await fs.realpath(path.dirname(candidate));
   if (!realRoots.some((root) => isScoped(realParent, root))) {
     throw new Error("A pasta de destino não está autorizada.");
   }
@@ -361,10 +392,13 @@ async function capturePrimaryScreen(): Promise<Screenshot> {
     types: ["screen"],
     thumbnailSize: { width: targetWidth, height: targetHeight },
   });
-  const matching = sources.find((source) => source.display_id === String(display.id)) ?? sources[0];
-  if (!matching || matching.thumbnail.isEmpty()) throw new Error("Não foi possível capturar a tela principal.");
-  const png = matching.thumbnail.toPNG();
-  const size = matching.thumbnail.getSize();
+  const source =
+    sources.find((candidate) => candidate.display_id === String(display.id)) ?? sources[0];
+  if (!source || source.thumbnail.isEmpty()) {
+    throw new Error("Não foi possível capturar a tela principal.");
+  }
+  const png = source.thumbnail.toPNG();
+  const size = source.thumbnail.getSize();
   return {
     png,
     dataUrl: `data:image/png;base64,${png.toString("base64")}`,
@@ -394,7 +428,10 @@ async function pasteText(text: string) {
   }
 }
 
-async function verifyWithScreenshot(kind: string, details: Record<string, unknown> = {}) {
+async function verifyWithScreenshot(
+  kind: string,
+  details: Record<string, unknown> = {},
+) {
   await new Promise((resolve) => setTimeout(resolve, 550));
   const snapshot = await capturePrimaryScreen();
   return {
@@ -423,27 +460,18 @@ async function runComputerTask(command: DeviceCommand) {
     const snapshot = await capturePrimaryScreen();
     setActivity("Executando", `Computer use · passo ${step + 1}: analisando a tela`);
 
-    const response = await postJson<{
-      action: {
-        action: string;
-        x: number | null;
-        y: number | null;
-        text: string | null;
-        keys: string[];
-        delta: number | null;
-        message: string;
-        verify: string;
-      };
-      model: string;
-    }>("/api/samuel-desktop/computer-step", {
-      commandId: command.id,
-      goal,
-      screenshot: snapshot.dataUrl,
-      width: snapshot.width,
-      height: snapshot.height,
-      step,
-      history,
-    });
+    const response = await postJson<ComputerStepResponse>(
+      "/api/samuel-desktop/computer-step",
+      {
+        commandId: command.id,
+        goal,
+        screenshot: snapshot.dataUrl,
+        width: snapshot.width,
+        height: snapshot.height,
+        step,
+        history,
+      },
+    );
 
     const action = response.action;
     history.push({
@@ -456,7 +484,6 @@ async function runComputerTask(command: DeviceCommand) {
       keys: action.keys,
     });
     if (history.length > 20) history.shift();
-
     setActivity("Executando", action.message || `Computer use · ${action.action}`);
 
     switch (action.action) {
@@ -465,7 +492,9 @@ async function runComputerTask(command: DeviceCommand) {
         await clickPointer(action.x, action.y, false);
         break;
       case "double_click":
-        if (action.x == null || action.y == null) throw new Error("Duplo clique sem coordenadas.");
+        if (action.x == null || action.y == null) {
+          throw new Error("Duplo clique sem coordenadas.");
+        }
         await clickPointer(action.x, action.y, true);
         break;
       case "type":
@@ -525,93 +554,126 @@ async function executeCommand(command: DeviceCommand): Promise<{ result: unknown
         evidence: { type: "window-snapshot", count: windows.length, capturedAt: nowIso() },
       };
     }
-
     case "system.app.open": {
       const file = String(args.file ?? "").trim();
       const process = await openApplication(
         file,
         Array.isArray(args.args) ? args.args.map(String).slice(0, 24) : [],
       );
-      return { result: process, evidence: await verifyWithScreenshot("app-open", { file }) };
+      return {
+        result: process,
+        evidence: await verifyWithScreenshot("app-open", { file }),
+      };
     }
-
     case "system.window.focus": {
       const handle = Number(args.handle);
       const focused = await focusWindow(handle);
       if (!focused) throw new Error("O Windows não confirmou o foco da janela.");
-      return { result: { focused, handle }, evidence: await verifyWithScreenshot("window-focus", { handle }) };
+      return {
+        result: { focused, handle },
+        evidence: await verifyWithScreenshot("window-focus", { handle }),
+      };
     }
-
     case "system.screenshot": {
       const snapshot = await capturePrimaryScreen();
       const savedPath = await saveScreenshot(snapshot);
       return {
         result: { savedPath, width: snapshot.width, height: snapshot.height },
-        evidence: { type: "screenshot", sha256: snapshot.hash, width: snapshot.width, height: snapshot.height, capturedAt: nowIso() },
+        evidence: {
+          type: "screenshot",
+          sha256: snapshot.hash,
+          width: snapshot.width,
+          height: snapshot.height,
+          capturedAt: nowIso(),
+        },
       };
     }
-
     case "browser.open": {
       const url = String(args.url ?? "").trim();
       const parsed = new URL(url);
-      if (!["http:", "https:"].includes(parsed.protocol)) throw new Error("Somente URLs HTTP/HTTPS são permitidas.");
+      if (!["http:", "https:"].includes(parsed.protocol)) {
+        throw new Error("Somente URLs HTTP/HTTPS são permitidas.");
+      }
       await shell.openExternal(parsed.toString());
-      return { result: { opened: parsed.toString() }, evidence: await verifyWithScreenshot("browser-open", { url: parsed.toString() }) };
+      return {
+        result: { opened: parsed.toString() },
+        evidence: await verifyWithScreenshot("browser-open", {
+          url: parsed.toString(),
+        }),
+      };
     }
-
     case "files.read": {
       const target = await resolveScopedPath(String(args.path ?? ""));
       const stats = await fs.stat(target);
       if (!stats.isFile()) throw new Error("O caminho não é um arquivo.");
-      if (stats.size > MAX_FILE_READ_BYTES) throw new Error("Arquivo grande demais para leitura direta; limite local de 1 MB.");
+      if (stats.size > MAX_FILE_READ_BYTES) {
+        throw new Error("Arquivo grande demais para leitura direta; limite local de 1 MB.");
+      }
       const buffer = await fs.readFile(target);
       return {
         result: { path: target, content: buffer.toString("utf8"), bytes: buffer.length },
-        evidence: { type: "file-read", path: target, sha256: createHash("sha256").update(buffer).digest("hex"), bytes: buffer.length },
+        evidence: {
+          type: "file-read",
+          path: target,
+          sha256: createHash("sha256").update(buffer).digest("hex"),
+          bytes: buffer.length,
+        },
       };
     }
-
     case "files.write": {
       const target = await resolveScopedPath(String(args.path ?? ""), true);
-      const content = String(args.content ?? "");
-      const buffer = Buffer.from(content, "utf8");
-      if (buffer.length > MAX_FILE_WRITE_BYTES) throw new Error("Conteúdo grande demais; limite local de 2 MB.");
+      const buffer = Buffer.from(String(args.content ?? ""), "utf8");
+      if (buffer.length > MAX_FILE_WRITE_BYTES) {
+        throw new Error("Conteúdo grande demais; limite local de 2 MB.");
+      }
       await fs.writeFile(target, buffer);
       const written = await fs.readFile(target);
       const checksum = createHash("sha256").update(written).digest("hex");
-      if (checksum !== createHash("sha256").update(buffer).digest("hex")) throw new Error("Falha na verificação do arquivo gravado.");
-      return { result: { path: target, bytes: written.length }, evidence: { type: "file-write", path: target, sha256: checksum, bytes: written.length } };
+      const expected = createHash("sha256").update(buffer).digest("hex");
+      if (checksum !== expected) throw new Error("Falha na verificação do arquivo gravado.");
+      return {
+        result: { path: target, bytes: written.length },
+        evidence: { type: "file-write", path: target, sha256: checksum, bytes: written.length },
+      };
     }
-
     case "pointer.click":
     case "pointer.double_click": {
       const x = Number(args.x);
       const y = Number(args.y);
       await clickPointer(x, y, command.action === "pointer.double_click");
-      return { result: { x, y }, evidence: await verifyWithScreenshot(command.action, { x, y }) };
+      return {
+        result: { x, y },
+        evidence: await verifyWithScreenshot(command.action, { x, y }),
+      };
     }
-
     case "pointer.scroll": {
       const delta = Number(args.delta) || -480;
       await scrollPointer(delta);
-      return { result: { delta }, evidence: await verifyWithScreenshot("scroll", { delta }) };
+      return {
+        result: { delta },
+        evidence: await verifyWithScreenshot("scroll", { delta }),
+      };
     }
-
     case "keyboard.type": {
       const text = String(args.text ?? "");
       await pasteText(text);
-      return { result: { characters: text.length }, evidence: await verifyWithScreenshot("keyboard-type", { characters: text.length }) };
+      return {
+        result: { characters: text.length },
+        evidence: await verifyWithScreenshot("keyboard-type", {
+          characters: text.length,
+        }),
+      };
     }
-
     case "keyboard.shortcut": {
       const keys = Array.isArray(args.keys) ? args.keys.map(String).slice(0, 8) : [];
       await sendShortcut(keys);
-      return { result: { keys }, evidence: await verifyWithScreenshot("keyboard-shortcut", { keys }) };
+      return {
+        result: { keys },
+        evidence: await verifyWithScreenshot("keyboard-shortcut", { keys }),
+      };
     }
-
     case "computer.task":
       return runComputerTask(command);
-
     default:
       throw new Error(`Comando não permitido pelo agente local: ${command.action}`);
   }
@@ -640,7 +702,11 @@ async function handleEnvelope(envelope: SignedEnvelope) {
   currentCommandId = command.id;
   stopRequested = false;
   setActivity("Executando", `${command.action} · ${command.id.slice(0, 8)}`);
-  audit("command_started", { id: command.id, action: command.action, risk: command.risk });
+  audit("command_started", {
+    id: command.id,
+    action: command.action,
+    risk: command.risk,
+  });
 
   try {
     const { result, evidence } = await executeCommand(command);
@@ -652,7 +718,7 @@ async function handleEnvelope(envelope: SignedEnvelope) {
     try {
       await reportResult(command, false, null, null, message);
     } catch {
-      // Keep local audit even if network reporting also failed.
+      // Preserva log local mesmo quando a rede falha.
     }
     setActivity("Atenção", `Falha em ${command.action}: ${message}`);
     audit("command_failed", { id: command.id, action: command.action, error: message });
@@ -664,7 +730,7 @@ async function handleEnvelope(envelope: SignedEnvelope) {
 }
 
 async function pollOnce() {
-  if (polling) return;
+  if (polling || quitting) return;
   polling = true;
   try {
     await refreshPairingIfExpired();
@@ -672,21 +738,23 @@ async function pollOnce() {
     await checkPairing();
 
     if (!config.paired || config.paused || currentCommandId) return;
-    const response = await postJson<{ command: SignedEnvelope | null; paused?: boolean }>(
-      "/api/samuel-desktop/device",
-      { action: "poll" },
-    );
+    const response = await postJson<{
+      command: SignedEnvelope | null;
+      paused?: boolean;
+    }>("/api/samuel-desktop/device", { action: "poll" });
     if (response.paused) {
       setActivity("Pausado remotamente", "A fila está suspensa no SF Growth AI");
       return;
     }
     if (response.command) await handleEnvelope(response.command);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Falha de conexão.";
-    setActivity("Offline", message);
+    setActivity(
+      "Offline",
+      error instanceof Error ? error.message : "Falha de conexão.",
+    );
   } finally {
     polling = false;
-    pollTimer = setTimeout(() => void pollOnce(), POLL_MS);
+    if (!quitting) pollTimer = setTimeout(() => void pollOnce(), POLL_MS);
   }
 }
 
@@ -708,7 +776,7 @@ function createWindow() {
   void mainWindow.loadFile(path.join(__dirname, "../src/ui.html"));
   mainWindow.webContents.on("did-finish-load", sendState);
   mainWindow.on("close", (event) => {
-    if (!app.isQuiting) {
+    if (!quitting) {
       event.preventDefault();
       mainWindow?.hide();
     }
@@ -716,9 +784,12 @@ function createWindow() {
 }
 
 function createTray() {
-  const icon = nativeImage.createFromDataURL(`data:image/png;base64,${TRAY_ICON}`).resize({ width: 20, height: 20 });
+  const icon = nativeImage
+    .createFromDataURL(`data:image/png;base64,${TRAY_ICON}`)
+    .resize({ width: 20, height: 20 });
   tray = new Tray(icon);
   tray.setToolTip("Samuel Desktop · SF Growth AI");
+
   const rebuild = () => {
     tray?.setContextMenu(
       Menu.buildFromTemplate([
@@ -728,16 +799,33 @@ function createTray() {
           click: () => {
             config.paused = !config.paused;
             void saveConfig();
-            setActivity(config.paused ? "Pausado" : "Conectado", config.paused ? "Execução local pausada" : "Execução local retomada");
+            setActivity(
+              config.paused ? "Pausado" : "Conectado",
+              config.paused ? "Execução local pausada" : "Execução local retomada",
+            );
             rebuild();
           },
         },
-        { label: "STOP SAMUEL", enabled: Boolean(currentCommandId), click: () => { stopRequested = true; setActivity("Interrompendo", "STOP SAMUEL solicitado pelo usuário"); } },
+        {
+          label: "STOP SAMUEL",
+          enabled: Boolean(currentCommandId),
+          click: () => {
+            stopRequested = true;
+            setActivity("Interrompendo", "STOP SAMUEL solicitado pelo usuário");
+          },
+        },
         { type: "separator" },
-        { label: "Sair", click: () => { app.isQuiting = true; app.quit(); } },
+        {
+          label: "Sair",
+          click: () => {
+            quitting = true;
+            app.quit();
+          },
+        },
       ]),
     );
   };
+
   rebuild();
   tray.on("double-click", () => mainWindow?.show());
 }
@@ -751,7 +839,11 @@ function registerIpc() {
     });
     if (selection.canceled || !selection.filePaths[0]) return uiState();
     const folder = path.resolve(selection.filePaths[0]);
-    if (!config.allowedFolders.some((item) => path.resolve(item).toLowerCase() === folder.toLowerCase())) {
+    if (
+      !config.allowedFolders.some(
+        (item) => path.resolve(item).toLowerCase() === folder.toLowerCase(),
+      )
+    ) {
       config.allowedFolders.push(folder);
       await saveConfig();
       audit("folder_allowed", { folder });
@@ -771,7 +863,10 @@ function registerIpc() {
   ipcMain.handle("samuel:set-paused", async (_event, paused: boolean) => {
     config.paused = paused === true;
     await saveConfig();
-    setActivity(config.paused ? "Pausado" : "Conectado", config.paused ? "Execução local pausada" : "Execução local retomada");
+    setActivity(
+      config.paused ? "Pausado" : "Conectado",
+      config.paused ? "Execução local pausada" : "Execução local retomada",
+    );
     return uiState();
   });
   ipcMain.handle("samuel:stop", () => {
@@ -790,13 +885,9 @@ function registerIpc() {
     await registerDevice(true);
     return uiState();
   });
-  ipcMain.handle("samuel:open-panel", () => shell.openExternal(`${config.baseUrl}/samuel-ai/desktop`));
-}
-
-declare module "electron" {
-  interface App {
-    isQuiting?: boolean;
-  }
+  ipcMain.handle("samuel:open-panel", () =>
+    shell.openExternal(`${config.baseUrl}/samuel-ai/desktop`),
+  );
 }
 
 app.whenReady().then(async () => {
@@ -818,17 +909,16 @@ app.whenReady().then(async () => {
   try {
     await registerDevice();
   } catch (error) {
-    setActivity("Offline", error instanceof Error ? error.message : "Falha no registro inicial");
+    setActivity(
+      "Offline",
+      error instanceof Error ? error.message : "Falha no registro inicial",
+    );
   }
   void pollOnce();
 });
 
 app.on("before-quit", () => {
-  app.isQuiting = true;
+  quitting = true;
   if (pollTimer) clearTimeout(pollTimer);
   globalShortcut.unregisterAll();
-});
-
-app.on("window-all-closed", (event: Event) => {
-  event.preventDefault();
 });
