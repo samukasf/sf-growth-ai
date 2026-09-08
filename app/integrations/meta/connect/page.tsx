@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BarChart3, CheckCircle2, Instagram, Megaphone, PanelsTopLeft, RefreshCw, Send, TriangleAlert } from "lucide-react";
+import { BarChart3, Camera, CheckCircle2, Megaphone, PanelsTopLeft, RefreshCw, Send, TriangleAlert } from "lucide-react";
 
 import { findMetaOAuthConnection } from "@/integrations/meta/meta-token.repository";
 import { META_OAUTH_SCOPES, resolveMetaOAuthConfig } from "@/integrations/meta/meta.auth";
@@ -22,7 +22,7 @@ type ConnectPageProps = {
 const CAPABILITIES = [
   { label: "Facebook Page", permissions: ["pages_show_list", "pages_read_engagement"], description: "Página, conteúdo e métricas.", icon: PanelsTopLeft },
   { label: "Insights", permissions: ["pages_read_engagement", "instagram_manage_insights"], description: "Métricas de Facebook e Instagram.", icon: BarChart3 },
-  { label: "Instagram Business", permissions: ["instagram_basic"], description: "Conta profissional ligada à Página.", icon: Instagram },
+  { label: "Instagram Business", permissions: ["instagram_basic"], description: "Conta profissional ligada à Página.", icon: Camera },
   { label: "Publicação", permissions: ["pages_manage_posts", "instagram_content_publish"], description: "Publicar conteúdo quando a app tiver Advanced Access.", icon: Send },
   { label: "Anúncios", permissions: ["ads_read", "ads_management"], description: "Ler e gerir campanhas autorizadas.", icon: Megaphone },
 ] as const;
