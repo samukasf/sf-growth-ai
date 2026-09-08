@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
- type Device = {
+type Device = {
   id: string;
   company_id: string | null;
   device_name: string;
@@ -75,9 +75,12 @@ export default function SamuelDesktopPage() {
   }, []);
 
   useEffect(() => {
-    void load();
+    const initialRefresh = window.setTimeout(() => void load(), 0);
     const timer = window.setInterval(() => void load(), 4_000);
-    return () => window.clearInterval(timer);
+    return () => {
+      window.clearTimeout(initialRefresh);
+      window.clearInterval(timer);
+    };
   }, [load]);
 
   const selected = useMemo(
