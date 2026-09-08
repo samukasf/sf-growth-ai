@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { authorizeCompanyRequest } from "@/features/auth/server/authorization";
+import { getWhatsAppConfigStatus } from "@/features/whatsapp/whatsapp-config.server";
 
 export const dynamic = "force-dynamic";
 
@@ -15,20 +16,7 @@ export async function GET(request: Request) {
   const auth = await authorizeCompanyRequest(companyId);
   if (!auth.ok) return auth.response;
 
-  const configured = Boolean(
-    process.env.WHATSAPP_ACCESS_TOKEN &&
-    process.env.WHATSAPP_PHONE_NUMBER_ID &&
-    process.env.WHATSAPP_GRAPH_API_VERSION,
-  );
-
-  return NextResponse.json(
-    {
-      configured,
-      provider: "WhatsApp Business Platform",
-      phoneNumberIdConfigured: Boolean(process.env.WHATSAPP_PHONE_NUMBER_ID),
-      businessAccountConfigured: Boolean(process.env.WHATSAPP_BUSINESS_ACCOUNT_ID),
-      webhookConfigured: Boolean(process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN),
-    },
-    { headers: { "Cache-Control": "private, no-store" } },
-  );
+  return NextResponse.json(getWhatsAppConfigStatus(companyId), {
+    headers: { "Cache-Control": "private, no-store" },
+  });
 }
