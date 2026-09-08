@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Samuel Desktop</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: radial-gradient(circle at 50% 0%, #0a2635 0, #070c12 32%, #030507 75%); color: #f5fbff; }
+    main { padding: 24px; }
+    .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+    .mark { width: 42px; height: 42px; border-radius: 50%; border: 1px solid rgba(74,210,255,.55); display: grid; place-items: center; box-shadow: 0 0 28px rgba(41,194,255,.2); font-weight: 800; }
+    h1 { font-size: 18px; margin: 0; letter-spacing: .03em; }
+    .sub { color: #7f95a5; font-size: 12px; margin-top: 2px; }
+    .card { border: 1px solid rgba(255,255,255,.09); background: rgba(6,12,18,.74); border-radius: 18px; padding: 16px; margin: 12px 0; box-shadow: 0 16px 45px rgba(0,0,0,.22); }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .label { color: #7890a1; font-size: 10px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
+    .status { display: inline-flex; align-items: center; gap: 7px; margin-top: 8px; font-weight: 700; font-size: 14px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #42e3a4; box-shadow: 0 0 14px rgba(66,227,164,.7); }
+    .dot.warn { background: #ffbc52; box-shadow: 0 0 14px rgba(255,188,82,.6); }
+    .dot.off { background: #ef6675; box-shadow: 0 0 14px rgba(239,102,117,.5); }
+    .activity { color: #a6b7c4; font-size: 12px; line-height: 1.5; margin: 8px 0 0; min-height: 36px; }
+    .code { margin-top: 12px; text-align: center; font-size: 31px; font-weight: 800; letter-spacing: .18em; color: #73d9ff; font-variant-numeric: tabular-nums; }
+    .hint { color: #7f95a5; font-size: 11px; line-height: 1.5; margin: 8px 0 0; }
+    button { appearance: none; border: 1px solid rgba(255,255,255,.12); border-radius: 12px; background: #101c25; color: #f4fbff; padding: 10px 12px; font-weight: 700; font-size: 12px; cursor: pointer; transition: .15s ease; }
+    button:hover { background: #142a38; border-color: rgba(92,208,255,.38); }
+    button.primary { background: #2188ef; border-color: #2188ef; }
+    button.danger { background: rgba(190,40,54,.22); border-color: rgba(255,87,103,.35); color: #ffafb8; }
+    button:disabled { opacity: .4; cursor: default; }
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 12px; }
+    .folder { display: flex; align-items: center; gap: 8px; border-top: 1px solid rgba(255,255,255,.06); padding: 9px 0; }
+    .folder:first-of-type { margin-top: 8px; }
+    .folder span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #b9c7d1; font-size: 11px; }
+    .folder button { padding: 6px 8px; font-size: 10px; }
+    .empty { color: #607484; font-size: 11px; padding: 10px 0 2px; }
+    .shortcut { color: #607484; font-size: 10px; text-align: center; margin: 15px 0 2px; }
+    .device-id { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; color: #5f7687; font-size: 9px; word-break: break-all; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="brand">
+      <div class="mark">S</div>
+      <div><h1>Samuel Desktop</h1><div class="sub">SF Growth AI · agente local Windows</div></div>
+    </div>
+
+    <section class="card">
+      <div class="label">Estado do agente</div>
+      <div class="row"><div id="status" class="status"><span id="dot" class="dot"></span><span>Inicializando</span></div><span id="device" class="sub"></span></div>
+      <p id="activity" class="activity">Preparando conexão segura…</p>
+      <div id="deviceId" class="device-id"></div>
+      <div class="actions">
+        <button id="pause">Pausar</button>
+        <button id="stop" class="danger">STOP SAMUEL</button>
+      </div>
+    </section>
+
+    <section id="pairCard" class="card">
+      <div class="label">Parear com sua conta</div>
+      <div id="pairingCode" class="code">--------</div>
+      <p id="pairHint" class="hint">Abra o painel do SF Growth AI, entre em Samuel Desktop e digite este código. O código expira em 10 minutos.</p>
+      <div class="actions">
+        <button id="openPanel" class="primary">Abrir painel</button>
+        <button id="newCode">Novo código</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="row"><div><div class="label">Pastas autorizadas</div><p class="hint">Samuel só lê ou grava arquivos dentro das pastas que você autorizar aqui.</p></div><button id="addFolder">+ Pasta</button></div>
+      <div id="folders"></div>
+    </section>
+
+    <p class="shortcut">Atalho global de emergência: <strong>Ctrl + Alt + Esc</strong></p>
+  </main>
+  <script>
+    const api = window.samuelDesktop;
+    let current = null;
+    const $ = (id) => document.getElementById(id);
+
+    function render(state) {
+      current = state;
+      $("status").lastElementChild.textContent = state.status;
+      $("device").textContent = state.deviceName;
+      $("activity").textContent = state.lastActivity || "—";
+      $("deviceId").textContent = state.deviceId ? `ID: ${state.deviceId}` : "";
+      $("pause").textContent = state.paused ? "Retomar" : "Pausar";
+      $("stop").disabled = !state.currentCommand;
+      $("pairCard").style.display = state.paired ? "none" : "block";
+      $("pairingCode").textContent = state.pairingCode || "--------";
+
+      const statusText = String(state.status || "").toLowerCase();
+      $("dot").className = "dot" + (statusText.includes("offline") || statusText.includes("revog") ? " off" : statusText.includes("aguard") || statusText.includes("aten") || statusText.includes("paus") ? " warn" : "");
+
+      const folders = $("folders");
+      folders.innerHTML = "";
+      if (!state.allowedFolders.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = "Nenhuma pasta autorizada. Computer use continua disponível, mas acesso direto a arquivos fica bloqueado.";
+        folders.appendChild(empty);
+      }
+      for (const folder of state.allowedFolders) {
+        const row = document.createElement("div");
+        row.className = "folder";
+        const text = document.createElement("span");
+        text.textContent = folder;
+        text.title = folder;
+        const remove = document.createElement("button");
+        remove.textContent = "Remover";
+        remove.onclick = async () => render(await api.removeFolder(folder));
+        row.append(text, remove);
+        folders.appendChild(row);
+      }
+    }
+
+    $("pause").onclick = async () => render(await api.setPaused(!current.paused));
+    $("stop").onclick = async () => render(await api.stop());
+    $("addFolder").onclick = async () => render(await api.addFolder());
+    $("newCode").onclick = async () => render(await api.newPairingCode());
+    $("openPanel").onclick = () => api.openPanel();
+
+    api.onState(render);
+    api.getState().then(render).catch((error) => {
+      $("activity").textContent = error?.message || "Falha ao carregar o estado do agente.";
+    });
+  </script>
+</body>
+</html>
