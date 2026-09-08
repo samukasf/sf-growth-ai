@@ -34,6 +34,7 @@ const NAV_ITEMS = [
 ];
 
 export function SamuelAiFocus({ data, handlers, onNavigate }: SamuelAiFocusProps) {
+  const companyId = data.executiveContext?.company.id ?? "default-company";
   const companyName = data.executiveContext?.company.name ?? data.briefing.companyName ?? "SF Growth AI";
   const segment = data.executiveContext?.businessProfile?.segment ?? data.executiveContext?.company.industry ?? null;
   const alerts = (data.watcherExecutive?.summary.criticalAlerts ?? 0) + (data.executiveMonitoring?.alerts.length ?? 0);
@@ -41,6 +42,7 @@ export function SamuelAiFocus({ data, handlers, onNavigate }: SamuelAiFocusProps
 
   return (
     <section className="samuel-focus-cockpit samuel-command-center relative h-dvh w-full overflow-hidden bg-[#030507] text-white">
+      <span hidden data-samuel-company-id={companyId} />
       <SamuelVoiceReliabilityBridge />
       <AmbientParticleField />
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_48%_at_50%_16%,rgba(33,104,255,.14),transparent_62%),radial-gradient(circle_at_50%_58%,rgba(34,211,238,.045),transparent_28%),linear-gradient(180deg,#04070a_0%,#020305_100%)]" />
@@ -126,9 +128,9 @@ export function SamuelAiFocus({ data, handlers, onNavigate }: SamuelAiFocusProps
 
       <div className="absolute inset-0 z-10 pt-20">
         <ChatPanel
-          key={data.executiveContext?.company.id ?? "default-company"}
+          key={companyId}
           initialMessages={EMPTY_CHAT_MESSAGES}
-          companyId={data.executiveContext?.company.id ?? "default-company"}
+          companyId={companyId}
           isProcessing={handlers.isProcessing}
           onSendMessage={handlers.onSendMessage}
           onFirstMessage={handlers.onFirstMessage}
