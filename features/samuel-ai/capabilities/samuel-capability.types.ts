@@ -64,6 +64,7 @@ export type SamuelCapabilityExecutionRequest = {
   autonomy: 0 | 1 | 2 | 3;
   approved?: boolean;
   input?: Record<string, unknown>;
+  satisfiedRequirements?: string[];
 };
 
 export type SamuelCapabilityExecutionStatus =
@@ -84,4 +85,5 @@ export type SamuelCapabilityExecutionPlan = {
   payload: Record<string, unknown>;
   timeoutMs: number | null;
   cancellable: boolean;
+  missingRequirements: string[];
 };
