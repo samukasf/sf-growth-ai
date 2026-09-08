@@ -37,15 +37,32 @@ type Props = {
 };
 
 function formatDate(value: string) {
-  const date = new Date(value);
+  const date = new Date(value.length === 10 ? `${value}T12:00:00` : value);
   if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat("pt-PT", { weekday: "short", day: "2-digit", month: "short" }).format(date);
+  return new Intl.DateTimeFormat("pt-PT", {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+  }).format(date);
 }
 
 function formatTime(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-  return new Intl.DateTimeFormat("pt-PT", { hour: "2-digit", minute: "2-digit" }).format(date);
+  return new Intl.DateTimeFormat("pt-PT", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function formatAllDay(event: CalendarEvent) {
+  if (!event.end || event.end.length !== 10) return "Dia inteiro";
+  const start = new Date(`${event.start.slice(0, 10)}T12:00:00`);
+  const exclusiveEnd = new Date(`${event.end}T12:00:00`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(exclusiveEnd.getTime())) return "Dia inteiro";
+  exclusiveEnd.setDate(exclusiveEnd.getDate() - 1);
+  if (exclusiveEnd.toDateString() === start.toDateString()) return "Dia inteiro";
+  return `Dia inteiro · até ${formatDate(exclusiveEnd.toISOString())}`;
 }
 
 export function GoogleAgendaPanel({ companyId, onNavigate }: Props) {
@@ -77,9 +94,7 @@ export function GoogleAgendaPanel({ companyId, onNavigate }: Props) {
   }, [companyId, view]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      void load();
-    }, 0);
+    const timer = window.setTimeout(() => void load(), 0);
     return () => window.clearTimeout(timer);
   }, [load]);
 
@@ -97,7 +112,9 @@ export function GoogleAgendaPanel({ companyId, onNavigate }: Props) {
     <section className="min-h-[calc(100dvh-130px)] overflow-hidden rounded-[28px] border border-white/[.07] bg-[#07111c] text-white shadow-[0_24px_80px_rgba(0,0,0,.28)]">
       <header className="flex flex-col gap-4 border-b border-white/[.07] bg-[linear-gradient(180deg,rgba(8,31,53,.82),rgba(5,17,29,.75))] p-4 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-3">
-          <span className="flex size-11 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-300/[.08] text-cyan-200"><CalendarDays className="size-5" /></span>
+          <span className="flex size-11 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-300/[.08] text-cyan-200">
+            <CalendarDays className="size-5" />
+          </span>
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[.2em] text-cyan-200/55">Google Workspace</p>
             <h2 className="mt-1 text-xl font-semibold text-white">Agenda</h2>
@@ -141,7 +158,11 @@ export function GoogleAgendaPanel({ companyId, onNavigate }: Props) {
           {loading ? (
             <div className="grid gap-3">{Array.from({ length: 4 }, (_, index) => <div key={index} className="h-24 animate-pulse rounded-2xl border border-white/[.05] bg-white/[.025]" />)}</div>
           ) : filtered.length === 0 ? (
-            <div className="flex min-h-[320px] flex-col items-center justify-center rounded-3xl border border-dashed border-white/10 bg-white/[.018] text-center"><CalendarDays className="size-10 text-cyan-200/35" /><strong className="mt-4 text-sm text-white/65">Nenhum compromisso encontrado</strong><p className="mt-2 max-w-sm text-xs leading-relaxed text-white/32">Crie ou consulte compromissos pelo Samuel usando voz ou texto.</p></div>
+            <div className="flex min-h-[320px] flex-col items-center justify-center rounded-3xl border border-dashed border-white/10 bg-white/[.018] text-center">
+              <CalendarDays className="size-10 text-cyan-200/35" />
+              <strong className="mt-4 text-sm text-white/65">Nenhum compromisso encontrado</strong>
+              <p className="mt-2 max-w-sm text-xs leading-relaxed text-white/32">Crie ou consulte compromissos pelo Samuel usando voz ou texto.</p>
+            </div>
           ) : (
             <div className="grid gap-3">
               {filtered.map((event) => (
@@ -150,7 +171,10 @@ export function GoogleAgendaPanel({ companyId, onNavigate }: Props) {
                     <div className="min-w-0">
                       <p className="text-[10px] font-semibold uppercase tracking-[.16em] text-cyan-200/50">{formatDate(event.start)}</p>
                       <h3 className="mt-1 truncate text-sm font-semibold text-white/85">{event.title || "Compromisso sem título"}</h3>
-                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2 text-[11px] text-white/38"><span className="flex items-center gap-1.5"><Clock3 className="size-3.5" />{event.allDay ? "Dia inteiro" : `${formatTime(event.start)} – ${formatTime(event.end)}`}</span>{event.location && <span className="flex items-center gap-1.5"><MapPin className="size-3.5" />{event.location}</span>}</div>
+                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2 text-[11px] text-white/38">
+                        <span className="flex items-center gap-1.5"><Clock3 className="size-3.5" />{event.allDay ? formatAllDay(event) : `${formatTime(event.start)} – ${formatTime(event.end)}`}</span>
+                        {event.location && <span className="flex items-center gap-1.5"><MapPin className="size-3.5" />{event.location}</span>}
+                      </div>
                     </div>
                     <button type="button" onClick={() => onNavigate("samuel-ai")} className="shrink-0 rounded-xl border border-white/[.07] px-3 py-2 text-[10px] font-semibold text-white/45 transition hover:border-cyan-300/20 hover:text-cyan-100">Pedir ao Samuel</button>
                   </div>
