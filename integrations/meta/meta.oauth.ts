@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 import {
+  META_OAUTH_SCOPES,
   resolveMetaOAuthConfig,
   type MetaOAuthConfig,
 } from "./meta.auth";
@@ -69,15 +70,7 @@ export function buildSignedMetaOAuthAuthorizeUrl(companyId: string): string {
   const params = new URLSearchParams({
     client_id: config.appId,
     redirect_uri: config.redirectUri,
-    scope: [
-      "pages_show_list",
-      "pages_read_engagement",
-      "pages_read_user_content",
-      "instagram_basic",
-      "instagram_manage_insights",
-      "ads_read",
-      "business_management",
-    ].join(","),
+    scope: META_OAUTH_SCOPES,
     response_type: "code",
     state,
   });
@@ -133,7 +126,6 @@ async function exchangeForLongLivedToken(
   });
   const text = await response.text();
   if (!response.ok) {
-    // Keep short-lived token if long-lived exchange fails.
     return { access_token: shortLivedToken };
   }
 
@@ -164,9 +156,24 @@ async function listManagedPages(userAccessToken: string): Promise<MetaPageAccoun
   return payload.data ?? [];
 }
 
-/**
- * Completa o OAuth Meta: code → user token → long-lived → page token persistido.
- */
+async function listGrantedPermissions(userAccessToken: string): Promise<string[]> {
+  try {
+    const response = await fetch(
+      `${GRAPH_API_BASE}/me/permissions?access_token=${encodeURIComponent(userAccessToken)}`,
+      { cache: "no-store" },
+    );
+    if (!response.ok) return [];
+    const payload = (await response.json()) as {
+      data?: Array<{ permission?: string; status?: string }>;
+    };
+    return (payload.data ?? [])
+      .filter((item) => item.status === "granted" && Boolean(item.permission))
+      .map((item) => item.permission as string);
+  } catch {
+    return [];
+  }
+}
+
 export async function completeMetaOAuthConnection(
   code: string,
   companyId: string,
@@ -179,7 +186,10 @@ export async function completeMetaOAuthConnection(
 
   const shortLived = await exchangeCodeForUserToken(code, config);
   const longLived = await exchangeForLongLivedToken(shortLived.access_token, config);
-  const pages = await listManagedPages(longLived.access_token);
+  const [pages, grantedPermissions] = await Promise.all([
+    listManagedPages(longLived.access_token),
+    listGrantedPermissions(longLived.access_token),
+  ]);
 
   if (pages.length === 0) {
     throw new MetaApiError(
@@ -213,7 +223,7 @@ export async function completeMetaOAuthConnection(
     accessToken: page.access_token,
     tokenType: longLived.token_type ?? shortLived.token_type ?? "bearer",
     expiresAt,
-    scopes: null,
+    scopes: grantedPermissions.length > 0 ? grantedPermissions.join(",") : null,
     connectedBy: connectedBy ?? null,
   });
 }
