@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { ChatPanel } from "../chat-panel";
+import { SamuelVoiceReliabilityBridge } from "../samuel-voice-reliability-bridge";
 import { AmbientParticleField } from "../shared/ambient-particle-field";
 import type { ExecutiveWorkspaceData, ExecutiveWorkspaceHandlers } from "./executive-workspace.types";
 import type { WorkspaceSection } from "./workspace-navigation";
@@ -40,6 +41,7 @@ export function SamuelAiFocus({ data, handlers, onNavigate }: SamuelAiFocusProps
 
   return (
     <section className="samuel-focus-cockpit samuel-command-center relative h-dvh w-full overflow-hidden bg-[#030507] text-white">
+      <SamuelVoiceReliabilityBridge />
       <AmbientParticleField />
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_48%_at_50%_16%,rgba(33,104,255,.14),transparent_62%),radial-gradient(circle_at_50%_58%,rgba(34,211,238,.045),transparent_28%),linear-gradient(180deg,#04070a_0%,#020305_100%)]" />
       <div aria-hidden="true" className="pointer-events-none absolute left-1/2 top-[14%] size-[42vw] max-h-[620px] max-w-[620px] -translate-x-1/2 rounded-full border border-cyan-200/[.035] shadow-[0_0_120px_rgba(34,211,238,.035),inset_0_0_90px_rgba(37,99,235,.025)]" />
