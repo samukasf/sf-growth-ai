@@ -6,15 +6,25 @@ export type MetaOAuthConfig = {
   redirectUri: string;
 };
 
-const META_OAUTH_SCOPES = [
+export const META_OAUTH_SCOPES = [
   "pages_show_list",
   "pages_read_engagement",
   "pages_read_user_content",
+  "pages_manage_posts",
+  "pages_manage_metadata",
   "instagram_basic",
   "instagram_manage_insights",
+  "instagram_content_publish",
   "ads_read",
+  "ads_management",
   "business_management",
 ].join(",");
+
+export function resolveMetaGraphApiVersion(): string {
+  const configured = process.env.META_GRAPH_API_VERSION?.trim();
+  if (configured) return configured.startsWith("v") ? configured : `v${configured}`;
+  return "v26.0";
+}
 
 export function resolveMetaPageId(companyId?: string): string {
   const mapJson = process.env.META_PAGE_MAP;
@@ -69,7 +79,6 @@ export function resolveMetaClientConfig(
   };
 }
 
-/** Resolve config from env or from an already-loaded OAuth connection override. */
 export async function resolveMetaClientConfigForCompany(
   companyId: string,
 ): Promise<MetaClientConfig | null> {
@@ -116,7 +125,7 @@ export function buildMetaOAuthAuthorizeUrl(state?: string): string | null {
     ...(state ? { state } : {}),
   });
 
-  return `https://www.facebook.com/v21.0/dialog/oauth?${params.toString()}`;
+  return `https://www.facebook.com/${resolveMetaGraphApiVersion()}/dialog/oauth?${params.toString()}`;
 }
 
 export function isMetaTokenExpiredError(code?: number, message?: string): boolean {
