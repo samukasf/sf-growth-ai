@@ -39,7 +39,7 @@ describe("Realtime voice server configuration", () => {
     expect(() => resolveRealtimeModel()).toThrow(InvalidRealtimeModelError);
   });
 
-  it("builds the GA audio schema with automatic turn detection", () => {
+  it("builds the GA audio schema with automatic turn detection and desktop tool", () => {
     const session = buildRealtimeSession({
       model: "gpt-realtime-2.1",
       voice: DEFAULT_REALTIME_VOICE,
@@ -63,5 +63,18 @@ describe("Realtime voice server configuration", () => {
     expect(session.instructions).toContain(
       "Só diga que executou algo quando houver confirmação real do sistema",
     );
+    expect(session.instructions).toContain("use a ferramenta computer_task");
+    expect(session.tool_choice).toBe("auto");
+    expect(session.parallel_tool_calls).toBe(false);
+    expect(session.tools).toHaveLength(1);
+    expect(session.tools[0]).toMatchObject({
+      type: "function",
+      name: "computer_task",
+      parameters: {
+        type: "object",
+        additionalProperties: false,
+        required: ["goal"],
+      },
+    });
   });
 });
