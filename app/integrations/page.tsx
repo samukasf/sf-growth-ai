@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, Linkedin, Mail, MessageCircleMore, PanelsTopLeft } from "lucide-react";
+import { CalendarDays, Mail, MessageCircleMore, PanelsTopLeft, UsersRound } from "lucide-react";
 
 const integrations = [
   {
@@ -20,7 +20,7 @@ const integrations = [
     title: "LinkedIn",
     description: "Conexão empresarial para presença, pesquisa e futuras ações de publicação.",
     href: "/integrations/linkedin/connect",
-    icon: Linkedin,
+    icon: UsersRound,
     action: "Configurar LinkedIn",
   },
   {
@@ -28,7 +28,7 @@ const integrations = [
     description: "Integração preparada para a WhatsApp Business Platform oficial. Requer token, número empresarial e ID da conta Meta Business no ambiente seguro.",
     href: "/samuel-ai",
     icon: MessageCircleMore,
-    action: "Abrir painel WhatsApp",
+    action: "Abrir Samuel",
   },
 ] as const;
 
