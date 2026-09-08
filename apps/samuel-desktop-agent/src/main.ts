@@ -87,6 +87,18 @@ type ComputerStepResponse = {
   model: string;
 };
 
+class DesktopHttpError extends Error {
+  readonly status: number;
+  readonly code: string | null;
+
+  constructor(message: string, status: number, code: string | null) {
+    super(message);
+    this.name = "DesktopHttpError";
+    this.status = status;
+    this.code = code;
+  }
+}
+
 const DEFAULT_BASE_URL = "https://sf-growth-ai.vercel.app";
 const POLL_MS = 1_500;
 const MAX_FILE_READ_BYTES = 1_000_000;
@@ -172,6 +184,19 @@ async function saveConfig() {
   await fs.rename(temporary, target);
 }
 
+async function resetPairingState(activity: string) {
+  config.deviceId = undefined;
+  config.encryptedToken = undefined;
+  config.encryptedCommandSecret = undefined;
+  config.paired = false;
+  config.pairingCode = undefined;
+  config.pairingExpiresAt = undefined;
+  config.companyId = null;
+  await saveConfig();
+  audit("pairing_reset", { activity });
+  setActivity("Aguardando pareamento", activity);
+}
+
 function encryptSecret(value: string) {
   if (!safeStorage.isEncryptionAvailable()) {
     throw new Error(
@@ -213,7 +238,13 @@ async function postJson<T>(pathname: string, body: unknown, authenticated = true
     signal: AbortSignal.timeout(45_000),
   });
   const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-  if (!response.ok) throw new Error(String(payload.error || `Falha HTTP ${response.status}`));
+  if (!response.ok) {
+    throw new DesktopHttpError(
+      String(payload.error || `Falha HTTP ${response.status}`),
+      response.status,
+      typeof payload.code === "string" ? payload.code : null,
+    );
+  }
   return payload as T;
 }
 
@@ -298,11 +329,31 @@ function sendState() {
 
 async function checkPairing() {
   if (!config.deviceId || !deviceToken()) return;
-  const response = await postJson<{
+
+  let response: {
     status: string;
     paired: boolean;
     companyId: string | null;
-  }>("/api/samuel-desktop/device", { action: "pair_status" });
+  };
+  try {
+    response = await postJson<{
+      status: string;
+      paired: boolean;
+      companyId: string | null;
+    }>("/api/samuel-desktop/device", { action: "pair_status" });
+  } catch (error) {
+    if (
+      error instanceof DesktopHttpError &&
+      (error.status === 401 || error.code === "DEVICE_UNAUTHORIZED")
+    ) {
+      await resetPairingState(
+        "O vínculo anterior foi removido. Gerando um novo código de pareamento.",
+      );
+      await registerDevice(true);
+      return;
+    }
+    throw error;
+  }
 
   const linked = response.status === "paired" || response.status === "paused";
   if (linked && !config.paired) {
@@ -314,9 +365,11 @@ async function checkPairing() {
     setActivity("Conectado", "Samuel Desktop pareado com sua conta");
   }
   if (response.status === "revoked") {
-    config.paired = false;
-    await saveConfig();
-    setActivity("Revogado", "Este computador foi removido no SF Growth AI");
+    await resetPairingState(
+      "Este computador foi removido. Gerando um novo código de pareamento.",
+    );
+    await registerDevice(true);
+    return;
   }
   if (response.status === "paused") {
     setActivity("Pausado remotamente", "Execução bloqueada pelo painel SF Growth AI");
@@ -377,11 +430,22 @@ async function resolveScopedPath(target: string, forWrite = false) {
     return realCandidate;
   }
 
+  try {
+    const realCandidate = await fs.realpath(candidate);
+    if (!realRoots.some((root) => isScoped(realCandidate, root))) {
+      throw new Error("O arquivo de destino resolve para fora das pastas autorizadas.");
+    }
+    return realCandidate;
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code !== "ENOENT") throw error;
+  }
+
   const realParent = await fs.realpath(path.dirname(candidate));
   if (!realRoots.some((root) => isScoped(realParent, root))) {
     throw new Error("A pasta de destino não está autorizada.");
   }
-  return candidate;
+  return path.join(realParent, path.basename(candidate));
 }
 
 async function capturePrimaryScreen(): Promise<Screenshot> {
@@ -472,6 +536,8 @@ async function runComputerTask(command: DeviceCommand) {
         history,
       },
     );
+
+    if (stopRequested) throw new Error("Tarefa interrompida pelo botão STOP SAMUEL.");
 
     const action = response.action;
     history.push({
