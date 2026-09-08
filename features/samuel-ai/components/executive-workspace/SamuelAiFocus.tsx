@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
   Activity,
@@ -46,17 +46,19 @@ type NavItem = {
   icon: LucideIcon;
   section?: WorkspaceSection;
   href?: string;
+  action?: "conversation";
 };
 
-type PromptAction = {
+type PanelAction = {
   label: string;
   icon: LucideIcon;
-  prompt: string;
+  prompt?: string;
+  section?: WorkspaceSection;
 };
 
 const LEFT_NAV: NavItem[] = [
   { label: "Início", icon: Home, section: "samuel-ai" },
-  { label: "Conversar", icon: MessageSquareText, section: "samuel-ai" },
+  { label: "Conversar", icon: MessageSquareText, action: "conversation" },
   { label: "Tarefas", icon: ListChecks, section: "executive-tasks" },
   { label: "Agenda", icon: CalendarDays, section: "executive-agenda" },
   { label: "E-mails", icon: Mail, section: "executive-inbox" },
@@ -69,21 +71,57 @@ const LEFT_NAV: NavItem[] = [
   { label: "Configurações", icon: Settings, href: "/integrations" },
 ];
 
-const RIGHT_ACTIONS: PromptAction[] = [
-  { label: "Encontrar\nclientes", icon: UserRoundSearch, prompt: "Encontre novos clientes com maior potencial para a minha empresa e organize por prioridade." },
-  { label: "Analisar\nempresas", icon: BarChart3, prompt: "Analise uma empresa e identifique oportunidades, riscos, posicionamento e possíveis abordagens comerciais." },
-  { label: "Criar sites\ne apps", icon: FileText, prompt: "Quero criar um site ou aplicativo. Estruture a melhor solução e comece pelo escopo essencial." },
-  { label: "Gerenciar\nanúncios", icon: Megaphone, prompt: "Analise e gerencie minhas campanhas de anúncios com foco em resultado e desperdício mínimo." },
-  { label: "Enviar\ne-mails", icon: Mail, prompt: "Ajude-me a preparar e enviar os e-mails prioritários da empresa." },
-  { label: "Agendar\ntarefas", icon: CalendarDays, prompt: "Organize minhas tarefas prioritárias e agende o que for necessário." },
+const RIGHT_ACTIONS: PanelAction[] = [
+  {
+    label: "Encontrar\nclientes",
+    icon: UserRoundSearch,
+    prompt: "Encontre novos clientes com maior potencial para a minha empresa. Pesquise, qualifique e organize por prioridade. Mostre os resultados e não afirme que executou algo que não foi verificado.",
+  },
+  {
+    label: "Analisar\nempresas",
+    icon: BarChart3,
+    prompt: "Quero analisar uma empresa. Peça somente o nome ou endereço do site se ainda faltar e depois faça uma análise objetiva de oportunidades, riscos, posicionamento e abordagem comercial.",
+  },
+  { label: "Criar sites\ne apps", icon: FileText, section: "site-builder" },
+  {
+    label: "Gerenciar\nanúncios",
+    icon: Megaphone,
+    prompt: "Quero gerenciar os anúncios da empresa. Verifique primeiro quais contas e integrações estão realmente conectadas, analise o que estiver disponível e proponha ou execute somente ações permitidas e verificáveis.",
+  },
+  {
+    label: "Enviar\ne-mails",
+    icon: Mail,
+    prompt: "Quero trabalhar nos e-mails prioritários da empresa. Verifique a conexão disponível, mostre o que precisa de atenção e peça confirmação antes de qualquer envio que exija aprovação.",
+  },
+  {
+    label: "Agendar\ntarefas",
+    icon: CalendarDays,
+    prompt: "Quero organizar e agendar tarefas. Use o contexto atual, identifique apenas os dados indispensáveis que faltam e prepare ou execute o agendamento conforme as permissões disponíveis.",
+  },
 ];
 
-const QUICK_ACTIONS: PromptAction[] = [
-  { label: "Encontrar\nclientes", icon: UserRoundSearch, prompt: "Encontre clientes em potencial para a minha empresa agora." },
-  { label: "Analisar\numa empresa", icon: BarChart3, prompt: "Quero analisar uma empresa. Peça apenas o dado indispensável e faça a análise." },
-  { label: "Criar um site", icon: MonitorCog, prompt: "Quero criar um site. Estruture a solução e comece pelo que já pode ser executado." },
-  { label: "Gerar uma\nproposta", icon: FileText, prompt: "Crie uma proposta comercial profissional com base no contexto da empresa e do cliente." },
-  { label: "Agendar\ntarefa", icon: CalendarDays, prompt: "Quero agendar uma tarefa. Identifique o que falta e prepare o agendamento." },
+const QUICK_ACTIONS: PanelAction[] = [
+  {
+    label: "Encontrar\nclientes",
+    icon: UserRoundSearch,
+    prompt: "Encontre clientes em potencial para a minha empresa agora, qualifique por potencial e mostre os melhores primeiro.",
+  },
+  {
+    label: "Analisar\numa empresa",
+    icon: BarChart3,
+    prompt: "Quero analisar uma empresa. Peça apenas o dado indispensável e faça a análise com oportunidades, riscos e próximos passos.",
+  },
+  { label: "Criar um site", icon: MonitorCog, section: "site-builder" },
+  {
+    label: "Gerar uma\nproposta",
+    icon: FileText,
+    prompt: "Crie uma proposta comercial profissional com base no contexto desta empresa. Se faltar cliente, serviço, preço ou prazo, peça somente os dados indispensáveis antes de gerar a proposta final.",
+  },
+  {
+    label: "Agendar\ntarefa",
+    icon: CalendarDays,
+    prompt: "Quero agendar uma tarefa. Identifique o que falta, confirme data e horário quando necessário e use a integração disponível para concluir o agendamento.",
+  },
 ];
 
 function setNativeTextareaValue(textarea: HTMLTextAreaElement, value: string) {
@@ -94,32 +132,61 @@ function setNativeTextareaValue(textarea: HTMLTextAreaElement, value: string) {
 
 export function SamuelAiFocus({ data, handlers, onNavigate }: SamuelAiFocusProps) {
   const companyId = data.executiveContext?.company.id ?? "default-company";
-  const [typingOpen, setTypingOpen] = useState(false);
-  const [typedMessage, setTypedMessage] = useState("");
+  const [conversationOpen, setConversationOpen] = useState(false);
+  const [brightMode, setBrightMode] = useState(false);
+  const alertCount =
+    (data.watcherExecutive?.summary.criticalAlerts ?? 0) +
+    (data.executiveMonitoring?.alerts.length ?? 0);
 
   const sendThroughSamuel = (message: string) => {
-    const cockpit = document.querySelector<HTMLElement>(".samuel-focus-cockpit");
-    const textarea = cockpit?.querySelector<HTMLTextAreaElement>(".samuel-chat-textarea");
-    if (!cockpit || !textarea || !message.trim()) return;
-    setNativeTextareaValue(textarea, message.trim());
-    window.setTimeout(() => {
-      const sendButton = cockpit.querySelector<HTMLButtonElement>(".samuel-chat-send:not(.is-cancel)");
-      if (sendButton && !sendButton.disabled) sendButton.click();
-    }, 0);
+    const cleanMessage = message.trim();
+    if (!cleanMessage) return;
+
+    setConversationOpen(true);
+
+    window.requestAnimationFrame(() => {
+      const cockpit = document.querySelector<HTMLElement>(".samuel-focus-cockpit");
+      const textarea = cockpit?.querySelector<HTMLTextAreaElement>(".samuel-chat-textarea");
+      if (!cockpit || !textarea) return;
+
+      setNativeTextareaValue(textarea, cleanMessage);
+      window.setTimeout(() => {
+        const sendButton = cockpit.querySelector<HTMLButtonElement>(
+          ".samuel-chat-send:not(.is-cancel)",
+        );
+        if (sendButton && !sendButton.disabled) sendButton.click();
+      }, 0);
+    });
   };
 
-  const submitTypedMessage = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!typedMessage.trim()) return;
-    sendThroughSamuel(typedMessage);
-    setTypedMessage("");
-    setTypingOpen(false);
+  const runPanelAction = (action: PanelAction) => {
+    if (action.section) {
+      onNavigate(action.section);
+      return;
+    }
+    if (action.prompt) sendThroughSamuel(action.prompt);
+  };
+
+  const handleNav = (item: NavItem) => {
+    if (item.action === "conversation") {
+      setConversationOpen(true);
+      return;
+    }
+    if (item.section) onNavigate(item.section);
   };
 
   const stopSamuel = () => {
     const mic = document.querySelector<HTMLButtonElement>(".samuel-reference-mic");
     if (mic?.dataset.voiceCaptureState === "recording") mic.click();
-    if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
+
+    const cancelButton = document.querySelector<HTMLButtonElement>(
+      ".samuel-focus-cockpit .samuel-chat-send.is-cancel",
+    );
+    if (cancelButton && !cancelButton.disabled) cancelButton.click();
+
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
   };
 
   return (
@@ -127,18 +194,54 @@ export function SamuelAiFocus({ data, handlers, onNavigate }: SamuelAiFocusProps
       <span hidden data-samuel-company-id={companyId} />
       <SamuelVoiceReliabilityBridge />
 
-      <div className="absolute left-[-10000px] top-0 h-px w-px overflow-hidden opacity-0 pointer-events-none" aria-hidden="true">
-        <ChatPanel
-          key={companyId}
-          initialMessages={EMPTY_CHAT_MESSAGES}
-          companyId={companyId}
-          isProcessing={handlers.isProcessing}
-          onSendMessage={handlers.onSendMessage}
-          onFirstMessage={handlers.onFirstMessage}
-        />
+      <div
+        className={
+          conversationOpen
+            ? "absolute inset-0 z-[120] flex items-center justify-center bg-black/75 p-4 backdrop-blur-md"
+            : "absolute left-[-10000px] top-0 h-px w-px overflow-hidden opacity-0 pointer-events-none"
+        }
+        aria-hidden={!conversationOpen}
+      >
+        <div
+          className={
+            conversationOpen
+              ? "flex h-[min(82dvh,820px)] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-[#0d78c5] bg-[#03101b] shadow-[0_0_70px_rgba(0,127,255,.28)]"
+              : "h-full w-full"
+          }
+        >
+          {conversationOpen && (
+            <div className="flex shrink-0 items-center justify-between border-b border-[#164f78] px-5 py-4">
+              <div>
+                <strong className="block text-base text-white">Conversar com Samuel</strong>
+                <span className="mt-1 block text-xs text-[#86abc9]">
+                  Digite, acompanhe a execução e veja a resposta completa.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setConversationOpen(false)}
+                className="rounded-xl border border-[#164f78] px-4 py-2 text-sm text-[#b9d9f1] transition hover:border-[#0d9dff] hover:text-white"
+              >
+                Fechar
+              </button>
+            </div>
+          )}
+          <div className={conversationOpen ? "min-h-0 flex-1 overflow-hidden" : "h-full w-full"}>
+            <ChatPanel
+              key={companyId}
+              initialMessages={EMPTY_CHAT_MESSAGES}
+              companyId={companyId}
+              isProcessing={handlers.isProcessing}
+              onSendMessage={handlers.onSendMessage}
+              onFirstMessage={handlers.onFirstMessage}
+            />
+          </div>
+        </div>
       </div>
 
-      <div className="relative mx-auto h-full max-h-[1024px] w-full max-w-[1536px] overflow-hidden bg-[#02070c] shadow-[0_0_80px_rgba(0,0,0,.75)]">
+      <div
+        className={`relative mx-auto h-full max-h-[1024px] w-full max-w-[1536px] overflow-hidden bg-[#02070c] shadow-[0_0_80px_rgba(0,0,0,.75)] transition-[filter] duration-200 ${brightMode ? "brightness-110 saturate-110" : ""}`}
+      >
         <div className="grid h-full grid-cols-[18.65%_57.35%_24%]">
           <aside className="relative z-30 border-r border-cyan-300/10 bg-[linear-gradient(180deg,#03101a_0%,#020b12_55%,#02080e_100%)] px-[6.5%] py-[2.7%]">
             <div className="mb-[12%] flex items-center gap-3">
@@ -166,7 +269,7 @@ export function SamuelAiFocus({ data, handlers, onNavigate }: SamuelAiFocusProps
                   return <Link key={item.label} href={item.href} className={className}>{content}</Link>;
                 }
                 return (
-                  <button key={item.label} type="button" className={className} onClick={() => item.section && onNavigate(item.section)}>
+                  <button key={item.label} type="button" className={className} onClick={() => handleNav(item)}>
                     {content}
                   </button>
                 );
@@ -240,7 +343,7 @@ export function SamuelAiFocus({ data, handlers, onNavigate }: SamuelAiFocusProps
             </div>
 
             <div className="relative z-30 mx-auto mt-[1.3%] grid w-[52%] grid-cols-[1fr_1.4fr_1fr] items-center gap-5 text-center">
-              <button type="button" onClick={() => setTypingOpen(true)} className="group mx-auto flex flex-col items-center gap-2 text-[clamp(10px,.85vw,14px)] text-white">
+              <button type="button" onClick={() => setConversationOpen(true)} className="group mx-auto flex flex-col items-center gap-2 text-[clamp(10px,.85vw,14px)] text-white">
                 <span className="flex size-[70px] items-center justify-center rounded-full border border-[#0d65ac] bg-[#03101b] transition group-hover:border-[#2aaeff] group-hover:shadow-[0_0_20px_rgba(0,151,255,.18)]"><Keyboard className="size-7 text-[#cce8ff]" /></span>
                 Digitar
               </button>
@@ -263,7 +366,7 @@ export function SamuelAiFocus({ data, handlers, onNavigate }: SamuelAiFocusProps
               {QUICK_ACTIONS.map((action) => {
                 const Icon = action.icon;
                 return (
-                  <button key={action.label} type="button" onClick={() => sendThroughSamuel(action.prompt)} className="flex min-h-[66px] items-center gap-3 rounded-xl border border-[#0b5d9d] bg-[#03101b]/90 px-4 text-left text-[clamp(8px,.72vw,12px)] text-white transition hover:border-[#119dff] hover:bg-[#061a2c]">
+                  <button key={action.label} type="button" onClick={() => runPanelAction(action)} className="flex min-h-[66px] items-center gap-3 rounded-xl border border-[#0b5d9d] bg-[#03101b]/90 px-4 text-left text-[clamp(8px,.72vw,12px)] text-white transition hover:border-[#119dff] hover:bg-[#061a2c]">
                     <Icon className="size-7 shrink-0 text-[#179dff] drop-shadow-[0_0_8px_#0077ff]" />
                     <span className="whitespace-pre-line leading-5">{action.label}</span>
                   </button>
@@ -280,11 +383,37 @@ export function SamuelAiFocus({ data, handlers, onNavigate }: SamuelAiFocusProps
           <aside className="relative z-30 border-l border-cyan-300/10 bg-[linear-gradient(180deg,#020a11_0%,#02080e_100%)] px-[7.5%] py-[2.4%]">
             <div className="mb-[6%] flex items-start justify-between gap-3">
               <div className="flex items-center gap-7 text-[#c9e6ff]">
-                <Sun className="size-8" strokeWidth={1.4} />
-                <div className="relative"><Bell className="size-7" strokeWidth={1.5} /><span className="absolute -right-2 -top-2 flex size-5 items-center justify-center rounded-full bg-[#ff2b37] text-[10px] font-bold text-white">1</span></div>
+                <button
+                  type="button"
+                  onClick={() => setBrightMode((current) => !current)}
+                  aria-label="Alternar brilho do painel"
+                  aria-pressed={brightMode}
+                  className="rounded-full transition hover:text-white"
+                >
+                  <Sun className="size-8" strokeWidth={1.4} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onNavigate("executive-alerts")}
+                  aria-label="Abrir alertas"
+                  className="relative rounded-full transition hover:text-white"
+                >
+                  <Bell className="size-7" strokeWidth={1.5} />
+                  {alertCount > 0 && (
+                    <span className="absolute -right-2 -top-2 flex size-5 items-center justify-center rounded-full bg-[#ff2b37] text-[10px] font-bold text-white">
+                      {Math.min(alertCount, 9)}
+                    </span>
+                  )}
+                </button>
               </div>
               <div className="flex items-center gap-4">
-                <div className="flex size-12 items-center justify-center rounded-full border border-[#0f8bff] text-[17px] text-white">SF</div>
+                <Link
+                  href="/empresas"
+                  aria-label="Abrir empresas e perfil"
+                  className="flex size-12 items-center justify-center rounded-full border border-[#0f8bff] text-[17px] text-white transition hover:bg-[#0b3154]"
+                >
+                  SF
+                </Link>
                 <div className="h-10 w-px bg-[#0b4e7c]" />
                 <div className="text-[clamp(9px,.72vw,12px)] leading-5 text-[#bfd9ef]">Sempre aprendendo.<br />Sempre ao seu lado.</div>
               </div>
@@ -297,7 +426,7 @@ export function SamuelAiFocus({ data, handlers, onNavigate }: SamuelAiFocusProps
                 {RIGHT_ACTIONS.map((action) => {
                   const Icon = action.icon;
                   return (
-                    <button key={action.label} type="button" onClick={() => sendThroughSamuel(action.prompt)} className="flex min-h-[108px] flex-col items-center justify-center gap-3 rounded-xl border border-[#0a426e] bg-[#051321] px-2 text-center text-[clamp(8px,.69vw,12px)] text-white transition hover:border-[#0c9cff] hover:bg-[#071a2b]">
+                    <button key={action.label} type="button" onClick={() => runPanelAction(action)} className="flex min-h-[108px] flex-col items-center justify-center gap-3 rounded-xl border border-[#0a426e] bg-[#051321] px-2 text-center text-[clamp(8px,.69vw,12px)] text-white transition hover:border-[#0c9cff] hover:bg-[#071a2b]">
                       <Icon className="size-8 text-[#1cb4ff] drop-shadow-[0_0_8px_#007dff]" />
                       <span className="whitespace-pre-line leading-5">{action.label}</span>
                     </button>
@@ -325,16 +454,6 @@ export function SamuelAiFocus({ data, handlers, onNavigate }: SamuelAiFocusProps
           </aside>
         </div>
       </div>
-
-      {typingOpen && (
-        <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <form onSubmit={submitTypedMessage} className="w-full max-w-2xl rounded-3xl border border-[#0d78c5] bg-[#03101b] p-5 shadow-[0_0_60px_rgba(0,127,255,.25)]">
-            <div className="mb-4 flex items-center justify-between"><strong className="text-lg text-white">Conversar com Samuel</strong><button type="button" onClick={() => setTypingOpen(false)} className="text-sm text-[#9cc6e8]">Fechar</button></div>
-            <textarea autoFocus value={typedMessage} onChange={(event) => setTypedMessage(event.target.value)} rows={4} placeholder="Digite o que precisa..." className="w-full resize-none rounded-2xl border border-[#164f78] bg-[#06131f] p-4 text-white outline-none placeholder:text-[#64839b] focus:border-[#0d9dff]" />
-            <div className="mt-4 flex justify-end"><button type="submit" className="rounded-xl border border-[#0d83e5] bg-[#062d55] px-5 py-3 text-sm font-semibold text-white">Enviar ao Samuel</button></div>
-          </form>
-        </div>
-      )}
     </section>
   );
 }
