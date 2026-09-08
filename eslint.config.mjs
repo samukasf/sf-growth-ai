@@ -13,6 +13,8 @@ const eslintConfig = defineConfig([
     "build/**",
     "node_modules.failed-install/**",
     "next-env.d.ts",
+    // Samuel Desktop is an independent Electron/Windows package with its own compiler/workflow.
+    "apps/samuel-desktop-agent/**",
   ]),
 ]);
 

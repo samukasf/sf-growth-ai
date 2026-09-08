@@ -1,6 +1,7 @@
 "use client";
 
-import { ArrowLeft, Bell, Grid2X2 } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, Bell, Grid2X2, MonitorSmartphone } from "lucide-react";
 import { ChatPanel } from "../chat-panel";
 import { AmbientParticleField } from "../shared/ambient-particle-field";
 import type { ExecutiveWorkspaceData, ExecutiveWorkspaceHandlers } from "./executive-workspace.types";
@@ -30,6 +31,7 @@ export function SamuelAiFocus({ data, handlers, onNavigate }: SamuelAiFocusProps
           <p className="mt-0.5 max-w-44 truncate text-[8px] uppercase tracking-[.15em] text-white/25">{companyName}</p>
         </div>
         <div className="flex items-center gap-2">
+          <Link href="/samuel-ai/desktop" className="flex size-10 items-center justify-center rounded-full border border-cyan-300/15 bg-cyan-300/[.04] text-cyan-100/65 backdrop-blur-xl transition hover:bg-cyan-300/[.09] hover:text-cyan-50" aria-label="Samuel Desktop"><MonitorSmartphone className="size-[16px]" /></Link>
           {alerts > 0 && <button type="button" onClick={() => onNavigate("executive-inbox")} className="relative flex size-10 items-center justify-center rounded-full border border-white/[.08] bg-black/20 text-white/55 backdrop-blur-xl" aria-label="Alertas"><Bell className="size-[16px]" /><span className="absolute right-2 top-2 size-1.5 rounded-full bg-amber-300" /></button>}
           <button type="button" onClick={() => onNavigate("dashboard")} className="flex size-10 items-center justify-center rounded-full border border-white/[.08] bg-black/20 text-white/55 backdrop-blur-xl transition hover:bg-white/[.07] hover:text-white" aria-label="Abrir sistema"><Grid2X2 className="size-[16px]" /></button>
         </div>
