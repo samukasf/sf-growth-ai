@@ -19,6 +19,7 @@ function blockedPlan(
     payload: {},
     timeoutMs: null,
     cancellable: false,
+    missingRequirements: [],
   };
 }
 
@@ -27,6 +28,11 @@ export function buildSamuelCapabilityExecutionPlan(
 ): SamuelCapabilityExecutionPlan {
   const capability = getSamuelCapability(request.capabilityId);
   if (!capability) return blockedPlan(request, "Unknown capability");
+
+  const satisfiedRequirements = new Set(request.satisfiedRequirements ?? []);
+  const missingRequirements = capability.requirements.filter(
+    (requirement) => !satisfiedRequirements.has(requirement),
+  );
 
   const base = {
     capabilityId: capability.id,
@@ -37,6 +43,7 @@ export function buildSamuelCapabilityExecutionPlan(
     payload: { companyId: request.companyId, ...(request.input ?? {}) },
     timeoutMs: capability.timeoutMs,
     cancellable: capability.cancellable,
+    missingRequirements,
   } satisfies Omit<SamuelCapabilityExecutionPlan, "status" | "reason">;
 
   if (capability.availability === "planned") {
@@ -51,7 +58,7 @@ export function buildSamuelCapabilityExecutionPlan(
     return {
       ...base,
       status: "configuration_required",
-      reason: `Capability requires configuration before execution. Requirements: ${capability.requirements.join(", ") || "provider configuration"}`,
+      reason: `Capability implementation requires configuration before execution. Requirements: ${capability.requirements.join(", ") || "provider configuration"}`,
     };
   }
 
@@ -60,6 +67,14 @@ export function buildSamuelCapabilityExecutionPlan(
       ...base,
       status: "blocked",
       reason: "Connected capability is missing a verified executor",
+    };
+  }
+
+  if (missingRequirements.length > 0) {
+    return {
+      ...base,
+      status: "configuration_required",
+      reason: `Operational prerequisites are not satisfied: ${missingRequirements.join(", ")}`,
     };
   }
 
@@ -82,7 +97,7 @@ export function buildSamuelCapabilityExecutionPlan(
   return {
     ...base,
     status: "ready",
-    reason: "Verified capability executor available",
+    reason: "Verified capability executor and operational prerequisites are available",
   };
 }
 
