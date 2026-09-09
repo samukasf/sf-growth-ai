@@ -12,7 +12,6 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const TOKEN_TTL_MS = 30 * 60_000;
-const NEW_SESSION_TTL_MS = 60_000;
 const RATE_WINDOW_MS = 60_000;
 const RATE_LIMIT = 8;
 const buckets = new Map<string, { count: number; resetAt: number }>();
@@ -44,11 +43,21 @@ async function createGeminiToken(apiKey: string, body: Record<string, unknown>) 
       "content-type": "application/json",
     },
     body: JSON.stringify(body),
+    cache: "no-store",
   });
   const payload = (await response.json().catch(() => null)) as
     | { name?: string; error?: { code?: number; status?: string; message?: string } }
     | null;
   return { response, payload };
+}
+
+function openAiBootstrap(fallback: boolean) {
+  return Response.json({
+    provider: "openai",
+    configured: true,
+    fallback,
+    model: process.env.OPENAI_REALTIME_MODEL?.trim() || "gpt-realtime-2.1",
+  }, { headers: { "cache-control": "no-store" } });
 }
 
 export async function GET(request: Request) {
@@ -61,11 +70,7 @@ export async function GET(request: Request) {
   try {
     provider = requestedProvider === "openai" || requestedProvider === "gemini"
       ? requestedProvider
-      : process.env.OPENAI_API_KEY?.trim()
-        ? "openai"
-        : process.env.GEMINI_API_KEY?.trim()
-          ? "gemini"
-          : resolveSamuelLiveProvider();
+      : resolveSamuelLiveProvider();
   } catch {
     return jsonError("Configuração do provedor Live inválida.", 500, "LIVE_PROVIDER_INVALID");
   }
@@ -88,20 +93,24 @@ export async function GET(request: Request) {
         };
 
   if (!readiness.configured) {
-    return jsonError(
-      `Voz Live indisponível: ${readiness.missingKey ?? "chave do provedor"} não configurada.`,
-      503,
-      "LIVE_NOT_CONFIGURED",
-    );
+    const alternateAvailable = provider === "gemini"
+      ? Boolean(process.env.OPENAI_API_KEY?.trim())
+      : Boolean(process.env.GEMINI_API_KEY?.trim());
+
+    if (!requestedProvider && alternateAvailable) {
+      if (provider === "gemini") return openAiBootstrap(true);
+      provider = "gemini";
+    } else {
+      return jsonError(
+        `Voz Live indisponível: ${readiness.missingKey ?? "chave do provedor"} não configurada.`,
+        503,
+        "LIVE_NOT_CONFIGURED",
+      );
+    }
   }
 
   if (provider === "openai") {
-    return Response.json({
-      provider: "openai",
-      configured: true,
-      fallback: false,
-      model: readiness.model,
-    }, { headers: { "cache-control": "no-store" } });
+    return openAiBootstrap(Boolean(requestedProvider));
   }
 
   const apiKey = process.env.GEMINI_API_KEY?.trim();
@@ -115,18 +124,23 @@ export async function GET(request: Request) {
   const now = Date.now();
   const model = resolveGeminiLiveModel();
 
-  const tokenAttempt = await createGeminiToken(apiKey, {
-    uses: 1,
-    expireTime: new Date(now + TOKEN_TTL_MS).toISOString(),
-    newSessionExpireTime: new Date(now + NEW_SESSION_TTL_MS).toISOString(),
-  });
+  let tokenAttempt = await createGeminiToken(apiKey, { uses: 1 });
+  if (!tokenAttempt.response.ok && tokenAttempt.response.status === 400) {
+    tokenAttempt = await createGeminiToken(apiKey, {});
+  }
 
   if (!tokenAttempt.response.ok || !tokenAttempt.payload?.name) {
     console.error("Gemini ephemeral token provisioning failed", {
       status: tokenAttempt.response.status,
       googleStatus: tokenAttempt.payload?.error?.status,
       googleMessage: tokenAttempt.payload?.error?.message,
+      model,
     });
+
+    if (!requestedProvider && process.env.OPENAI_API_KEY?.trim()) {
+      return openAiBootstrap(true);
+    }
+
     return jsonError("Não foi possível iniciar a sessão Gemini Live.", 502, "GEMINI_TOKEN_ERROR");
   }
 

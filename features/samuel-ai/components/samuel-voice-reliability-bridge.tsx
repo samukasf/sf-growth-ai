@@ -2,9 +2,11 @@
 
 import { useEffect } from "react";
 
-const MAX_RECORDING_MS = 30_000;
-const SILENCE_AFTER_SPEECH_MS = 1_150;
+const MAX_FALLBACK_RECORDING_MS = 60_000;
+const FALLBACK_SILENCE_MS = 1_800;
 const VOICE_RMS_THRESHOLD = 0.028;
+const REALTIME_BOOT_TIMEOUT_MS = 12_000;
+const STATE_SYNC_MS = 120;
 
 type TranscriptionResponse = {
   ok?: boolean;
@@ -12,137 +14,178 @@ type TranscriptionResponse = {
   error?: string;
 };
 
+type VoiceState = "idle" | "recording" | "processing" | "error";
+type VoiceMode = "realtime" | "fallback" | "none";
+type VoicePhase =
+  | "idle"
+  | "connecting"
+  | "listening"
+  | "processing"
+  | "speaking"
+  | "fallback-listening"
+  | "fallback-processing"
+  | "error";
+
 function preferredMimeType() {
   if (typeof MediaRecorder === "undefined") return "";
-  const candidates = [
+  return [
     "audio/webm;codecs=opus",
     "audio/webm",
     "audio/mp4;codecs=mp4a.40.2",
     "audio/mp4",
-  ];
-  return candidates.find((type) => MediaRecorder.isTypeSupported(type)) ?? "";
+  ].find((type) => MediaRecorder.isTypeSupported(type)) ?? "";
+}
+
+function realtimeElements(cockpit: HTMLElement) {
+  return {
+    consoleElement: cockpit.querySelector<HTMLElement>(".samuel-voice-console"),
+    startButton: cockpit.querySelector<HTMLButtonElement>(".samuel-voice-console__start"),
+  };
+}
+
+function realtimeSessionActive(startButton: HTMLButtonElement | null) {
+  return startButton?.getAttribute("aria-pressed") === "true";
+}
+
+function realtimePhase(consoleElement: HTMLElement | null): VoicePhase {
+  if (!consoleElement) return "idle";
+  if (consoleElement.classList.contains("samuel-voice-console--speaking")) return "speaking";
+  const text = consoleElement.textContent?.toLowerCase() ?? "";
+  if (text.includes("solicitando microfone")) return "connecting";
+  if (text.includes("processando")) return "processing";
+  if (text.includes("samuel falando") || text.includes("· falando")) return "speaking";
+  return "listening";
 }
 
 function setTextareaValue(textarea: HTMLTextAreaElement, value: string) {
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLTextAreaElement.prototype,
-    "value",
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
   descriptor?.set?.call(textarea, value);
   textarea.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
-function dispatchTranscript(cockpit: HTMLElement, transcript: string) {
-  const textarea = cockpit.querySelector<HTMLTextAreaElement>(
-    ".samuel-chat-textarea",
-  );
+function sendTranscriptToChat(cockpit: HTMLElement, transcript: string) {
+  const textarea = cockpit.querySelector<HTMLTextAreaElement>(".samuel-chat-textarea");
   if (!textarea) return false;
 
   setTextareaValue(textarea, transcript);
   textarea.focus();
 
   const trySend = (attempt = 0) => {
-    const sendButton = cockpit.querySelector<HTMLButtonElement>(
+    const send = cockpit.querySelector<HTMLButtonElement>(
       ".samuel-chat-send:not(.is-cancel)",
     );
-    if (sendButton && !sendButton.disabled) {
-      sendButton.click();
+    if (send && !send.disabled) {
+      send.click();
       return;
     }
-    if (attempt < 4) {
-      window.setTimeout(() => trySend(attempt + 1), 35);
-    }
+    if (attempt < 8) window.setTimeout(() => trySend(attempt + 1), 45);
   };
   window.setTimeout(() => trySend(), 0);
-
   return true;
 }
 
-function primeBrowserSpeech() {
-  if (
-    typeof window === "undefined" ||
-    !("speechSynthesis" in window) ||
-    !("SpeechSynthesisUtterance" in window)
-  ) {
-    return;
-  }
-
+function primeAudioOutput() {
+  if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) return;
   try {
-    const unlock = new SpeechSynthesisUtterance(" ");
-    unlock.volume = 0;
-    unlock.rate = 1;
-    window.speechSynthesis.speak(unlock);
+    const utterance = new SpeechSynthesisUtterance(" ");
+    utterance.volume = 0;
+    window.speechSynthesis.speak(utterance);
   } catch {
-    // Voice output still has its normal fallback/error handling.
+    // Text-chat TTS keeps its own fallback/error handling.
   }
 }
 
 /**
- * Reliable browser voice bridge for the main Samuel microphone.
- *
- * Audio is captured with MediaRecorder, stopped automatically after natural
- * silence, transcribed by the SF Growth AI server and routed through the same
- * ChatPanel message path used by typed conversation.
+ * Connects the large dashboard microphone to the already-mounted ChatPanel.
+ * Realtime is the primary path; MediaRecorder is a one-turn contingency only.
  */
 export function SamuelVoiceReliabilityBridge() {
   useEffect(() => {
+    let desired = false;
+    let connected = false;
+    let fallbackUsed = false;
+    let activeCockpit: HTMLElement | null = null;
+    let activeButton: HTMLButtonElement | null = null;
+    let bootTimer = 0;
+    let syncTimer = 0;
+
     let recorder: MediaRecorder | null = null;
     let stream: MediaStream | null = null;
     let audioContext: AudioContext | null = null;
     let analyser: AnalyserNode | null = null;
     let animationFrame = 0;
-    let maxTimer = 0;
+    let fallbackTimer = 0;
     let chunks: Blob[] = [];
     let speechStarted = false;
     let lastVoiceAt = 0;
-    let activeCockpit: HTMLElement | null = null;
-    let activeButton: HTMLButtonElement | null = null;
-    let processing = false;
+    let fallbackProcessing = false;
 
-    const setButtonState = (
-      button: HTMLButtonElement | null,
-      state: "idle" | "recording" | "processing" | "error",
+    const setState = (
+      state: VoiceState,
+      mode: VoiceMode,
+      phase: VoicePhase,
+      sourceButton = activeButton,
     ) => {
       const buttons = Array.from(
         document.querySelectorAll<HTMLButtonElement>(
           ".samuel-focus-cockpit .samuel-reference-mic",
         ),
       );
-      if (button && !buttons.includes(button)) buttons.push(button);
+      if (sourceButton && !buttons.includes(sourceButton)) buttons.push(sourceButton);
 
-      for (const target of buttons) {
-        target.dataset.voiceCaptureState = state;
-        target.setAttribute(
+      for (const button of buttons) {
+        button.dataset.voiceCaptureState = state;
+        button.dataset.voiceMode = mode;
+        button.dataset.voicePhase = phase;
+        const cockpit = button.closest<HTMLElement>(".samuel-focus-cockpit");
+        if (cockpit) {
+          cockpit.dataset.samuelVoiceMode = mode;
+          cockpit.dataset.samuelVoicePhase = phase;
+        }
+        button.setAttribute(
           "aria-label",
-          state === "recording"
-            ? "Samuel está ouvindo. Toque para parar."
-            : state === "processing"
-              ? "Samuel está transcrevendo sua fala."
-              : state === "error"
-                ? "Falha ao captar a voz. Toque para tentar novamente."
-                : "Iniciar conversa por voz",
+          phase === "connecting"
+            ? "A iniciar conversa de voz em tempo real. Toque para encerrar."
+            : phase === "speaking"
+              ? "Samuel está falando. Fale para interromper ou toque para encerrar."
+              : state === "recording" && mode === "realtime"
+                ? "Conversa de voz ativa. Fale naturalmente. Toque para encerrar."
+                : state === "recording"
+                  ? "Modo de contingência ativo. Fale e aguarde a transcrição."
+                  : state === "processing"
+                    ? "Samuel está processando sua fala."
+                    : state === "error"
+                      ? "Falha na voz. Toque para tentar novamente."
+                      : "Iniciar conversa por voz",
         );
       }
     };
 
-    const cleanupAudioGraph = () => {
+    const clearBootTimer = () => {
+      if (bootTimer) window.clearTimeout(bootTimer);
+      bootTimer = 0;
+    };
+
+    const cleanupFallbackAudio = () => {
       if (animationFrame) cancelAnimationFrame(animationFrame);
       animationFrame = 0;
-      if (maxTimer) window.clearTimeout(maxTimer);
-      maxTimer = 0;
+      if (fallbackTimer) window.clearTimeout(fallbackTimer);
+      fallbackTimer = 0;
       analyser?.disconnect();
       analyser = null;
-      if (audioContext && audioContext.state !== "closed") {
-        void audioContext.close();
-      }
+      if (audioContext && audioContext.state !== "closed") void audioContext.close();
       audioContext = null;
       stream?.getTracks().forEach((track) => track.stop());
       stream = null;
     };
 
-    const transcribeAndSend = async (blob: Blob, cockpit: HTMLElement) => {
-      processing = true;
-      setButtonState(activeButton, "processing");
+    const stopFallbackRecording = () => {
+      if (recorder && recorder.state !== "inactive") recorder.stop();
+    };
+
+    const transcribeFallback = async (blob: Blob, cockpit: HTMLElement) => {
+      fallbackProcessing = true;
+      setState("processing", "fallback", "fallback-processing");
       try {
         const companyId =
           cockpit.querySelector<HTMLElement>("[data-samuel-company-id]")?.dataset
@@ -166,28 +209,22 @@ export function SamuelVoiceReliabilityBridge() {
         if (!response.ok || !payload.text?.trim()) {
           throw new Error(payload.error || "Não foi possível transcrever sua fala.");
         }
-
-        const delivered = dispatchTranscript(cockpit, payload.text.trim());
-        if (!delivered) {
+        if (!sendTranscriptToChat(cockpit, payload.text.trim())) {
           throw new Error("O campo de conversa do Samuel não está disponível.");
         }
-        setButtonState(activeButton, "idle");
+        setState("idle", "none", "idle");
       } catch (error) {
-        console.error("Samuel voice capture failed", error);
-        setButtonState(activeButton, "error");
+        console.error("Samuel fallback voice capture failed", error);
+        setState("error", "fallback", "error");
       } finally {
-        processing = false;
+        fallbackProcessing = false;
+        desired = false;
         activeCockpit = null;
         activeButton = null;
       }
     };
 
-    const finishRecording = () => {
-      if (!recorder || recorder.state === "inactive") return;
-      recorder.stop();
-    };
-
-    const monitorVoice = () => {
+    const monitorFallbackVoice = () => {
       if (!recorder || recorder.state !== "recording" || !analyser) return;
       const samples = new Float32Array(analyser.fftSize);
       analyser.getFloatTimeDomainData(samples);
@@ -202,22 +239,28 @@ export function SamuelVoiceReliabilityBridge() {
       } else if (
         speechStarted &&
         lastVoiceAt > 0 &&
-        now - lastVoiceAt >= SILENCE_AFTER_SPEECH_MS
+        now - lastVoiceAt >= FALLBACK_SILENCE_MS
       ) {
-        finishRecording();
+        stopFallbackRecording();
         return;
       }
-
-      animationFrame = requestAnimationFrame(monitorVoice);
+      animationFrame = requestAnimationFrame(monitorFallbackVoice);
     };
 
-    const startRecording = async (
-      cockpit: HTMLElement,
-      button: HTMLButtonElement,
-    ) => {
-      if (processing) return;
+    const startFallback = async (cockpit: HTMLElement, button: HTMLButtonElement) => {
+      if (fallbackUsed || fallbackProcessing || recorder?.state === "recording") return;
+      fallbackUsed = true;
+      desired = false;
+      connected = false;
+      clearBootTimer();
+
+      const { startButton } = realtimeElements(cockpit);
+      if (startButton && realtimeSessionActive(startButton) && !startButton.disabled) {
+        startButton.click();
+      }
+
       if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
-        setButtonState(button, "error");
+        setState("error", "fallback", "error", button);
         return;
       }
 
@@ -226,20 +269,7 @@ export function SamuelVoiceReliabilityBridge() {
       chunks = [];
       speechStarted = false;
       lastVoiceAt = 0;
-
-      primeBrowserSpeech();
-      const AudioContextCtor =
-        window.AudioContext ||
-        (window as typeof window & { webkitAudioContext?: typeof AudioContext })
-          .webkitAudioContext;
-      if (AudioContextCtor) {
-        try {
-          audioContext = new AudioContextCtor({ latencyHint: "interactive" });
-          void audioContext.resume().catch(() => undefined);
-        } catch {
-          audioContext = null;
-        }
-      }
+      primeAudioOutput();
 
       try {
         stream = await navigator.mediaDevices.getUserMedia({
@@ -252,35 +282,32 @@ export function SamuelVoiceReliabilityBridge() {
         });
 
         const mimeType = preferredMimeType();
-        recorder = mimeType
-          ? new MediaRecorder(stream, { mimeType })
-          : new MediaRecorder(stream);
-
+        recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
         recorder.ondataavailable = (event) => {
           if (event.data.size > 0) chunks.push(event.data);
         };
         recorder.onerror = () => {
-          setButtonState(button, "error");
-          cleanupAudioGraph();
+          setState("error", "fallback", "error", button);
+          cleanupFallbackAudio();
         };
         recorder.onstop = () => {
           const type = recorder?.mimeType || mimeType || "audio/webm";
           const blob = new Blob(chunks, { type });
-          const targetCockpit = activeCockpit;
-          cleanupAudioGraph();
+          const target = activeCockpit;
+          cleanupFallbackAudio();
           recorder = null;
-          if (targetCockpit && blob.size > 0) {
-            void transcribeAndSend(blob, targetCockpit);
-          } else {
-            setButtonState(button, "error");
-          }
+          if (target && blob.size > 0) void transcribeFallback(blob, target);
+          else setState("error", "fallback", "error", button);
         };
 
-        if (audioContext) {
+        const AudioContextCtor =
+          window.AudioContext ||
+          (window as typeof window & { webkitAudioContext?: typeof AudioContext })
+            .webkitAudioContext;
+        if (AudioContextCtor) {
           try {
-            if (audioContext.state === "suspended") {
-              void audioContext.resume().catch(() => undefined);
-            }
+            audioContext = new AudioContextCtor({ latencyHint: "interactive" });
+            if (audioContext.state === "suspended") void audioContext.resume();
             const source = audioContext.createMediaStreamSource(stream);
             analyser = audioContext.createAnalyser();
             analyser.fftSize = 1024;
@@ -292,45 +319,124 @@ export function SamuelVoiceReliabilityBridge() {
         }
 
         recorder.start(250);
-        setButtonState(button, "recording");
-        maxTimer = window.setTimeout(finishRecording, MAX_RECORDING_MS);
-        if (analyser) animationFrame = requestAnimationFrame(monitorVoice);
+        setState("recording", "fallback", "fallback-listening", button);
+        fallbackTimer = window.setTimeout(stopFallbackRecording, MAX_FALLBACK_RECORDING_MS);
+        if (analyser) animationFrame = requestAnimationFrame(monitorFallbackVoice);
       } catch (error) {
-        console.error("Samuel microphone permission/capture failed", error);
-        cleanupAudioGraph();
+        console.error("Samuel fallback microphone capture failed", error);
+        cleanupFallbackAudio();
         recorder = null;
-        setButtonState(button, "error");
+        setState("error", "fallback", "error", button);
       }
     };
 
-    const onPrimaryVoiceClick = (event: MouseEvent) => {
+    const syncRealtime = () => {
+      const cockpit = activeCockpit ?? document.querySelector<HTMLElement>(".samuel-focus-cockpit");
+      if (!cockpit || recorder?.state === "recording" || fallbackProcessing) return;
+      const button = activeButton ?? cockpit.querySelector<HTMLButtonElement>(".samuel-reference-mic");
+      if (!button) return;
+
+      const { consoleElement, startButton } = realtimeElements(cockpit);
+      const active = realtimeSessionActive(startButton);
+      const phase = active ? realtimePhase(consoleElement) : "idle";
+      const providerError = Boolean(
+        consoleElement?.classList.contains("samuel-voice-console--error"),
+      );
+
+      if (active) {
+        setState("recording", "realtime", phase, button);
+        if (phase !== "connecting") {
+          connected = true;
+          clearBootTimer();
+        }
+        return;
+      }
+
+      if (desired && providerError) {
+        void startFallback(cockpit, button);
+        return;
+      }
+
+      if (desired && !connected) {
+        setState("recording", "realtime", "connecting", button);
+        return;
+      }
+
+      if (!desired) setState("idle", "none", "idle", button);
+    };
+
+    const beginRealtime = (cockpit: HTMLElement, button: HTMLButtonElement) => {
+      const { startButton } = realtimeElements(cockpit);
+      if (!startButton || startButton.disabled) {
+        void startFallback(cockpit, button);
+        return;
+      }
+
+      activeCockpit = cockpit;
+      activeButton = button;
+      desired = true;
+      connected = false;
+      fallbackUsed = false;
+      primeAudioOutput();
+      setState("recording", "realtime", "connecting", button);
+
+      startButton.click();
+
+      clearBootTimer();
+      bootTimer = window.setTimeout(() => {
+        if (desired && !connected) void startFallback(cockpit, button);
+      }, REALTIME_BOOT_TIMEOUT_MS);
+    };
+
+    const endVoice = (cockpit: HTMLElement, button: HTMLButtonElement) => {
+      desired = false;
+      connected = false;
+      fallbackUsed = false;
+      clearBootTimer();
+
+      if (recorder?.state === "recording") {
+        stopFallbackRecording();
+        return;
+      }
+
+      const { startButton } = realtimeElements(cockpit);
+      if (startButton && realtimeSessionActive(startButton) && !startButton.disabled) {
+        startButton.click();
+      }
+      setState("idle", "none", "idle", button);
+    };
+
+    const onPrimaryMic = (event: MouseEvent) => {
       const target = event.target;
       if (!(target instanceof Element)) return;
-
-      const primaryButton = target.closest<HTMLButtonElement>(
+      const button = target.closest<HTMLButtonElement>(
         ".samuel-focus-cockpit .samuel-reference-mic",
       );
-      if (!primaryButton) return;
-
-      const cockpit = primaryButton.closest<HTMLElement>(".samuel-focus-cockpit");
+      if (!button) return;
+      const cockpit = button.closest<HTMLElement>(".samuel-focus-cockpit");
       if (!cockpit) return;
 
       event.preventDefault();
       event.stopImmediatePropagation();
 
-      if (recorder?.state === "recording") {
-        finishRecording();
-        return;
+      const { startButton } = realtimeElements(cockpit);
+      if (desired || realtimeSessionActive(startButton) || recorder?.state === "recording") {
+        endVoice(cockpit, button);
+      } else if (!fallbackProcessing) {
+        beginRealtime(cockpit, button);
       }
-
-      if (!processing) void startRecording(cockpit, primaryButton);
     };
 
-    window.addEventListener("click", onPrimaryVoiceClick, true);
+    window.addEventListener("click", onPrimaryMic, true);
+    syncTimer = window.setInterval(syncRealtime, STATE_SYNC_MS);
+    syncRealtime();
+
     return () => {
-      window.removeEventListener("click", onPrimaryVoiceClick, true);
+      window.removeEventListener("click", onPrimaryMic, true);
+      if (syncTimer) window.clearInterval(syncTimer);
+      clearBootTimer();
       if (recorder?.state === "recording") recorder.stop();
-      cleanupAudioGraph();
+      cleanupFallbackAudio();
     };
   }, []);
 

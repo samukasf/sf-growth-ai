@@ -9,8 +9,32 @@ import {
 } from "./live-provider.server";
 
 describe("Samuel Live provider resolver", () => {
-  it("keeps OpenAI as the safe default", () => {
-    expect(resolveSamuelLiveProvider({} as unknown as NodeJS.ProcessEnv)).toBe("openai");
+  it("defaults to Gemini when no provider is explicitly configured", () => {
+    expect(resolveSamuelLiveProvider({} as unknown as NodeJS.ProcessEnv)).toBe("gemini");
+  });
+
+  it("prefers Gemini automatically when both API keys exist", () => {
+    expect(
+      resolveSamuelLiveProvider({
+        GEMINI_API_KEY: "gemini-key",
+        OPENAI_API_KEY: "openai-key",
+      } as unknown as NodeJS.ProcessEnv),
+    ).toBe("gemini");
+  });
+
+  it("uses OpenAI automatically when Gemini is unavailable", () => {
+    expect(
+      resolveSamuelLiveProvider({ OPENAI_API_KEY: "openai-key" } as unknown as NodeJS.ProcessEnv),
+    ).toBe("openai");
+  });
+
+  it("honors an explicit OpenAI selection", () => {
+    expect(
+      resolveSamuelLiveProvider({
+        SAMUEL_LIVE_PROVIDER: "openai",
+        GEMINI_API_KEY: "gemini-key",
+      } as unknown as NodeJS.ProcessEnv),
+    ).toBe("openai");
   });
 
   it("accepts Gemini explicitly", () => {

@@ -1,6 +1,6 @@
 export type SamuelLiveProviderName = "openai" | "gemini";
 
-export const DEFAULT_SAMUEL_LIVE_PROVIDER: SamuelLiveProviderName = "openai";
+export const DEFAULT_SAMUEL_LIVE_PROVIDER: SamuelLiveProviderName = "gemini";
 export const DEFAULT_GEMINI_LIVE_MODEL = "gemini-3.1-flash-live-preview";
 
 export class InvalidLiveProviderError extends Error {
@@ -15,14 +15,18 @@ export class InvalidLiveProviderError extends Error {
 export function resolveSamuelLiveProvider(
   env: NodeJS.ProcessEnv = process.env,
 ): SamuelLiveProviderName {
-  const provider = (env.SAMUEL_LIVE_PROVIDER?.trim().toLowerCase() ||
-    DEFAULT_SAMUEL_LIVE_PROVIDER) as string;
+  const explicit = env.SAMUEL_LIVE_PROVIDER?.trim().toLowerCase();
 
-  if (provider !== "openai" && provider !== "gemini") {
-    throw new InvalidLiveProviderError(provider);
+  if (explicit) {
+    if (explicit !== "openai" && explicit !== "gemini") {
+      throw new InvalidLiveProviderError(explicit);
+    }
+    return explicit;
   }
 
-  return provider;
+  if (env.GEMINI_API_KEY?.trim()) return "gemini";
+  if (env.OPENAI_API_KEY?.trim()) return "openai";
+  return DEFAULT_SAMUEL_LIVE_PROVIDER;
 }
 
 export function resolveGeminiLiveModel(env: NodeJS.ProcessEnv = process.env) {
