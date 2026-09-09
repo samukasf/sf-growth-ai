@@ -26,6 +26,33 @@ describe("parseGoogleCalendarIntent", () => {
     vi.useRealTimers();
   });
 
+  it("understands natural spoken 'coloque um compromisso' command", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-09T10:00:00.000Z"));
+    const plan = parseGoogleCalendarIntent(
+      "Samuel, coloque um compromisso com o Pedro na minha agenda amanhã às 15h",
+    );
+
+    expect(plan?.actionId).toBe("calendar_create");
+    expect(plan?.requiresConfirmation).toBe(true);
+    expect(plan?.args.title).toContain("Pedro");
+    expect(plan?.args.start).toBeTruthy();
+    vi.useRealTimers();
+  });
+
+  it("understands a weekday in a spoken create command", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-09T10:00:00.000Z"));
+    const plan = parseGoogleCalendarIntent(
+      "Anote reunião com o contabilista sexta-feira às 11h30",
+    );
+
+    expect(plan?.actionId).toBe("calendar_create");
+    expect(plan?.requiresConfirmation).toBe(true);
+    expect(plan?.args.start).toBeTruthy();
+    vi.useRealTimers();
+  });
+
   it("requires event id before deleting when id is missing", () => {
     const plan = parseGoogleCalendarIntent("Cancelar compromisso da agenda");
 
