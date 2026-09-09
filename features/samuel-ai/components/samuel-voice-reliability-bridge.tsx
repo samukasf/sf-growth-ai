@@ -2,13 +2,15 @@
 
 import { useEffect } from "react";
 
-const MAX_UTTERANCE_MS = 45_000;
-const END_SILENCE_MS = 1_150;
-const START_SPEECH_MS = 90;
-const BARGE_IN_SPEECH_MS = 150;
-const MIN_SPEECH_RMS = 0.019;
-const MIN_BARGE_RMS = 0.034;
-const ANALYSER_FFT_SIZE = 1024;
+import {
+  SAMUEL_VOICE_PRE_ROLL_MS,
+  SAMUEL_VOICE_SAMPLE_RATE,
+  SamuelTurnDetector,
+  calculatePcmRms,
+  concatPcm,
+  downsamplePcm,
+  encodePcm16Wav,
+} from "../voice/samuel-turn-detector";
 
 type TranscriptionResponse = {
   ok?: boolean;
@@ -25,15 +27,18 @@ type OutputEventDetail = {
 
 type VoicePhase = "idle" | "connecting" | "listening" | "processing" | "speaking" | "error";
 
-function preferredMimeType() {
-  if (typeof MediaRecorder === "undefined") return "";
-  return [
-    "audio/webm;codecs=opus",
-    "audio/webm",
-    "audio/mp4;codecs=mp4a.40.2",
-    "audio/mp4",
-  ].find((type) => MediaRecorder.isTypeSupported(type)) ?? "";
-}
+type VoiceTelemetryEvent =
+  | "session_started"
+  | "session_ended"
+  | "speech_started"
+  | "barge_in"
+  | "speech_ended"
+  | "transcription_ok"
+  | "transcription_error"
+  | "echo_rejected"
+  | "turn_routed"
+  | "confirmation_routed"
+  | "microphone_error";
 
 function normalizeText(value: string) {
   return value
@@ -68,13 +73,6 @@ function isLikelyEcho(userText: string, assistantText: string) {
   return overlap >= 0.82;
 }
 
-function calculateRms(analyser: AnalyserNode, samples: Float32Array) {
-  analyser.getFloatTimeDomainData(samples);
-  let energy = 0;
-  for (const sample of samples) energy += sample * sample;
-  return Math.sqrt(energy / samples.length);
-}
-
 function setNativeTextareaValue(textarea: HTMLTextAreaElement, value: string) {
   const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
   descriptor?.set?.call(textarea, value);
@@ -87,17 +85,38 @@ function findConfirmationButton(cockpit: HTMLElement) {
   ) ?? null;
 }
 
+function speakConfirmedActionResult(cockpit: HTMLElement) {
+  const startedAt = performance.now();
+  let previous = "";
+  const poll = () => {
+    if (performance.now() - startedAt > 15_000) return;
+    const assistantMessages = Array.from(
+      cockpit.querySelectorAll<HTMLElement>(".samuel-message--assistant .samuel-message__content"),
+    );
+    const latest = assistantMessages.at(-1)?.textContent?.trim() ?? "";
+    if (
+      latest &&
+      latest !== previous &&
+      /ação executada|não consegui executar|evento criado|evento atualizado|evento .*removido|enviado|rascunho/i.test(latest)
+    ) {
+      window.dispatchEvent(
+        new CustomEvent("samuel:voice-speak-request", { detail: { text: latest } }),
+      );
+      return;
+    }
+    previous = latest || previous;
+    window.setTimeout(poll, 120);
+  };
+  window.setTimeout(poll, 120);
+}
+
 function routeTranscriptToSamuel(cockpit: HTMLElement, transcript: string) {
   if (isConfirmationPhrase(transcript)) {
     const confirmation = findConfirmationButton(cockpit);
     if (confirmation && !confirmation.disabled) {
       confirmation.click();
-      window.dispatchEvent(
-        new CustomEvent("samuel:voice-confirmation-submitted", {
-          detail: { transcript },
-        }),
-      );
-      return true;
+      speakConfirmedActionResult(cockpit);
+      return "confirmation" as const;
     }
   }
 
@@ -113,43 +132,80 @@ function routeTranscriptToSamuel(cockpit: HTMLElement, transcript: string) {
       window.setTimeout(() => {
         const ready = cockpit.querySelector<HTMLButtonElement>(".samuel-chat-send:not(.is-cancel)");
         if (ready && !ready.disabled) ready.click();
-      }, 20);
+      }, 24);
       return;
     }
-    if (attempt < 30) window.setTimeout(() => trySubmit(attempt + 1), 80);
+    if (attempt < 40) window.setTimeout(() => trySubmit(attempt + 1), 75);
   };
 
-  window.setTimeout(() => trySubmit(), cancel ? 120 : 0);
-  return true;
+  window.setTimeout(() => trySubmit(), cancel ? 140 : 0);
+  return "turn" as const;
+}
+
+function postTelemetry(
+  companyId: string,
+  event: VoiceTelemetryEvent,
+  details: Record<string, unknown> = {},
+) {
+  const body = JSON.stringify({ companyId, event, details, at: new Date().toISOString() });
+  try {
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon(
+        "/api/samuel-ai/voice/telemetry",
+        new Blob([body], { type: "application/json" }),
+      );
+      return;
+    }
+  } catch {
+    // Fall through to keepalive fetch.
+  }
+  void fetch("/api/samuel-ai/voice/telemetry", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body,
+    keepalive: true,
+  }).catch(() => undefined);
+}
+
+function companyIdFor(cockpit: HTMLElement | null) {
+  return (
+    cockpit?.querySelector<HTMLElement>("[data-samuel-company-id]")?.dataset.samuelCompanyId ||
+    "default-company"
+  );
 }
 
 /**
- * Deterministic Jarvis-style voice controller for the large Samuel microphone.
+ * Continuous Samuel voice controller.
  *
- * The microphone stays open for the whole session. Client VAD segments each
- * utterance, the existing STT + Samuel chat/action runtime handles the turn,
- * and response audio is independent so user speech can cancel it immediately.
+ * This deliberately follows the architecture used by mature open-source voice
+ * agents: the microphone is independent from TTS/model state; a local turn
+ * detector segments PCM with pre-roll; STT is a second-stage validator; and
+ * assistant audio can be cancelled as soon as a real user interruption begins.
  */
 export function SamuelVoiceReliabilityBridge() {
   useEffect(() => {
     let sessionActive = false;
     let stream: MediaStream | null = null;
     let audioContext: AudioContext | null = null;
-    let analyser: AnalyserNode | null = null;
-    let animationFrame = 0;
-    let recorder: MediaRecorder | null = null;
-    let chunks: Blob[] = [];
-    let recordingStartedAt = 0;
-    let lastSpeechAt = 0;
-    let speechCandidateAt = 0;
-    let noiseFloor = 0.006;
-    let transcriptInFlight = false;
-    let recordingBargeIn = false;
-    let assistantSpeaking = false;
-    let lastAssistantText = "";
+    let sourceNode: MediaStreamAudioSourceNode | null = null;
+    let processorNode: ScriptProcessorNode | null = null;
+    let silentGain: GainNode | null = null;
     let activeCockpit: HTMLElement | null = null;
     let activeButton: HTMLButtonElement | null = null;
-    let stopWithoutSending = false;
+    let assistantSpeaking = false;
+    let lastAssistantText = "";
+    let pendingTranscriptions = 0;
+
+    const detector = new SamuelTurnDetector();
+    const preRollParts: Float32Array[] = [];
+    let preRollSampleCount = 0;
+    let segmentParts: Float32Array[] = [];
+    let segmentSampleCount = 0;
+    let currentSegmentBargeIn = false;
+
+    const maxPreRollSamples = Math.round(
+      (SAMUEL_VOICE_SAMPLE_RATE * SAMUEL_VOICE_PRE_ROLL_MS) / 1_000,
+    );
 
     const setState = (phase: VoicePhase, errorMessage?: string) => {
       const buttons = Array.from(
@@ -194,61 +250,69 @@ export function SamuelVoiceReliabilityBridge() {
       }
     };
 
-    const stopRecorder = () => {
-      if (recorder && recorder.state !== "inactive") recorder.stop();
+    const clearAudioBuffers = () => {
+      preRollParts.length = 0;
+      preRollSampleCount = 0;
+      segmentParts = [];
+      segmentSampleCount = 0;
+      currentSegmentBargeIn = false;
+    };
+
+    const pushPreRoll = (pcm: Float32Array) => {
+      const copy = pcm.slice();
+      preRollParts.push(copy);
+      preRollSampleCount += copy.length;
+      while (preRollSampleCount > maxPreRollSamples && preRollParts.length > 1) {
+        const removed = preRollParts.shift();
+        preRollSampleCount -= removed?.length ?? 0;
+      }
     };
 
     const cleanup = () => {
-      if (animationFrame) cancelAnimationFrame(animationFrame);
-      animationFrame = 0;
-      if (recorder?.state === "recording") {
-        stopWithoutSending = true;
-        recorder.stop();
-      }
-      recorder = null;
-      analyser?.disconnect();
-      analyser = null;
+      processorNode?.disconnect();
+      processorNode = null;
+      sourceNode?.disconnect();
+      sourceNode = null;
+      silentGain?.disconnect();
+      silentGain = null;
       if (audioContext && audioContext.state !== "closed") void audioContext.close();
       audioContext = null;
       stream?.getTracks().forEach((track) => track.stop());
       stream = null;
-      transcriptInFlight = false;
-      speechCandidateAt = 0;
-      recordingStartedAt = 0;
-      lastSpeechAt = 0;
+      detector.reset();
+      clearAudioBuffers();
       assistantSpeaking = false;
+      pendingTranscriptions = 0;
     };
 
     const endSession = () => {
       if (!sessionActive && !stream) return;
+      const companyId = companyIdFor(activeCockpit);
       sessionActive = false;
-      stopWithoutSending = true;
       window.dispatchEvent(new CustomEvent("samuel:voice-interrupt"));
       if ("speechSynthesis" in window) window.speechSynthesis.cancel();
       cleanup();
       setState("idle");
+      postTelemetry(companyId, "session_ended");
       activeCockpit = null;
       activeButton = null;
     };
 
-    const transcribe = async (blob: Blob, wasBargeIn: boolean) => {
-      if (!sessionActive || !activeCockpit) return;
-      transcriptInFlight = true;
+    const transcribe = async (pcm: Float32Array, wasBargeIn: boolean) => {
+      if (!sessionActive || !activeCockpit || pcm.length < SAMUEL_VOICE_SAMPLE_RATE * 0.12) return;
+      pendingTranscriptions += 1;
       setState("processing");
       const cockpit = activeCockpit;
-      const companyId =
-        cockpit.querySelector<HTMLElement>("[data-samuel-company-id]")?.dataset.samuelCompanyId ||
-        "default-company";
+      const companyId = companyIdFor(cockpit);
+      const wavBytes = encodePcm16Wav(pcm, SAMUEL_VOICE_SAMPLE_RATE);
+      const form = new FormData();
+      form.set(
+        "audio",
+        new File([wavBytes], "samuel-turn.wav", { type: "audio/wav" }),
+      );
+
+      const startedAt = performance.now();
       try {
-        const extension = blob.type.includes("mp4") ? "m4a" : "webm";
-        const form = new FormData();
-        form.set(
-          "audio",
-          new File([blob], `samuel-turn.${extension}`, {
-            type: blob.type || "audio/webm",
-          }),
-        );
-        const startedAt = performance.now();
         const response = await fetch("/api/samuel-ai/transcribe", {
           method: "POST",
           headers: { "X-Samuel-Company-Id": companyId },
@@ -261,11 +325,13 @@ export function SamuelVoiceReliabilityBridge() {
         }
 
         const text = payload.text.trim();
-        console.info("Samuel voice turn transcribed", {
+        const latencyMs = Math.round(performance.now() - startedAt);
+        postTelemetry(companyId, "transcription_ok", {
           provider: payload.provider ?? "unknown",
           model: payload.model ?? "unknown",
-          latencyMs: Math.round(performance.now() - startedAt),
+          latencyMs,
           bargeIn: wasBargeIn,
+          audioMs: Math.round((pcm.length / SAMUEL_VOICE_SAMPLE_RATE) * 1_000),
         });
 
         if (isStopPhrase(text)) {
@@ -275,7 +341,9 @@ export function SamuelVoiceReliabilityBridge() {
         }
 
         if (wasBargeIn && isLikelyEcho(text, lastAssistantText)) {
-          console.info("Samuel voice echo rejected", { bargeIn: true });
+          postTelemetry(companyId, "echo_rejected", {
+            transcriptLength: text.length,
+          });
           setState("listening");
           return;
         }
@@ -290,100 +358,91 @@ export function SamuelVoiceReliabilityBridge() {
             },
           }),
         );
-        routeTranscriptToSamuel(cockpit, text);
+        const routed = routeTranscriptToSamuel(cockpit, text);
+        postTelemetry(
+          companyId,
+          routed === "confirmation" ? "confirmation_routed" : "turn_routed",
+          { bargeIn: wasBargeIn },
+        );
       } catch (error) {
         const message = error instanceof Error ? error.message : "Falha na transcrição.";
         console.error("Samuel continuous voice transcription failed", { message });
+        postTelemetry(companyId, "transcription_error", { message });
         setState("error", message);
       } finally {
-        transcriptInFlight = false;
+        pendingTranscriptions = Math.max(0, pendingTranscriptions - 1);
+        if (sessionActive && pendingTranscriptions === 0 && !assistantSpeaking) {
+          setState("listening");
+        }
       }
     };
 
-    const startRecording = (bargeIn: boolean) => {
-      if (!sessionActive || !stream || recorder?.state === "recording" || transcriptInFlight) return;
-      const mimeType = preferredMimeType();
-      chunks = [];
-      recordingBargeIn = bargeIn;
-      stopWithoutSending = false;
-      try {
-        recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "MediaRecorder indisponível.";
-        setState("error", message);
-        return;
-      }
-
-      const currentRecorder = recorder;
-      currentRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) chunks.push(event.data);
-      };
-      currentRecorder.onerror = () => setState("error", "Falha ao gravar a fala.");
-      currentRecorder.onstop = () => {
-        const shouldDiscard = stopWithoutSending || !sessionActive;
-        const type = currentRecorder.mimeType || mimeType || "audio/webm";
-        const blob = new Blob(chunks, { type });
-        recorder = null;
-        recordingStartedAt = 0;
-        lastSpeechAt = 0;
-        speechCandidateAt = 0;
-        chunks = [];
-        if (!shouldDiscard && blob.size > 0) void transcribe(blob, recordingBargeIn);
-      };
-      currentRecorder.start(180);
-      recordingStartedAt = performance.now();
-      lastSpeechAt = recordingStartedAt;
-      setState("listening");
+    const finalizeSegment = (wasBargeIn: boolean) => {
+      if (!segmentParts.length) return;
+      const pcm = concatPcm(segmentParts);
+      segmentParts = [];
+      segmentSampleCount = 0;
+      preRollParts.length = 0;
+      preRollSampleCount = 0;
+      postTelemetry(companyIdFor(activeCockpit), "speech_ended", {
+        audioMs: Math.round((pcm.length / SAMUEL_VOICE_SAMPLE_RATE) * 1_000),
+        bargeIn: wasBargeIn,
+      });
+      void transcribe(pcm, wasBargeIn);
     };
 
-    const monitor = () => {
-      if (!sessionActive || !analyser) return;
-      const samples = new Float32Array(analyser.fftSize);
-      const rms = calculateRms(analyser, samples);
+    const handlePcm = (pcm: Float32Array) => {
+      if (!sessionActive || !pcm.length) return;
       const now = performance.now();
+      const rms = calculatePcmRms(pcm);
+      const wasActive = detector.isActive;
+      const decision = detector.observe(rms, now, assistantSpeaking);
 
-      const speechThreshold = Math.max(MIN_SPEECH_RMS, noiseFloor * 2.7);
-      const bargeThreshold = Math.max(MIN_BARGE_RMS, noiseFloor * 4.1);
-      const threshold = assistantSpeaking ? bargeThreshold : speechThreshold;
+      if (decision.started) {
+        currentSegmentBargeIn = decision.bargeIn;
+        segmentParts = preRollParts.map((part) => part.slice());
+        segmentSampleCount = segmentParts.reduce((total, part) => total + part.length, 0);
+        segmentParts.push(pcm.slice());
+        segmentSampleCount += pcm.length;
+        preRollParts.length = 0;
+        preRollSampleCount = 0;
 
-      if (recorder?.state === "recording") {
-        if (rms >= speechThreshold) lastSpeechAt = now;
-        const duration = now - recordingStartedAt;
-        if (
-          duration >= MAX_UTTERANCE_MS ||
-          (duration > 380 && lastSpeechAt > 0 && now - lastSpeechAt >= END_SILENCE_MS)
-        ) {
-          stopRecorder();
-        }
-      } else if (!transcriptInFlight) {
-        if (!assistantSpeaking && rms < speechThreshold) {
-          noiseFloor = Math.max(0.0025, Math.min(0.025, noiseFloor * 0.965 + rms * 0.035));
-        }
+        postTelemetry(
+          companyIdFor(activeCockpit),
+          decision.bargeIn ? "barge_in" : "speech_started",
+          {
+            rms: Number(rms.toFixed(4)),
+            threshold: Number(decision.threshold.toFixed(4)),
+            noiseFloor: Number(decision.noiseFloor.toFixed(4)),
+          },
+        );
 
-        if (rms >= threshold) {
-          if (!speechCandidateAt) speechCandidateAt = now;
-          const needed = assistantSpeaking ? BARGE_IN_SPEECH_MS : START_SPEECH_MS;
-          if (now - speechCandidateAt >= needed) {
-            const bargeIn = assistantSpeaking;
-            speechCandidateAt = 0;
-            if (bargeIn) {
-              assistantSpeaking = false;
-              window.dispatchEvent(new CustomEvent("samuel:voice-interrupt"));
-              if ("speechSynthesis" in window) window.speechSynthesis.cancel();
-            }
-            startRecording(bargeIn);
-          }
-        } else {
-          speechCandidateAt = 0;
+        if (decision.bargeIn) {
+          assistantSpeaking = false;
+          window.dispatchEvent(new CustomEvent("samuel:voice-interrupt"));
+          if ("speechSynthesis" in window) window.speechSynthesis.cancel();
         }
+        setState("listening");
+      } else if (wasActive && detector.isActive) {
+        segmentParts.push(pcm.slice());
+        segmentSampleCount += pcm.length;
+      } else if (!detector.isActive && !decision.ended) {
+        pushPreRoll(pcm);
       }
 
-      animationFrame = requestAnimationFrame(monitor);
+      if (decision.ended) {
+        if (wasActive) {
+          segmentParts.push(pcm.slice());
+          segmentSampleCount += pcm.length;
+        }
+        finalizeSegment(currentSegmentBargeIn || decision.bargeIn);
+        currentSegmentBargeIn = false;
+      }
     };
 
     const startSession = async (cockpit: HTMLElement, button: HTMLButtonElement) => {
       if (sessionActive) return;
-      if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+      if (!navigator.mediaDevices?.getUserMedia) {
         setState("error", "Este navegador não oferece captura de áudio compatível.");
         return;
       }
@@ -392,6 +451,8 @@ export function SamuelVoiceReliabilityBridge() {
       activeButton = button;
       sessionActive = true;
       setState("connecting");
+      const companyId = companyIdFor(cockpit);
+
       try {
         stream = await navigator.mediaDevices.getUserMedia({
           audio: {
@@ -406,16 +467,32 @@ export function SamuelVoiceReliabilityBridge() {
           window.AudioContext ||
           (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
         if (!AudioContextCtor) throw new Error("AudioContext indisponível.");
+
         audioContext = new AudioContextCtor({ latencyHint: "interactive" });
         if (audioContext.state === "suspended") await audioContext.resume();
-        const source = audioContext.createMediaStreamSource(stream);
-        analyser = audioContext.createAnalyser();
-        analyser.fftSize = ANALYSER_FFT_SIZE;
-        analyser.smoothingTimeConstant = 0.12;
-        source.connect(analyser);
-        noiseFloor = 0.006;
+        sourceNode = audioContext.createMediaStreamSource(stream);
+        processorNode = audioContext.createScriptProcessor(2048, 1, 1);
+        silentGain = audioContext.createGain();
+        silentGain.gain.value = 0;
+
+        sourceNode.connect(processorNode);
+        processorNode.connect(silentGain);
+        silentGain.connect(audioContext.destination);
+        processorNode.onaudioprocess = (event) => {
+          if (!sessionActive || !audioContext) return;
+          const raw = event.inputBuffer.getChannelData(0);
+          const pcm = downsamplePcm(raw, audioContext.sampleRate, SAMUEL_VOICE_SAMPLE_RATE);
+          handlePcm(pcm);
+        };
+
+        detector.reset();
+        clearAudioBuffers();
         setState("listening");
-        animationFrame = requestAnimationFrame(monitor);
+        postTelemetry(companyId, "session_started", {
+          inputSampleRate: audioContext.sampleRate,
+          targetSampleRate: SAMUEL_VOICE_SAMPLE_RATE,
+          preRollMs: SAMUEL_VOICE_PRE_ROLL_MS,
+        });
       } catch (error) {
         const message =
           error instanceof DOMException && error.name === "NotAllowedError"
@@ -424,6 +501,7 @@ export function SamuelVoiceReliabilityBridge() {
               ? error.message
               : "Não foi possível abrir o microfone.";
         console.error("Samuel continuous microphone failed", { message });
+        postTelemetry(companyId, "microphone_error", { message });
         sessionActive = false;
         cleanup();
         setState("error", message);
@@ -454,7 +532,7 @@ export function SamuelVoiceReliabilityBridge() {
     };
     const onOutputEnd = () => {
       assistantSpeaking = false;
-      if (sessionActive && !transcriptInFlight && recorder?.state !== "recording") setState("listening");
+      if (sessionActive && pendingTranscriptions === 0 && !detector.isActive) setState("listening");
     };
     const onExternalStop = () => endSession();
 
