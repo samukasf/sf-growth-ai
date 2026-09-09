@@ -58,7 +58,7 @@ async function transcribeWithOpenAI(audio: File): Promise<ProviderResult> {
       | null;
 
     if (!response.ok) {
-      console.warn("Samuel OpenAI transcription unavailable; trying fallback", {
+      console.warn("Samuel OpenAI transcription unavailable", {
         status: response.status,
         requestId: response.headers.get("x-request-id"),
         providerMessage: payload?.error?.message,
@@ -131,7 +131,7 @@ async function transcribeWithGemini(audio: File): Promise<ProviderResult> {
           },
         ],
         generationConfig: {
-          temperature: 0,
+          thinkingConfig: { thinkingLevel: "low" },
           maxOutputTokens: 2048,
         },
       }),
@@ -205,35 +205,35 @@ export async function POST(request: Request) {
     return jsonError("O áudio excedeu o limite desta conversa.", 413, "VOICE_AUDIO_TOO_LARGE");
   }
 
-  const openai = await transcribeWithOpenAI(audio);
-  if (openai.ok && openai.text) {
+  const gemini = await transcribeWithGemini(audio);
+  if (gemini.ok && gemini.text) {
     return Response.json(
-      { ok: true, text: openai.text, provider: openai.provider, model: openai.model },
+      { ok: true, text: gemini.text, provider: gemini.provider, model: gemini.model },
       { headers: { "cache-control": "no-store" } },
     );
   }
 
-  const gemini = await transcribeWithGemini(audio);
-  if (gemini.ok && gemini.text) {
-    console.info("Samuel voice transcription used Gemini fallback", {
-      openaiStatus: openai.status,
-      openaiCode: openai.code,
-      model: gemini.model,
+  const openai = await transcribeWithOpenAI(audio);
+  if (openai.ok && openai.text) {
+    console.info("Samuel voice transcription used OpenAI fallback", {
+      geminiStatus: gemini.status,
+      geminiCode: gemini.code,
+      model: openai.model,
     });
     return Response.json(
-      { ok: true, text: gemini.text, provider: gemini.provider, model: gemini.model, fallback: true },
+      { ok: true, text: openai.text, provider: openai.provider, model: openai.model, fallback: true },
       { headers: { "cache-control": "no-store" } },
     );
   }
 
   console.error("Samuel voice transcription exhausted providers", {
-    openaiStatus: openai.status,
-    openaiCode: openai.code,
     geminiStatus: gemini.status,
     geminiCode: gemini.code,
+    openaiStatus: openai.status,
+    openaiCode: openai.code,
   });
 
-  if (openai.code?.includes("NO_SPEECH") || gemini.code?.includes("NO_SPEECH")) {
+  if (gemini.code?.includes("NO_SPEECH") || openai.code?.includes("NO_SPEECH")) {
     return jsonError("Não consegui identificar fala no áudio.", 422, "VOICE_NO_SPEECH");
   }
 
