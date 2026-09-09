@@ -47,7 +47,12 @@ function normalizeText(value: string) {
 
 function isStopPhrase(value: string) {
   const text = normalizeText(value);
-  return /^(para|pare|parar|chega|silencio|cala|cala a boca|stop|quieto|quiet|shush|enough)( agora)?[.!]?$/i.test(text);
+  return /^(para|pare|parar|chega|silencio|cala|cala a boca|stop|quieto|quiet|shush|enough)( agora)?$/i.test(text);
+}
+
+function isConfirmationPhrase(value: string) {
+  const text = normalizeText(value);
+  return /^(sim|sim confirma|confirmo|confirma|confirmar|pode confirmar|pode criar|pode fazer|pode executar|execute|executa|faz isso|pode marcar|pode agendar)$/i.test(text);
 }
 
 function isLikelyEcho(userText: string, assistantText: string) {
@@ -70,13 +75,60 @@ function calculateRms(analyser: AnalyserNode, samples: Float32Array) {
   return Math.sqrt(energy / samples.length);
 }
 
+function setNativeTextareaValue(textarea: HTMLTextAreaElement, value: string) {
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
+  descriptor?.set?.call(textarea, value);
+  textarea.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+function findConfirmationButton(cockpit: HTMLElement) {
+  return Array.from(cockpit.querySelectorAll<HTMLButtonElement>("button")).find((button) =>
+    /confirmar e executar/i.test(button.textContent ?? ""),
+  ) ?? null;
+}
+
+function routeTranscriptToSamuel(cockpit: HTMLElement, transcript: string) {
+  if (isConfirmationPhrase(transcript)) {
+    const confirmation = findConfirmationButton(cockpit);
+    if (confirmation && !confirmation.disabled) {
+      confirmation.click();
+      window.dispatchEvent(
+        new CustomEvent("samuel:voice-confirmation-submitted", {
+          detail: { transcript },
+        }),
+      );
+      return true;
+    }
+  }
+
+  const cancel = cockpit.querySelector<HTMLButtonElement>(".samuel-chat-send.is-cancel");
+  if (cancel && !cancel.disabled) cancel.click();
+
+  const trySubmit = (attempt = 0) => {
+    const textarea = cockpit.querySelector<HTMLTextAreaElement>(".samuel-chat-textarea");
+    const send = cockpit.querySelector<HTMLButtonElement>(".samuel-chat-send:not(.is-cancel)");
+    if (textarea && send && !send.disabled) {
+      setNativeTextareaValue(textarea, transcript);
+      textarea.focus();
+      window.setTimeout(() => {
+        const ready = cockpit.querySelector<HTMLButtonElement>(".samuel-chat-send:not(.is-cancel)");
+        if (ready && !ready.disabled) ready.click();
+      }, 20);
+      return;
+    }
+    if (attempt < 30) window.setTimeout(() => trySubmit(attempt + 1), 80);
+  };
+
+  window.setTimeout(() => trySubmit(), cancel ? 120 : 0);
+  return true;
+}
+
 /**
  * Deterministic Jarvis-style voice controller for the large Samuel microphone.
  *
  * The microphone stays open for the whole session. Client VAD segments each
- * utterance, the existing STT + Samuel chat runtime handles the turn, and TTS
- * playback is independent so user speech can cancel it immediately. This is the
- * reliability baseline even when provider-native Realtime is unavailable.
+ * utterance, the existing STT + Samuel chat/action runtime handles the turn,
+ * and response audio is independent so user speech can cancel it immediately.
  */
 export function SamuelVoiceReliabilityBridge() {
   useEffect(() => {
@@ -111,7 +163,13 @@ export function SamuelVoiceReliabilityBridge() {
         button.dataset.voiceMode = sessionActive ? "jarvis" : "none";
         button.dataset.voicePhase = phase;
         button.dataset.voiceCaptureState =
-          phase === "error" ? "error" : phase === "processing" ? "processing" : sessionActive ? "recording" : "idle";
+          phase === "error"
+            ? "error"
+            : phase === "processing"
+              ? "processing"
+              : sessionActive
+                ? "recording"
+                : "idle";
         const cockpit = button.closest<HTMLElement>(".samuel-focus-cockpit");
         if (cockpit) {
           cockpit.dataset.samuelVoiceMode = sessionActive ? "jarvis" : "none";
@@ -162,6 +220,7 @@ export function SamuelVoiceReliabilityBridge() {
     };
 
     const endSession = () => {
+      if (!sessionActive && !stream) return;
       sessionActive = false;
       stopWithoutSending = true;
       window.dispatchEvent(new CustomEvent("samuel:voice-interrupt"));
@@ -210,6 +269,7 @@ export function SamuelVoiceReliabilityBridge() {
         });
 
         if (isStopPhrase(text)) {
+          window.dispatchEvent(new CustomEvent("samuel:voice-interrupt"));
           setState("listening");
           return;
         }
@@ -230,6 +290,7 @@ export function SamuelVoiceReliabilityBridge() {
             },
           }),
         );
+        routeTranscriptToSamuel(cockpit, text);
       } catch (error) {
         const message = error instanceof Error ? error.message : "Falha na transcrição.";
         console.error("Samuel continuous voice transcription failed", { message });
@@ -272,7 +333,7 @@ export function SamuelVoiceReliabilityBridge() {
       currentRecorder.start(180);
       recordingStartedAt = performance.now();
       lastSpeechAt = recordingStartedAt;
-      setState(bargeIn ? "listening" : "listening");
+      setState("listening");
     };
 
     const monitor = () => {
