@@ -39,6 +39,16 @@ function extractQuery(text: string): string {
     .trim() || text.trim();
 }
 
+const WEEKDAYS: Array<{ pattern: RegExp; day: number }> = [
+  { pattern: /\bdomingo\b/, day: 0 },
+  { pattern: /\bsegunda(?:-feira)?\b/, day: 1 },
+  { pattern: /\bterca(?:-feira)?\b/, day: 2 },
+  { pattern: /\bquarta(?:-feira)?\b/, day: 3 },
+  { pattern: /\bquinta(?:-feira)?\b/, day: 4 },
+  { pattern: /\bsexta(?:-feira)?\b/, day: 5 },
+  { pattern: /\bsabado\b/, day: 6 },
+];
+
 function parseDay(text: string, now = new Date()): Date | null {
   const normalized = normalize(text);
   const date = new Date(now);
@@ -47,8 +57,25 @@ function parseDay(text: string, now = new Date()): Date | null {
     date.setHours(0, 0, 0, 0);
     return date;
   }
+  if (/\bdepois de amanha\b/.test(normalized)) {
+    date.setDate(date.getDate() + 2);
+    date.setHours(0, 0, 0, 0);
+    return date;
+  }
   if (/\bamanha\b/.test(normalized)) {
     date.setDate(date.getDate() + 1);
+    date.setHours(0, 0, 0, 0);
+    return date;
+  }
+
+  for (const weekday of WEEKDAYS) {
+    if (!weekday.pattern.test(normalized)) continue;
+    const current = date.getDay();
+    let offset = (weekday.day - current + 7) % 7;
+    if (offset === 0 || /\bproxim[oa]\b/.test(normalized)) {
+      if (offset === 0) offset = 7;
+    }
+    date.setDate(date.getDate() + offset);
     date.setHours(0, 0, 0, 0);
     return date;
   }
@@ -120,16 +147,23 @@ function parseStartEnd(text: string): { start: string; end: string } | null {
   };
 }
 
+function cleanTitle(value: string) {
+  const cleaned = value
+    .replace(/^\s*(?:um|uma|o|a)?\s*(?:compromisso|evento|reuni[aã]o|meeting|call)\s*(?:com|sobre|de)?\s*/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return cleaned.length >= 3 ? cleaned.slice(0, 120) : "Compromisso com Samuel AI";
+}
+
 function extractTitle(text: string): string {
   const explicit = text.match(/\b(?:titulo|título|assunto)\s*[:=]\s*["“”']?([^"“”'\n]+)["“”']?/i)?.[1]?.trim();
-  if (explicit) return explicit.slice(0, 120);
+  if (explicit) return cleanTitle(explicit);
 
   const eventTitle =
-    text.match(/\b(?:reuni[aã]o|compromisso|evento|call)\s+(?:com|sobre|de)?\s*([^,.;\n]+?)(?:\s+\b(?:hoje|amanh[aã]|dia|[àa]s|as|\d{1,2}[/-]\d{1,2})\b|$)/i)?.[1]?.trim() ||
-    text.match(/\b(?:agendar|marcar|criar)\s+([^,.;\n]+?)(?:\s+\b(?:hoje|amanh[aã]|dia|[àa]s|as|\d{1,2}[/-]\d{1,2})\b|$)/i)?.[1]?.trim();
+    text.match(/\b(?:reuni[aã]o|compromisso|evento|call)\s+(?:com|sobre|de)?\s*([^,.;\n]+?)(?:\s+\b(?:hoje|amanh[aã]|depois de amanh[aã]|dia|segunda|terça|terca|quarta|quinta|sexta|sábado|sabado|domingo|[àa]s|as|\d{1,2}[/-]\d{1,2})\b|$)/i)?.[1]?.trim() ||
+    text.match(/\b(?:agendar|marcar|criar|adicionar|colocar|coloque|inserir|inclua|incluir|anotar|anote|reservar|reserve)\s+([^,.;\n]+?)(?:\s+\b(?:hoje|amanh[aã]|depois de amanh[aã]|dia|segunda|terça|terca|quarta|quinta|sexta|sábado|sabado|domingo|[àa]s|as|\d{1,2}[/-]\d{1,2})\b|$)/i)?.[1]?.trim();
 
-  if (!eventTitle || eventTitle.length < 3) return "Compromisso com Samuel AI";
-  return eventTitle.replace(/\s+/g, " ").slice(0, 120);
+  return eventTitle ? cleanTitle(eventTitle) : "Compromisso com Samuel AI";
 }
 
 function formatPreviewDate(start?: string, end?: string) {
@@ -142,13 +176,13 @@ function formatPreviewDate(start?: string, end?: string) {
 
 /**
  * Interpreta pedidos em linguagem natural sobre Google Agenda.
- * Escritas reais são sempre marcadas para confirmação explícita na UI.
+ * Escritas reais são sempre marcadas para confirmação explícita na UI/voz.
  */
 export function parseGoogleCalendarIntent(query: string): CalendarActionPlan | null {
   const normalized = normalize(query);
   const aboutCalendar =
-    /\b(agenda|calendar|calendario|calendario|compromisso|evento|reuniao|meeting|call)\b/.test(normalized) ||
-    /\b(agendar|marcar|remarcar|desmarcar|cancelar compromisso|cancelar evento)\b/.test(normalized);
+    /\b(agenda|calendar|calendario|compromisso|evento|reuniao|meeting|call)\b/.test(normalized) ||
+    /\b(agendar|marcar|remarcar|desmarcar|colocar|coloque|inserir|inclua|incluir|anotar|anote|reservar|reserve|cancelar compromisso|cancelar evento)\b/.test(normalized);
 
   if (!aboutCalendar) return null;
 
@@ -208,7 +242,7 @@ export function parseGoogleCalendarIntent(query: string): CalendarActionPlan | n
     );
   }
 
-  if (/\b(agendar|marcar|criar|adicionar|nova reuniao|novo evento|novo compromisso)\b/.test(normalized)) {
+  if (/\b(agendar|marcar|criar|adicionar|colocar|coloque|inserir|inclua|incluir|anotar|anote|reservar|reserve|nova reuniao|novo evento|novo compromisso)\b/.test(normalized)) {
     const range = parseStartEnd(query);
     const title = extractTitle(query);
     if (!range) {
