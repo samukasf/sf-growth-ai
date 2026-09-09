@@ -4,8 +4,10 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MAX_AUDIO_BYTES = 12 * 1024 * 1024;
-const OPENAI_TRANSCRIPTION_MODEL = "gpt-4o-mini-transcribe";
-const GEMINI_TRANSCRIPTION_MODEL = process.env.GEMINI_TRANSCRIPTION_MODEL?.trim() || "gemini-3.8-flash";
+const OPENAI_TRANSCRIPTION_MODEL =
+  process.env.OPENAI_TRANSCRIPTION_MODEL?.trim() || "gpt-4o-mini-transcribe";
+const GEMINI_TRANSCRIPTION_MODEL =
+  process.env.GEMINI_TRANSCRIPTION_MODEL?.trim() || "gemini-2.5-flash";
 
 type ProviderResult = {
   ok: boolean;
@@ -42,10 +44,11 @@ async function transcribeWithOpenAI(audio: File): Promise<ProviderResult> {
   }
 
   const providerForm = new FormData();
-  providerForm.set("file", audio, audio.name || "samuel-voice.webm");
+  providerForm.set("file", audio, audio.name || "samuel-voice.wav");
   providerForm.set("model", OPENAI_TRANSCRIPTION_MODEL);
   providerForm.set("language", "pt");
 
+  const startedAt = Date.now();
   try {
     const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
       method: "POST",
@@ -62,6 +65,7 @@ async function transcribeWithOpenAI(audio: File): Promise<ProviderResult> {
         status: response.status,
         requestId: response.headers.get("x-request-id"),
         providerMessage: payload?.error?.message,
+        latencyMs: Date.now() - startedAt,
       });
       return {
         ok: false,
@@ -105,7 +109,7 @@ async function transcribeWithGemini(audio: File): Promise<ProviderResult> {
 
   try {
     const bytes = Buffer.from(await audio.arrayBuffer());
-    const mimeType = audio.type?.trim() || "audio/webm";
+    const mimeType = audio.type?.trim() || "audio/wav";
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_TRANSCRIPTION_MODEL)}:generateContent`;
     const response = await fetch(endpoint, {
       method: "POST",
@@ -119,7 +123,7 @@ async function transcribeWithGemini(audio: File): Promise<ProviderResult> {
             role: "user",
             parts: [
               {
-                text: "Transcreva exatamente a fala deste áudio em português. Retorne somente a transcrição, sem explicações, sem aspas e sem comentários adicionais.",
+                text: "Transcreva exatamente a fala deste áudio em português. Retorne somente a transcrição, sem explicações, aspas ou comentários.",
               },
               {
                 inline_data: {
@@ -130,10 +134,7 @@ async function transcribeWithGemini(audio: File): Promise<ProviderResult> {
             ],
           },
         ],
-        generationConfig: {
-          thinkingConfig: { thinkingLevel: "low" },
-          maxOutputTokens: 2048,
-        },
+        generationConfig: { maxOutputTokens: 2048, temperature: 0 },
       }),
       cache: "no-store",
     });
@@ -148,10 +149,6 @@ async function transcribeWithGemini(audio: File): Promise<ProviderResult> {
       | null;
 
     if (!response.ok) {
-      console.error("Samuel Gemini transcription failed", {
-        status: response.status,
-        providerMessage: payload?.error?.message,
-      });
       return {
         ok: false,
         status: response.status,
@@ -205,35 +202,35 @@ export async function POST(request: Request) {
     return jsonError("O áudio excedeu o limite desta conversa.", 413, "VOICE_AUDIO_TOO_LARGE");
   }
 
-  const gemini = await transcribeWithGemini(audio);
-  if (gemini.ok && gemini.text) {
+  const openai = await transcribeWithOpenAI(audio);
+  if (openai.ok && openai.text) {
     return Response.json(
-      { ok: true, text: gemini.text, provider: gemini.provider, model: gemini.model },
+      { ok: true, text: openai.text, provider: openai.provider, model: openai.model },
       { headers: { "cache-control": "no-store" } },
     );
   }
 
-  const openai = await transcribeWithOpenAI(audio);
-  if (openai.ok && openai.text) {
-    console.info("Samuel voice transcription used OpenAI fallback", {
-      geminiStatus: gemini.status,
-      geminiCode: gemini.code,
-      model: openai.model,
+  const gemini = await transcribeWithGemini(audio);
+  if (gemini.ok && gemini.text) {
+    console.info("Samuel voice transcription used Gemini failover", {
+      openaiStatus: openai.status,
+      openaiCode: openai.code,
+      model: gemini.model,
     });
     return Response.json(
-      { ok: true, text: openai.text, provider: openai.provider, model: openai.model, fallback: true },
+      { ok: true, text: gemini.text, provider: gemini.provider, model: gemini.model, fallback: true },
       { headers: { "cache-control": "no-store" } },
     );
   }
 
   console.error("Samuel voice transcription exhausted providers", {
-    geminiStatus: gemini.status,
-    geminiCode: gemini.code,
     openaiStatus: openai.status,
     openaiCode: openai.code,
+    geminiStatus: gemini.status,
+    geminiCode: gemini.code,
   });
 
-  if (gemini.code?.includes("NO_SPEECH") || openai.code?.includes("NO_SPEECH")) {
+  if (openai.code?.includes("NO_SPEECH") || gemini.code?.includes("NO_SPEECH")) {
     return jsonError("Não consegui identificar fala no áudio.", 422, "VOICE_NO_SPEECH");
   }
 
