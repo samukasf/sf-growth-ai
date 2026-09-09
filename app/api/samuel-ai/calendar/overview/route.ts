@@ -1,11 +1,48 @@
 import { NextResponse } from "next/server";
 
 import { authorizeCompanyRequest } from "@/features/auth/server/authorization";
-import { getGoogleCalendarProviderForCompany } from "@/features/google-calendar";
+import {
+  CalendarApiError,
+  getGoogleCalendarProviderForCompany,
+} from "@/features/google-calendar";
 
 export const dynamic = "force-dynamic";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function calendarErrorResponse(error: unknown) {
+  if (error instanceof CalendarApiError) {
+    const reconnectRequired = ["NOT_CONNECTED", "AUTH_ERROR"].includes(error.code);
+    const status =
+      error.code === "NOT_CONNECTED"
+        ? 409
+        : error.code === "AUTH_ERROR"
+          ? 401
+          : error.code === "NOT_CONFIGURED"
+            ? 503
+            : error.code === "NETWORK_ERROR"
+              ? 503
+              : 502;
+
+    return NextResponse.json(
+      {
+        ok: false,
+        code: error.code,
+        summary: error.message,
+        error: error.message,
+        reconnectRequired,
+        reconnectUrl: reconnectRequired ? "/integrations/google/connect" : null,
+      },
+      { status, headers: { "Cache-Control": "private, no-store" } },
+    );
+  }
+
+  const message = error instanceof Error ? error.message : "Não foi possível carregar a Google Agenda.";
+  return NextResponse.json(
+    { ok: false, code: "UNKNOWN", summary: message, error: message, reconnectRequired: false },
+    { status: 502, headers: { "Cache-Control": "private, no-store" } },
+  );
+}
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -41,10 +78,6 @@ export async function GET(request: Request) {
       { headers: { "Cache-Control": "private, no-store" } },
     );
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Não foi possível carregar a Google Agenda.";
-    return NextResponse.json(
-      { ok: false, summary: message, error: message },
-      { status: 502, headers: { "Cache-Control": "private, no-store" } },
-    );
+    return calendarErrorResponse(error);
   }
 }
