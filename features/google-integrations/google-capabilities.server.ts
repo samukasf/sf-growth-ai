@@ -17,14 +17,23 @@ export const GOOGLE_CAPABILITY_SCOPES = {
 } as const;
 
 export type GoogleCapabilityKey = keyof typeof GOOGLE_CAPABILITY_SCOPES;
+export type GoogleConnectionHealth =
+  | "healthy"
+  | "reauthorization_required"
+  | "not_connected"
+  | "not_configured";
 
 export type GoogleIntegrationStatus = {
   oauthConfigured: boolean;
   connected: boolean;
+  tokenHealthy: boolean;
+  health: GoogleConnectionHealth;
   email: string | null;
   updatedAt: string | null;
   capabilities: Record<GoogleCapabilityKey, boolean>;
   missingCapabilities: GoogleCapabilityKey[];
+  reconnectRequired: boolean;
+  healthMessage: string | null;
 };
 
 function normalizeScopes(scope: string | null | undefined) {
@@ -36,9 +45,18 @@ function normalizeScopes(scope: string | null | undefined) {
   );
 }
 
+function friendlyGoogleHealthError(error: unknown) {
+  const message = error instanceof Error ? error.message : "A conexão Google não respondeu.";
+  if (/refresh|token|401|403|reconect|oauth|auth/i.test(message)) {
+    return "A autorização Google expirou ou foi revogada. Reconecte a conta Google para restaurar Agenda, Gmail e demais recursos.";
+  }
+  return `A conexão Google existe, mas não pôde ser validada agora: ${message}`;
+}
+
 export async function getGoogleIntegrationStatus(
   companyId: string,
 ): Promise<GoogleIntegrationStatus> {
+  const oauthConfigured = Boolean(resolveGoogleOAuthConfig());
   const connection = await findGoogleOAuthConnection(companyId).catch(() => null);
   const scopes = normalizeScopes(connection?.scope);
   const capabilities = Object.fromEntries(
@@ -49,13 +67,61 @@ export async function getGoogleIntegrationStatus(
     (key) => !capabilities[key],
   );
 
+  if (!oauthConfigured) {
+    return {
+      oauthConfigured: false,
+      connected: Boolean(connection),
+      tokenHealthy: false,
+      health: "not_configured",
+      email: connection?.googleEmail ?? null,
+      updatedAt: connection?.updatedAt ?? null,
+      capabilities,
+      missingCapabilities,
+      reconnectRequired: false,
+      healthMessage: "Google OAuth não está configurado no servidor.",
+    };
+  }
+
+  if (!connection) {
+    return {
+      oauthConfigured: true,
+      connected: false,
+      tokenHealthy: false,
+      health: "not_connected",
+      email: null,
+      updatedAt: null,
+      capabilities,
+      missingCapabilities,
+      reconnectRequired: true,
+      healthMessage: "Nenhuma conta Google está conectada a esta empresa.",
+    };
+  }
+
+  let tokenHealthy = false;
+  let healthMessage: string | null = null;
+  try {
+    await resolveGmailAccessToken(companyId);
+    tokenHealthy = true;
+  } catch (error) {
+    healthMessage = friendlyGoogleHealthError(error);
+  }
+
+  const reconnectRequired = !tokenHealthy || !capabilities.calendar;
   return {
-    oauthConfigured: Boolean(resolveGoogleOAuthConfig()),
-    connected: Boolean(connection),
-    email: connection?.googleEmail ?? null,
-    updatedAt: connection?.updatedAt ?? null,
+    oauthConfigured: true,
+    connected: tokenHealthy,
+    tokenHealthy,
+    health: tokenHealthy ? "healthy" : "reauthorization_required",
+    email: connection.googleEmail,
+    updatedAt: connection.updatedAt,
     capabilities,
     missingCapabilities,
+    reconnectRequired,
+    healthMessage:
+      healthMessage ??
+      (capabilities.calendar
+        ? null
+        : "A conta Google está conectada, mas falta a permissão do Google Agenda. Reconecte para conceder os scopes atuais."),
   };
 }
 
