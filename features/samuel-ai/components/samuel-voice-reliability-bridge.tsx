@@ -255,7 +255,9 @@ export function SamuelVoiceReliabilityBridge() {
       clearBootTimer();
 
       const { startButton } = realtimeElements(cockpit);
-      if (realtimeSessionActive(startButton) && !startButton?.disabled) startButton.click();
+      if (startButton && realtimeSessionActive(startButton) && !startButton.disabled) {
+        startButton.click();
+      }
 
       if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
         setState("error", "fallback", "error", button);
@@ -378,7 +380,6 @@ export function SamuelVoiceReliabilityBridge() {
       primeAudioOutput();
       setState("recording", "realtime", "connecting", button);
 
-      // Direct synchronous click preserves browser microphone/autoplay gesture permission.
       startButton.click();
 
       clearBootTimer();
@@ -399,7 +400,7 @@ export function SamuelVoiceReliabilityBridge() {
       }
 
       const { startButton } = realtimeElements(cockpit);
-      if (realtimeSessionActive(startButton) && startButton && !startButton.disabled) {
+      if (startButton && realtimeSessionActive(startButton) && !startButton.disabled) {
         startButton.click();
       }
       setState("idle", "none", "idle", button);
