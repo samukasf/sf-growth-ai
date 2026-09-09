@@ -19,7 +19,6 @@ export type SpeakOptions = {
 };
 
 type UseSamuelSpeechInput = { enabled?: boolean; companyId?: string };
-
 type Playback = {
   text: string;
   charIndex: number;
@@ -38,6 +37,8 @@ const MALE_VOICE_HINTS = [
 
 export type SamuelVoiceCandidate = { name: string; lang: string; localService?: boolean };
 
+type SpeakRequestDetail = { text?: string };
+
 function sanitize(content: string) {
   return content
     .replace(/\[([^\]]+)]\([^)]+\)/g, "$1")
@@ -47,7 +48,7 @@ function sanitize(content: string) {
     .slice(0, 2_400);
 }
 
-function words(text: string) {
+function wordPositions(text: string) {
   return [...text.matchAll(/\S+/g)].map((match) => ({ index: match.index ?? 0, value: match[0] }));
 }
 
@@ -107,22 +108,19 @@ export function useSamuelSpeech({ enabled = true, companyId = "default-company" 
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null);
-  const frameRef = useRef<number | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
   const progressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const neuralAbortRef = useRef<AbortController | null>(null);
   const activeEngineRef = useRef<SamuelSpeechEngine>(null);
   const activeTextRef = useRef("");
 
-  const cleanup = useCallback(() => {
-    neuralAbortRef.current?.abort();
-    neuralAbortRef.current = null;
+  const releaseMedia = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
     if (progressTimerRef.current) clearInterval(progressTimerRef.current);
     progressTimerRef.current = null;
     if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
     settleTimerRef.current = null;
-    if (frameRef.current !== null && typeof window !== "undefined") cancelAnimationFrame(frameRef.current);
-    frameRef.current = null;
     if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
     utteranceRef.current = null;
     if (audioRef.current) {
@@ -135,28 +133,59 @@ export function useSamuelSpeech({ enabled = true, companyId = "default-company" 
     audioUrlRef.current = null;
   }, []);
 
-  const finish = useCallback((requestId: number, text: string, wordCount: number, options: SpeakOptions) => {
+  const beginProgress = useCallback((text: string, audio?: HTMLAudioElement) => {
+    const positions = wordPositions(text);
+    const startedAt = performance.now();
+    if (progressTimerRef.current) clearInterval(progressTimerRef.current);
+    progressTimerRef.current = setInterval(() => {
+      const duration = audio && Number.isFinite(audio.duration) && audio.duration > 0
+        ? audio.duration * 1000
+        : Math.max(1_250, positions.length * 295);
+      const elapsed = audio ? audio.currentTime * 1000 : performance.now() - startedAt;
+      const progress = Math.min(0.985, elapsed / duration);
+      const wordIndex = Math.min(
+        Math.max(0, positions.length - 1),
+        Math.floor(progress * Math.max(1, positions.length)),
+      );
+      setPlayback({
+        text,
+        charIndex: positions[wordIndex]?.index ?? 0,
+        wordIndex,
+        progress,
+        mouthLevel: 0.1 + Math.abs(Math.sin(performance.now() / 115)) * 0.23,
+      });
+    }, 75);
+  }, []);
+
+  const finish = useCallback((requestId: number, text: string, options: SpeakOptions) => {
     if (requestRef.current !== requestId) return;
     const finishedEngine = activeEngineRef.current;
-    cleanup();
+    const positions = wordPositions(text);
+    releaseMedia();
     setStatus("idle");
-    setPlayback({ text, charIndex: text.length, wordIndex: Math.max(-1, wordCount - 1), progress: 1, mouthLevel: 0 });
-    setSettling(true);
-    settleTimerRef.current = setTimeout(() => setSettling(false), 420);
+    setPlayback({
+      text,
+      charIndex: text.length,
+      wordIndex: Math.max(-1, positions.length - 1),
+      progress: 1,
+      mouthLevel: 0,
+    });
     emitOutputEvent("end", { text, engine: finishedEngine });
-    activeEngineRef.current = null;
     activeTextRef.current = "";
+    activeEngineRef.current = null;
+    setSettling(true);
+    settleTimerRef.current = setTimeout(() => setSettling(false), 350);
     options.onEnd?.();
-  }, [cleanup]);
+  }, [releaseMedia]);
 
   const cancel = useCallback(() => {
-    const currentText = activeTextRef.current;
+    const text = activeTextRef.current;
     const currentEngine = activeEngineRef.current;
     requestRef.current += 1;
-    cleanup();
-    if (currentText) emitOutputEvent("cancel", { text: currentText, engine: currentEngine });
-    activeEngineRef.current = null;
+    releaseMedia();
+    if (text) emitOutputEvent("cancel", { text, engine: currentEngine });
     activeTextRef.current = "";
+    activeEngineRef.current = null;
     setStatus("idle");
     setSettling(false);
     setPlayback(EMPTY);
@@ -164,147 +193,132 @@ export function useSamuelSpeech({ enabled = true, companyId = "default-company" 
     setVoiceLabel(null);
     setLoadProgress(0);
     setErrorMessage(null);
-  }, [cleanup]);
+  }, [releaseMedia]);
 
   const browserSpeak = useCallback((text: string, requestId: number, options: SpeakOptions) => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) return false;
-    const availableVoices = window.speechSynthesis.getVoices();
-    const voice = selectSamuelMasculineVoice(availableVoices) ?? selectSamuelPortugueseFallbackVoice(availableVoices);
-    const textWords = words(text);
+    if (
+      typeof window === "undefined" ||
+      !("speechSynthesis" in window) ||
+      !("SpeechSynthesisUtterance" in window)
+    ) return false;
+
+    const voices = window.speechSynthesis.getVoices();
+    const voice = selectSamuelMasculineVoice(voices) ?? selectSamuelPortugueseFallbackVoice(voices);
     const utterance = new SpeechSynthesisUtterance(text);
     if (voice) utterance.voice = voice;
     utterance.lang = voice?.lang ?? "pt-BR";
     utterance.rate = 0.96;
-    utterance.pitch = voice && selectSamuelMasculineVoice([voice]) ? 0.78 : 0.86;
+    utterance.pitch = voice && selectSamuelMasculineVoice([voice]) ? 0.8 : 0.88;
     utterance.volume = 1;
-    activeEngineRef.current = "browser-male";
+    utteranceRef.current = utterance;
     activeTextRef.current = text;
+    activeEngineRef.current = "browser-male";
     setEngine("browser-male");
     setVoiceLabel(voice?.name ?? "Voz nativa do dispositivo · Português");
     setLoadProgress(1);
-    setErrorMessage(null);
+
     utterance.onstart = () => {
       if (requestRef.current !== requestId) return;
       setStatus("speaking");
+      beginProgress(text);
       emitOutputEvent("start", { text, engine: "browser-male" });
       options.onStart?.();
-      const startedAt = performance.now();
-      const estimated = Math.max(1_200, textWords.length * 285);
-      progressTimerRef.current = setInterval(() => {
-        const progress = Math.min(0.98, (performance.now() - startedAt) / estimated);
-        const wordIndex = Math.min(Math.max(0, textWords.length - 1), Math.floor(progress * Math.max(1, textWords.length)));
-        setPlayback({
-          text,
-          charIndex: textWords[wordIndex]?.index ?? 0,
-          wordIndex,
-          progress,
-          mouthLevel: 0.08 + Math.abs(Math.sin(performance.now() / 145)) * 0.2,
-        });
-      }, 90);
     };
     utterance.onboundary = (event) => {
       if (requestRef.current !== requestId) return;
+      const positions = wordPositions(text);
       const charIndex = Math.max(0, Math.min(text.length, event.charIndex));
-      const wordIndex = Math.max(0, textWords.findLastIndex((word) => word.index <= charIndex));
-      setPlayback((current) => ({ ...current, charIndex, wordIndex, progress: text.length ? charIndex / text.length : 0 }));
+      const wordIndex = Math.max(0, positions.findLastIndex((word) => word.index <= charIndex));
+      setPlayback((current) => ({
+        ...current,
+        charIndex,
+        wordIndex,
+        progress: text.length ? charIndex / text.length : 0,
+      }));
     };
-    utterance.onend = () => finish(requestId, text, textWords.length, options);
+    utterance.onend = () => finish(requestId, text, options);
     utterance.onerror = (event) => {
       if (requestRef.current !== requestId) return;
       setStatus(event.error === "not-allowed" ? "blocked" : "idle");
       setErrorMessage(
         event.error === "not-allowed"
-          ? "O navegador bloqueou o áudio. Toque novamente em Ouvir Samuel."
+          ? "O navegador bloqueou a reprodução de áudio."
           : "A voz nativa foi interrompida.",
       );
       emitOutputEvent("error", { text, engine: "browser-male" });
-      activeEngineRef.current = null;
       activeTextRef.current = "";
+      activeEngineRef.current = null;
       options.onError?.();
     };
-    utteranceRef.current = utterance;
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utterance);
     window.speechSynthesis.resume();
     return true;
-  }, [finish]);
+  }, [beginProgress, finish]);
 
   const piperSpeak = useCallback(async (text: string, requestId: number, options: SpeakOptions) => {
-    setStatus("preparing");
-    activeEngineRef.current = "piper-local";
     activeTextRef.current = text;
+    activeEngineRef.current = "piper-local";
     setEngine("piper-local");
     setVoiceLabel("Piper · Faber Grave pt-BR");
+    setStatus("preparing");
     setLoadProgress(0);
     try {
       const tts = await import("@diffusionstudio/vits-web");
       const blob = await tts.predict(
         { text, voiceId: PIPER_VOICE },
         ({ loaded, total }) => {
-          if (requestRef.current === requestId && total > 0) setLoadProgress(Math.min(0.98, loaded / total));
+          if (requestRef.current === requestId && total > 0) {
+            setLoadProgress(Math.min(0.98, loaded / total));
+          }
         },
       );
       if (requestRef.current !== requestId) return;
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
-      const textWords = words(text);
       audioRef.current = audio;
       audioUrlRef.current = url;
       audio.playbackRate = 0.96;
       audio.preservesPitch = true;
       setLoadProgress(1);
       audio.onplay = () => {
+        if (requestRef.current !== requestId) return;
         setStatus("speaking");
+        beginProgress(text, audio);
         emitOutputEvent("start", { text, engine: "piper-local" });
         options.onStart?.();
-        const track = () => {
-          if (requestRef.current !== requestId || audio.paused) return;
-          const duration = Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : Math.max(1.5, textWords.length * 0.31);
-          const progress = Math.min(0.99, audio.currentTime / duration);
-          const wordIndex = Math.min(Math.max(0, textWords.length - 1), Math.floor(progress * Math.max(1, textWords.length)));
-          setPlayback({
-            text,
-            charIndex: textWords[wordIndex]?.index ?? 0,
-            wordIndex,
-            progress,
-            mouthLevel: 0.1 + Math.abs(Math.sin(audio.currentTime * 9)) * 0.18,
-          });
-          frameRef.current = requestAnimationFrame(track);
-        };
-        frameRef.current = requestAnimationFrame(track);
       };
-      audio.onended = () => finish(requestId, text, textWords.length, options);
+      audio.onended = () => finish(requestId, text, options);
       audio.onerror = () => {
+        if (requestRef.current !== requestId) return;
         setStatus("idle");
         setErrorMessage("Não foi possível reproduzir a voz local.");
         emitOutputEvent("error", { text, engine: "piper-local" });
-        activeEngineRef.current = null;
         activeTextRef.current = "";
+        activeEngineRef.current = null;
         options.onError?.();
       };
       await audio.play();
     } catch {
       if (requestRef.current !== requestId) return;
       setStatus("unsupported");
-      setEngine(null);
-      setVoiceLabel(null);
       setErrorMessage("Voz local indisponível.");
       emitOutputEvent("error", { text, engine: "piper-local" });
-      activeEngineRef.current = null;
       activeTextRef.current = "";
+      activeEngineRef.current = null;
       options.onError?.();
     }
-  }, [finish]);
+  }, [beginProgress, finish]);
 
   const neuralSpeak = useCallback(async (text: string, requestId: number, options: SpeakOptions) => {
     const controller = new AbortController();
-    neuralAbortRef.current = controller;
-    activeEngineRef.current = "gemini-neural";
+    abortRef.current = controller;
     activeTextRef.current = text;
-    setStatus("preparing");
+    activeEngineRef.current = "gemini-neural";
     setEngine("gemini-neural");
-    setVoiceLabel("Samuel Neural · voz adulta");
-    setLoadProgress(0.12);
+    setVoiceLabel("Samuel Neural · adulto grave");
+    setStatus("preparing");
+    setLoadProgress(0.08);
     setErrorMessage(null);
 
     try {
@@ -317,10 +331,9 @@ export function useSamuelSpeech({ enabled = true, companyId = "default-company" 
       });
       if (!response.ok) throw new Error(`TTS neural HTTP ${response.status}`);
       const blob = await response.blob();
-      if (requestRef.current !== requestId || controller.signal.aborted) return;
+      if (controller.signal.aborted || requestRef.current !== requestId) return;
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
-      const textWords = words(text);
       audioRef.current = audio;
       audioUrlRef.current = url;
       audio.preload = "auto";
@@ -328,30 +341,11 @@ export function useSamuelSpeech({ enabled = true, companyId = "default-company" 
       audio.onplay = () => {
         if (requestRef.current !== requestId) return;
         setStatus("speaking");
+        beginProgress(text, audio);
         emitOutputEvent("start", { text, engine: "gemini-neural" });
         options.onStart?.();
-        const track = () => {
-          if (requestRef.current !== requestId || audio.paused) return;
-          const duration = Number.isFinite(audio.duration) && audio.duration > 0
-            ? audio.duration
-            : Math.max(1.2, textWords.length * 0.3);
-          const progress = Math.min(0.99, audio.currentTime / duration);
-          const wordIndex = Math.min(
-            Math.max(0, textWords.length - 1),
-            Math.floor(progress * Math.max(1, textWords.length)),
-          );
-          setPlayback({
-            text,
-            charIndex: textWords[wordIndex]?.index ?? 0,
-            wordIndex,
-            progress,
-            mouthLevel: 0.12 + Math.abs(Math.sin(audio.currentTime * 10.5)) * 0.24,
-          });
-          frameRef.current = requestAnimationFrame(track);
-        };
-        frameRef.current = requestAnimationFrame(track);
       };
-      audio.onended = () => finish(requestId, text, textWords.length, options);
+      audio.onended = () => finish(requestId, text, options);
       audio.onerror = () => {
         if (requestRef.current !== requestId) return;
         emitOutputEvent("error", { text, engine: "gemini-neural" });
@@ -359,43 +353,50 @@ export function useSamuelSpeech({ enabled = true, companyId = "default-company" 
       };
       await audio.play();
     } catch (error) {
-      if (requestRef.current !== requestId || controller.signal.aborted) return;
+      if (controller.signal.aborted || requestRef.current !== requestId) return;
       console.warn("Samuel neural voice unavailable; using local fallback", error);
       if (!browserSpeak(text, requestId, options)) void piperSpeak(text, requestId, options);
     } finally {
-      if (neuralAbortRef.current === controller) neuralAbortRef.current = null;
+      if (abortRef.current === controller) abortRef.current = null;
     }
-  }, [browserSpeak, companyId, finish, piperSpeak]);
+  }, [beginProgress, browserSpeak, companyId, finish, piperSpeak]);
 
   const speak = useCallback((content: string, options: SpeakOptions = {}) => {
     if (!enabled || typeof window === "undefined") return false;
     const text = sanitize(content);
     if (!text) return false;
+
     requestRef.current += 1;
     const requestId = requestRef.current;
-    cleanup();
+    releaseMedia();
     setSettling(false);
     setPlayback({ ...EMPTY, text });
     setErrorMessage(null);
 
-    if (options.automatic) {
-      setStatus("idle");
-      setEngine(null);
-      setVoiceLabel(null);
-      setLoadProgress(0);
-      return true;
-    }
-
-    // High-quality server neural speech is the primary voice. Browser/Piper
-    // remain reliability fallbacks if the neural provider is unavailable.
+    if (options.automatic) return true;
     void neuralSpeak(text, requestId, options);
     return true;
-  }, [cleanup, enabled, neuralSpeak]);
+  }, [enabled, neuralSpeak, releaseMedia]);
+
+  useEffect(() => {
+    const handleInterrupt = () => cancel();
+    const handleSpeakRequest = (event: Event) => {
+      const detail = (event as CustomEvent<SpeakRequestDetail>).detail;
+      const text = detail?.text?.trim();
+      if (text) speak(text);
+    };
+    window.addEventListener("samuel:voice-interrupt", handleInterrupt);
+    window.addEventListener("samuel:voice-speak-request", handleSpeakRequest as EventListener);
+    return () => {
+      window.removeEventListener("samuel:voice-interrupt", handleInterrupt);
+      window.removeEventListener("samuel:voice-speak-request", handleSpeakRequest as EventListener);
+    };
+  }, [cancel, speak]);
 
   useEffect(() => () => {
     requestRef.current += 1;
-    cleanup();
-  }, [cleanup]);
+    releaseMedia();
+  }, [releaseMedia]);
 
   return {
     status,
