@@ -4,6 +4,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MAX_AUDIO_BYTES = 12 * 1024 * 1024;
+const ELEVENLABS_TRANSCRIPTION_MODEL =
+  process.env.ELEVENLABS_TRANSCRIPTION_MODEL?.trim() || "scribe_v2";
 const OPENAI_TRANSCRIPTION_MODEL =
   process.env.OPENAI_TRANSCRIPTION_MODEL?.trim() || "gpt-4o-mini-transcribe";
 const GEMINI_TRANSCRIPTION_MODEL =
@@ -12,7 +14,7 @@ const GEMINI_TRANSCRIPTION_MODEL =
 type ProviderResult = {
   ok: boolean;
   text?: string;
-  provider?: "openai" | "gemini";
+  provider?: "elevenlabs" | "openai" | "gemini";
   model?: string;
   status?: number;
   error?: string;
@@ -30,6 +32,83 @@ function resolveGeminiApiKey(): string | null {
     process.env.GOOGLE_API_KEY?.trim() ||
     null
   );
+}
+
+export async function transcribeWithElevenLabs(audio: File): Promise<ProviderResult> {
+  const apiKey = process.env.ELEVENLABS_API_KEY?.trim();
+  if (!apiKey) {
+    return {
+      ok: false,
+      status: 503,
+      code: "ELEVENLABS_NOT_CONFIGURED",
+      error: "ELEVENLABS_API_KEY não configurada.",
+    };
+  }
+
+  const providerForm = new FormData();
+  providerForm.set("file", audio, audio.name || "samuel-voice.wav");
+  providerForm.set("model_id", ELEVENLABS_TRANSCRIPTION_MODEL);
+  providerForm.set("language_code", "por");
+  providerForm.set("tag_audio_events", "false");
+  providerForm.set("timestamps_granularity", "none");
+
+  const startedAt = Date.now();
+  try {
+    const response = await fetch("https://api.elevenlabs.io/v1/speech-to-text", {
+      method: "POST",
+      headers: { "xi-api-key": apiKey },
+      body: providerForm,
+      cache: "no-store",
+    });
+    const payload = (await response.json().catch(() => null)) as
+      | { text?: string; detail?: { message?: string }; message?: string }
+      | null;
+
+    if (!response.ok) {
+      console.warn("Samuel ElevenLabs transcription unavailable", {
+        status: response.status,
+        requestId: response.headers.get("request-id"),
+        providerMessage: payload?.detail?.message ?? payload?.message,
+        latencyMs: Date.now() - startedAt,
+      });
+      return {
+        ok: false,
+        status: response.status,
+        code:
+          response.status === 429
+            ? "ELEVENLABS_RATE_LIMITED"
+            : "ELEVENLABS_PROVIDER_ERROR",
+        error:
+          payload?.detail?.message ??
+          payload?.message ??
+          "ElevenLabs transcription failed",
+      };
+    }
+
+    const text = payload?.text?.trim();
+    if (!text) {
+      return {
+        ok: false,
+        status: 422,
+        code: "ELEVENLABS_NO_SPEECH",
+        error: "No speech detected",
+      };
+    }
+
+    return {
+      ok: true,
+      text,
+      provider: "elevenlabs",
+      model: ELEVENLABS_TRANSCRIPTION_MODEL,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      status: 502,
+      code: "ELEVENLABS_UNREACHABLE",
+      error: error instanceof Error ? error.message : "ElevenLabs unreachable",
+    };
+  }
 }
 
 async function transcribeWithOpenAI(audio: File): Promise<ProviderResult> {
@@ -202,6 +281,19 @@ export async function POST(request: Request) {
     return jsonError("O áudio excedeu o limite desta conversa.", 413, "VOICE_AUDIO_TOO_LARGE");
   }
 
+  const elevenlabs = await transcribeWithElevenLabs(audio);
+  if (elevenlabs.ok && elevenlabs.text) {
+    return Response.json(
+      {
+        ok: true,
+        text: elevenlabs.text,
+        provider: elevenlabs.provider,
+        model: elevenlabs.model,
+      },
+      { headers: { "cache-control": "no-store" } },
+    );
+  }
+
   const openai = await transcribeWithOpenAI(audio);
   if (openai.ok && openai.text) {
     return Response.json(
@@ -224,13 +316,19 @@ export async function POST(request: Request) {
   }
 
   console.error("Samuel voice transcription exhausted providers", {
+    elevenlabsStatus: elevenlabs.status,
+    elevenlabsCode: elevenlabs.code,
     openaiStatus: openai.status,
     openaiCode: openai.code,
     geminiStatus: gemini.status,
     geminiCode: gemini.code,
   });
 
-  if (openai.code?.includes("NO_SPEECH") || gemini.code?.includes("NO_SPEECH")) {
+  if (
+    elevenlabs.code?.includes("NO_SPEECH") ||
+    openai.code?.includes("NO_SPEECH") ||
+    gemini.code?.includes("NO_SPEECH")
+  ) {
     return jsonError("Não consegui identificar fala no áudio.", 422, "VOICE_NO_SPEECH");
   }
 

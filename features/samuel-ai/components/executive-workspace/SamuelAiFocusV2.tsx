@@ -56,6 +56,27 @@ type Action = {
   prompt?: string;
 };
 
+type VoicePhase = "idle" | "connecting" | "listening" | "processing" | "speaking" | "error";
+
+function voicePhaseCopy(phase: VoicePhase, processing: boolean) {
+  if (phase === "connecting") {
+    return { title: "Abrindo o microfone…", subtitle: "Autorize o acesso para começar" };
+  }
+  if (phase === "listening") {
+    return { title: "Estou ouvindo…", subtitle: "Fale naturalmente em português" };
+  }
+  if (phase === "processing" || processing) {
+    return { title: "Estou entendendo…", subtitle: "A preparar sua resposta" };
+  }
+  if (phase === "speaking") {
+    return { title: "Estou respondendo…", subtitle: "Voz Samuel · ElevenLabs" };
+  }
+  if (phase === "error") {
+    return { title: "A voz encontrou uma falha", subtitle: "Toque novamente para tentar" };
+  }
+  return { title: "Pronto para ajudar", subtitle: "Toque no microfone ou escreva" };
+}
+
 const LEFT_NAV: NavItem[] = [
   { label: "Início", icon: Home, section: "samuel-ai" },
   { label: "Conversar", icon: MessageSquareText, conversation: true },
@@ -103,16 +124,23 @@ export function SamuelAiFocusV2({ data, handlers, onNavigate }: Props) {
   const companyId = data.executiveContext?.company.id ?? "default-company";
   const [conversationOpen, setConversationOpen] = useState(false);
   const [voiceActive, setVoiceActive] = useState(false);
+  const [voicePhase, setVoicePhase] = useState<VoicePhase>("idle");
   const alertCount =
     (data.watcherExecutive?.summary.criticalAlerts ?? 0) +
     (data.executiveMonitoring?.alerts.length ?? 0);
 
   useEffect(() => {
+    const openConversation = () => setConversationOpen(true);
+    window.addEventListener("samuel:conversation-open", openConversation);
     const timer = window.setInterval(() => {
       const mic = document.querySelector<HTMLButtonElement>(".samuel-reference-mic");
-      setVoiceActive(mic?.dataset.voiceCaptureState === "recording");
+      setVoiceActive(mic?.dataset.voiceMode === "jarvis");
+      setVoicePhase((mic?.dataset.voicePhase as VoicePhase | undefined) ?? "idle");
     }, 250);
-    return () => window.clearInterval(timer);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("samuel:conversation-open", openConversation);
+    };
   }, []);
 
   const sendThroughSamuel = (message: string) => {
@@ -225,6 +253,7 @@ export function SamuelAiFocusV2({ data, handlers, onNavigate }: Props) {
 
       <MobilePanel
         voiceActive={voiceActive}
+        voicePhase={voicePhase}
         processing={handlers.isProcessing}
         onOpenConversation={() => setConversationOpen(true)}
         onStop={stopSamuel}
@@ -237,12 +266,12 @@ export function SamuelAiFocusV2({ data, handlers, onNavigate }: Props) {
 
 function ConversationLayer({ open, onClose, companyId, handlers }: { open: boolean; onClose: () => void; companyId: string; handlers: ExecutiveWorkspaceHandlers }) {
   return (
-    <div className={open ? "absolute inset-0 z-[150] flex items-center justify-center bg-black/78 p-3 backdrop-blur-md" : "absolute left-[-10000px] top-0 h-px w-px overflow-hidden opacity-0 pointer-events-none"} aria-hidden={!open}>
-      <div className={open ? "flex h-[min(88dvh,860px)] w-full max-w-5xl flex-col overflow-hidden rounded-3xl border border-[#0d78c5] bg-[#03101b] shadow-[0_0_70px_rgba(0,127,255,.28)]" : "h-full w-full"}>
+    <div className={open ? "absolute inset-0 z-[150] flex items-center justify-center bg-black/78 p-0 backdrop-blur-md sm:p-3" : "absolute left-[-10000px] top-0 h-px w-px overflow-hidden opacity-0 pointer-events-none"} aria-hidden={!open}>
+      <div className={open ? "flex h-full w-full max-w-5xl flex-col overflow-hidden border border-[#0d78c5] bg-[#03101b] shadow-[0_0_70px_rgba(0,127,255,.28)] sm:h-[min(88dvh,860px)] sm:rounded-3xl" : "h-full w-full"}>
         {open && (
-          <div className="flex shrink-0 items-center justify-between border-b border-[#164f78] px-4 py-3 sm:px-5 sm:py-4">
-            <div><strong className="block text-sm text-white sm:text-base">Conversar com Samuel</strong><span className="mt-1 block text-[10px] text-[#86abc9] sm:text-xs">Voz, texto, execução e respostas no mesmo lugar.</span></div>
-            <button type="button" onClick={onClose} className="rounded-xl border border-[#164f78] px-3 py-2 text-xs text-[#b9d9f1] hover:border-[#0d9dff]">Fechar</button>
+          <div className="flex shrink-0 items-center justify-between border-b border-[#164f78] px-4 pb-3 pt-[max(.75rem,env(safe-area-inset-top))] sm:px-5 sm:py-4">
+            <div><strong className="block text-lg text-white sm:text-base">Conversar com Samuel</strong><span className="mt-1 block text-xs text-[#86abc9]">Voz, texto e respostas no mesmo lugar.</span></div>
+            <button type="button" onClick={onClose} className="min-h-11 rounded-xl border border-[#164f78] px-4 text-sm text-[#b9d9f1] hover:border-[#0d9dff]">Fechar</button>
           </div>
         )}
         <div className={open ? "min-h-0 flex-1 overflow-hidden" : "h-full w-full"}>
@@ -283,15 +312,16 @@ function RightPanel({ actions, onAction, alertCount, onAlerts }: { actions: Acti
   );
 }
 
-function MobilePanel({ voiceActive, processing, onOpenConversation, onStop, onNavigate, onAction }: { voiceActive: boolean; processing: boolean; onOpenConversation: () => void; onStop: () => void; onNavigate: (section: WorkspaceSection) => void; onAction: (action: Action) => void }) {
+function MobilePanel({ voiceActive, voicePhase, processing, onOpenConversation, onStop, onNavigate, onAction }: { voiceActive: boolean; voicePhase: VoicePhase; processing: boolean; onOpenConversation: () => void; onStop: () => void; onNavigate: (section: WorkspaceSection) => void; onAction: (action: Action) => void }) {
+  const phaseCopy = voicePhaseCopy(voicePhase, processing);
   return (
     <div className="flex h-full flex-col overflow-y-auto bg-[radial-gradient(circle_at_50%_18%,rgba(0,111,255,.2),transparent_32%),linear-gradient(180deg,#03101c,#02070c)] xl:hidden">
       <header className="flex items-center justify-between border-b border-white/[.06] px-4 py-3"><div className="flex items-center gap-2"><div className="flex size-9 items-center justify-center rounded-xl border border-cyan-300/30 text-lg font-black italic">S</div><div><strong className="block text-sm tracking-[.1em]">SAMUEL IA</strong><span className="text-[8px] tracking-[.18em] text-white/35">SF GROWTH AI</span></div></div><button type="button" onClick={() => onNavigate("executive-alerts")} className="relative"><Bell className="size-5 text-white/60" /></button></header>
       <main className="flex-1 px-4 pb-24 pt-5">
         <div className="text-center"><p className="text-[8px] tracking-[.32em] text-[#9fc6e7]">MAIS AÇÕES. MAIS RESULTADOS.</p><h1 className="mt-2 text-3xl font-semibold tracking-[.08em]">SAMUEL IA</h1></div>
         <div className="relative mx-auto mt-4 size-[260px] max-w-[78vw]"><SamuelCore active={voiceActive || processing} /></div>
-        <div className="mx-auto mt-3 max-w-sm rounded-2xl border border-[#0878e9] bg-[#031326] px-4 py-3 text-center"><strong className="text-sm">{voiceActive ? "Estou ouvindo..." : processing ? "Estou trabalhando..." : "Pronto para ajudar"}</strong><p className="mt-1 text-[10px] text-white/40">Fale naturalmente ou abra a conversa.</p></div>
-        <div className="mt-5 flex items-start justify-center gap-8"><RoundControl icon={Keyboard} label="Digitar" onClick={onOpenConversation} compact /><button type="button" className="samuel-reference-mic flex flex-col items-center gap-2 text-[10px] font-semibold"><span className="relative flex size-20 items-center justify-center rounded-full border border-[#0b71e6] bg-[radial-gradient(circle,#083671,#020b16)] shadow-[0_0_28px_rgba(0,152,255,.5)]"><span className={`absolute inset-[-8px] rounded-full border border-cyan-300/15 ${voiceActive ? "animate-ping" : "animate-pulse"}`} /><Mic className="size-8" /></span>{voiceActive ? "Ouvindo" : "Falar"}</button><RoundControl icon={Square} label="Parar" onClick={onStop} compact /></div>
+        <div className="mx-auto mt-3 max-w-sm rounded-2xl border border-[#0878e9] bg-[#031326] px-4 py-3 text-center"><strong className="text-sm">{phaseCopy.title}</strong><p className="mt-1 text-xs text-white/55">{phaseCopy.subtitle}</p></div>
+        <div className="mt-5 flex items-start justify-center gap-8"><RoundControl icon={Keyboard} label="Digitar" onClick={onOpenConversation} compact /><button type="button" className="samuel-reference-mic flex flex-col items-center gap-2 text-xs font-semibold"><span className="relative flex size-20 items-center justify-center rounded-full border border-[#0b71e6] bg-[radial-gradient(circle,#083671,#020b16)] shadow-[0_0_28px_rgba(0,152,255,.5)]"><span className={`absolute inset-[-8px] rounded-full border border-cyan-300/15 ${voiceActive ? "animate-ping" : "animate-pulse"}`} /><Mic className="size-8" /></span>{voicePhase === "processing" ? "Pensando" : voicePhase === "speaking" ? "Falando" : voiceActive ? "Ouvindo" : "Falar"}</button><RoundControl icon={Square} label="Parar" onClick={onStop} compact /></div>
         <div className="mt-6 grid grid-cols-2 gap-2">{RIGHT_ACTIONS.map((action) => <button key={action.label} type="button" onClick={() => onAction(action)} className="flex min-h-[78px] items-center gap-3 rounded-2xl border border-[#0a426e] bg-[#051321] p-3 text-left text-xs"><action.icon className="size-6 shrink-0 text-[#1cb4ff]" /><span>{action.label}</span></button>)}</div>
       </main>
       <nav className="fixed inset-x-3 bottom-3 z-40 grid grid-cols-5 rounded-2xl border border-white/[.08] bg-[#07111c]/95 p-2 shadow-2xl backdrop-blur-xl"><MobileNav icon={Home} label="Início" onClick={() => onNavigate("samuel-ai")} /><MobileNav icon={CalendarDays} label="Agenda" onClick={() => onNavigate("executive-agenda")} /><MobileNav icon={Mic} label="Samuel" onClick={onOpenConversation} primary /><MobileNav icon={Mail} label="E-mail" onClick={() => onNavigate("gmail")} /><MobileNav icon={UsersRound} label="CRM" onClick={() => onNavigate("crm")} /></nav>

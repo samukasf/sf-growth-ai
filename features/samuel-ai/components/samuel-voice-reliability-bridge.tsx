@@ -312,6 +312,7 @@ export function SamuelVoiceReliabilityBridge() {
       );
 
       const startedAt = performance.now();
+      let turnCompleted = false;
       try {
         const response = await fetch("/api/samuel-ai/transcribe", {
           method: "POST",
@@ -359,6 +360,7 @@ export function SamuelVoiceReliabilityBridge() {
           }),
         );
         const routed = routeTranscriptToSamuel(cockpit, text);
+        turnCompleted = true;
         postTelemetry(
           companyId,
           routed === "confirmation" ? "confirmation_routed" : "turn_routed",
@@ -368,10 +370,17 @@ export function SamuelVoiceReliabilityBridge() {
         const message = error instanceof Error ? error.message : "Falha na transcrição.";
         console.error("Samuel continuous voice transcription failed", { message });
         postTelemetry(companyId, "transcription_error", { message });
+        sessionActive = false;
+        cleanup();
         setState("error", message);
       } finally {
         pendingTranscriptions = Math.max(0, pendingTranscriptions - 1);
-        if (sessionActive && pendingTranscriptions === 0 && !assistantSpeaking) {
+        if (
+          turnCompleted &&
+          sessionActive &&
+          pendingTranscriptions === 0 &&
+          !assistantSpeaking
+        ) {
           setState("listening");
         }
       }
@@ -449,6 +458,7 @@ export function SamuelVoiceReliabilityBridge() {
 
       activeCockpit = cockpit;
       activeButton = button;
+      window.dispatchEvent(new CustomEvent("samuel:conversation-open"));
       sessionActive = true;
       setState("connecting");
       const companyId = companyIdFor(cockpit);
