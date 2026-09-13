@@ -9,7 +9,13 @@ export type SamuelSpeechStatus =
   | "blocked"
   | "unsupported";
 
-export type SamuelSpeechEngine = "gemini-neural" | "piper-local" | "browser-male" | null;
+export type SamuelSpeechEngine =
+  | "server-neural"
+  | "elevenlabs-neural"
+  | "openai-neural"
+  | "piper-local"
+  | "browser-male"
+  | null;
 
 export type SpeakOptions = {
   automatic?: boolean;
@@ -29,6 +35,8 @@ type Playback = {
 
 const EMPTY: Playback = { text: "", charIndex: 0, wordIndex: -1, progress: 0, mouthLevel: 0 };
 const PIPER_VOICE = "pt_BR-faber-medium" as const;
+const SILENT_WAV_DATA_URI =
+  "data:audio/wav;base64,UklGRjQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YRAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const MALE_VOICE_HINTS = [
   "male", "masculino", "antonio", "antónio", "carlos", "daniel", "duarte",
   "eddy", "felipe", "francisco", "jorge", "luciano", "miguel", "paulo",
@@ -38,6 +46,18 @@ const MALE_VOICE_HINTS = [
 export type SamuelVoiceCandidate = { name: string; lang: string; localService?: boolean };
 
 type SpeakRequestDetail = { text?: string };
+
+export function resolveSamuelNeuralEngine(provider: string | null): SamuelSpeechEngine {
+  if (provider === "elevenlabs") return "elevenlabs-neural";
+  if (provider === "openai") return "openai-neural";
+  return "server-neural";
+}
+
+export function resolveSamuelNeuralVoiceLabel(provider: string | null) {
+  if (provider === "elevenlabs") return "ElevenLabs · Samuel";
+  if (provider === "openai") return "OpenAI · Samuel";
+  return "Samuel Neural";
+}
 
 function sanitize(content: string) {
   return content
@@ -113,6 +133,43 @@ export function useSamuelSpeech({ enabled = true, companyId = "default-company" 
   const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeEngineRef = useRef<SamuelSpeechEngine>(null);
   const activeTextRef = useRef("");
+  const audioUnlockedRef = useRef(false);
+  const audioUnlockPromiseRef = useRef<Promise<boolean> | null>(null);
+
+  const ensureAudioElement = useCallback(() => {
+    if (typeof Audio === "undefined") return null;
+    if (!audioRef.current) {
+      const audio = new Audio();
+      audio.preload = "auto";
+      audio.setAttribute("playsinline", "");
+      audioRef.current = audio;
+    }
+    return audioRef.current;
+  }, []);
+
+  const unlockAudioPlayback = useCallback(() => {
+    if (audioUnlockedRef.current) return Promise.resolve(true);
+    if (audioUnlockPromiseRef.current) return audioUnlockPromiseRef.current;
+
+    const audio = ensureAudioElement();
+    if (!audio) return Promise.resolve(false);
+    audio.muted = false;
+    audio.src = SILENT_WAV_DATA_URI;
+
+    const unlockPromise = audio.play()
+      .then(() => {
+        audio.pause();
+        audio.currentTime = 0;
+        audioUnlockedRef.current = true;
+        return true;
+      })
+      .catch(() => false)
+      .finally(() => {
+        audioUnlockPromiseRef.current = null;
+      });
+    audioUnlockPromiseRef.current = unlockPromise;
+    return unlockPromise;
+  }, [ensureAudioElement]);
 
   const releaseMedia = useCallback(() => {
     abortRef.current?.abort();
@@ -124,10 +181,12 @@ export function useSamuelSpeech({ enabled = true, companyId = "default-company" 
     if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
     utteranceRef.current = null;
     if (audioRef.current) {
+      audioRef.current.onplay = null;
+      audioRef.current.onended = null;
+      audioRef.current.onerror = null;
       audioRef.current.pause();
       audioRef.current.removeAttribute("src");
       audioRef.current.load();
-      audioRef.current = null;
     }
     if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current);
     audioUrlRef.current = null;
@@ -275,11 +334,14 @@ export function useSamuelSpeech({ enabled = true, companyId = "default-company" 
       );
       if (requestRef.current !== requestId) return;
       const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      audioRef.current = audio;
+      const audio = ensureAudioElement();
+      if (!audio) throw new Error("Elemento de áudio indisponível.");
       audioUrlRef.current = url;
+      audio.src = url;
+      audio.muted = false;
       audio.playbackRate = 0.96;
       audio.preservesPitch = true;
+      audio.load();
       setLoadProgress(1);
       audio.onplay = () => {
         if (requestRef.current !== requestId) return;
@@ -308,15 +370,15 @@ export function useSamuelSpeech({ enabled = true, companyId = "default-company" 
       activeEngineRef.current = null;
       options.onError?.();
     }
-  }, [beginProgress, finish]);
+  }, [beginProgress, ensureAudioElement, finish]);
 
   const neuralSpeak = useCallback(async (text: string, requestId: number, options: SpeakOptions) => {
     const controller = new AbortController();
     abortRef.current = controller;
     activeTextRef.current = text;
-    activeEngineRef.current = "gemini-neural";
-    setEngine("gemini-neural");
-    setVoiceLabel("Samuel Neural · adulto grave");
+    activeEngineRef.current = "server-neural";
+    setEngine("server-neural");
+    setVoiceLabel("ElevenLabs · a preparar");
     setStatus("preparing");
     setLoadProgress(0.08);
     setErrorMessage(null);
@@ -330,25 +392,40 @@ export function useSamuelSpeech({ enabled = true, companyId = "default-company" 
         cache: "no-store",
       });
       if (!response.ok) throw new Error(`TTS neural HTTP ${response.status}`);
+      const neuralEngine = resolveSamuelNeuralEngine(
+        response.headers.get("X-Samuel-TTS-Provider"),
+      );
+      const neuralVoiceLabel = resolveSamuelNeuralVoiceLabel(
+        response.headers.get("X-Samuel-TTS-Provider"),
+      );
       const blob = await response.blob();
+      if (!blob.size) throw new Error("TTS neural retornou áudio vazio.");
       if (controller.signal.aborted || requestRef.current !== requestId) return;
       const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      audioRef.current = audio;
+      const audio = ensureAudioElement();
+      if (!audio) throw new Error("Elemento de áudio indisponível.");
       audioUrlRef.current = url;
+      audio.src = url;
+      audio.muted = false;
       audio.preload = "auto";
+      audio.playbackRate = 1;
+      audio.preservesPitch = true;
+      audio.load();
+      activeEngineRef.current = neuralEngine;
+      setEngine(neuralEngine);
+      setVoiceLabel(neuralVoiceLabel);
       setLoadProgress(1);
       audio.onplay = () => {
         if (requestRef.current !== requestId) return;
         setStatus("speaking");
         beginProgress(text, audio);
-        emitOutputEvent("start", { text, engine: "gemini-neural" });
+        emitOutputEvent("start", { text, engine: neuralEngine });
         options.onStart?.();
       };
       audio.onended = () => finish(requestId, text, options);
       audio.onerror = () => {
         if (requestRef.current !== requestId) return;
-        emitOutputEvent("error", { text, engine: "gemini-neural" });
+        emitOutputEvent("error", { text, engine: neuralEngine });
         if (!browserSpeak(text, requestId, options)) void piperSpeak(text, requestId, options);
       };
       await audio.play();
@@ -359,7 +436,7 @@ export function useSamuelSpeech({ enabled = true, companyId = "default-company" 
     } finally {
       if (abortRef.current === controller) abortRef.current = null;
     }
-  }, [beginProgress, browserSpeak, companyId, finish, piperSpeak]);
+  }, [beginProgress, browserSpeak, companyId, ensureAudioElement, finish, piperSpeak]);
 
   const speak = useCallback((content: string, options: SpeakOptions = {}) => {
     if (!enabled || typeof window === "undefined") return false;
@@ -373,29 +450,44 @@ export function useSamuelSpeech({ enabled = true, companyId = "default-company" 
     setPlayback({ ...EMPTY, text });
     setErrorMessage(null);
 
-    if (options.automatic) return true;
+    if (options.automatic && !audioUnlockedRef.current) {
+      setStatus("blocked");
+      setVoiceLabel("ElevenLabs · pronta para ativar");
+      return true;
+    }
+    void unlockAudioPlayback();
     void neuralSpeak(text, requestId, options);
     return true;
-  }, [enabled, neuralSpeak, releaseMedia]);
+  }, [enabled, neuralSpeak, releaseMedia, unlockAudioPlayback]);
 
   useEffect(() => {
     const handleInterrupt = () => cancel();
+    const handleUnlock = () => {
+      void unlockAudioPlayback();
+    };
     const handleSpeakRequest = (event: Event) => {
       const detail = (event as CustomEvent<SpeakRequestDetail>).detail;
       const text = detail?.text?.trim();
       if (text) speak(text);
     };
+    window.addEventListener("pointerdown", handleUnlock, true);
+    window.addEventListener("keydown", handleUnlock, true);
+    window.addEventListener("samuel:voice-unlock", handleUnlock);
     window.addEventListener("samuel:voice-interrupt", handleInterrupt);
     window.addEventListener("samuel:voice-speak-request", handleSpeakRequest as EventListener);
     return () => {
+      window.removeEventListener("pointerdown", handleUnlock, true);
+      window.removeEventListener("keydown", handleUnlock, true);
+      window.removeEventListener("samuel:voice-unlock", handleUnlock);
       window.removeEventListener("samuel:voice-interrupt", handleInterrupt);
       window.removeEventListener("samuel:voice-speak-request", handleSpeakRequest as EventListener);
     };
-  }, [cancel, speak]);
+  }, [cancel, speak, unlockAudioPlayback]);
 
   useEffect(() => () => {
     requestRef.current += 1;
     releaseMedia();
+    audioRef.current = null;
   }, [releaseMedia]);
 
   return {

@@ -19,6 +19,7 @@ A aplicação fica disponível em [http://localhost:3000/samuel-ai](http://local
 Preencha em `.env.local` (ver `.env.example` completo):
 
 - `OPENAI_API_KEY` para conversas geradas por IA e para a voz Realtime. `OPENAI_MODEL` é configurável (`gpt-5.4-mini` por padrão).
+- `ELEVENLABS_API_KEY` para a voz neural das respostas do Samuel. `SAMUEL_TTS_PROVIDER=elevenlabs` torna-a principal; `ELEVENLABS_VOICE_ID` escolhe a voz da conta.
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` e `SUPABASE_SERVICE_ROLE_KEY` para dados e histórico persistente.
 - `AI_GATEWAY_API_KEY`, `AI_GATEWAY_BASE_URL` e `AI_GATEWAY_MODEL` somente para o chat textual. O gateway pode manter uma IA aberta como provedora principal do texto, mas nunca controla a voz Realtime.
 - `SAMUEL_AI_TEXT_PROVIDER=kimi`, `KIMI_API_KEY` ou `MOONSHOT_API_KEY`, `KIMI_BASE_URL=https://api.moonshot.ai/v1` e `KIMI_MODEL=kimi-k3` para usar Kimi K3 no chat textual por API compatível com OpenAI Chat Completions.
@@ -61,7 +62,13 @@ O endpoint `POST /api/samuel-ai/chat`:
 
 O prompt do Samuel AI mantém a continuidade da conversa, responde no idioma do utilizador e usa o contexto empresarial somente quando for relevante. O cliente suporta restauro de histórico, fallback local, cancelamento, erro e retry.
 
-## Voz Realtime do Samuel AI
+## Voz do Samuel AI
+
+As respostas faladas do fluxo confiável usam `POST /api/samuel-ai/voice/tts`. O servidor tenta ElevenLabs (`eleven_flash_v2_5`) primeiro e faz failover automático para OpenAI (`gpt-4o-mini-tts`). Se ambos estiverem indisponíveis, o cliente tenta a voz nativa do navegador e depois Piper local. As chaves nunca são enviadas ao navegador.
+
+Configure `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID` e `ELEVENLABS_VOICE_NAME` somente no servidor. O ID padrão serve para validar a integração, mas a voz definitiva do Samuel deve ser escolhida na conta ElevenLabs. O primeiro toque do usuário prepara um elemento de áudio persistente para permitir a reprodução após a chamada de rede, inclusive no Safari/iOS.
+
+### Realtime
 
 A conversa por voz usa WebRTC no navegador e a OpenAI Realtime API pelo endpoint server-side `POST /api/samuel-ai/realtime/offer`. O navegador envia apenas a oferta SDP; a chave permanece no servidor.
 
@@ -84,4 +91,4 @@ npm run lint
 npm run build
 ```
 
-Os testes cobrem o pipeline, a ponte do Workspace para o Runtime, o protocolo NDJSON, o streaming da Responses API e a configuração server-side da voz Realtime.
+Os testes cobrem o pipeline, a ponte do Workspace para o Runtime, o protocolo NDJSON, o streaming da Responses API, a configuração server-side da voz Realtime e o failover ElevenLabs → OpenAI.

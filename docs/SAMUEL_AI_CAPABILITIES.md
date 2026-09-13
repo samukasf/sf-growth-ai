@@ -27,14 +27,14 @@ alimentam a página de produção do Samuel.
 
 ## Voz
 
-- Voz neural local masculina `pt_BR-faber-medium`, com reprodução mais grave,
-  equalização de graves, compressão e ritmo executivo.
-- Fallback do navegador somente quando uma voz em português identificada como
-  masculina está disponível; o sistema não escolhe uma voz neutra por suposição.
+- Respostas faladas usam ElevenLabs no servidor como rota principal, com voz e
+  modelo configuráveis; OpenAI é o failover neural automático.
+- Se os dois provedores falharem, o cliente usa a voz nativa em português e,
+  por último, Piper local `pt_BR-faber-medium`.
 - Voz Realtime usa WebRTC, `gpt-realtime-2.1` e a voz `cedar`, com equalização de
   saída. Ela requer `OPENAI_API_KEY`, acesso ao modelo e crédito de API válidos.
-- Restrições de autoplay do iOS continuam sendo respeitadas: a primeira reprodução
-  pode exigir um toque do usuário.
+- O primeiro gesto do usuário prepara a reprodução no Safari/iOS; nenhuma chave
+  de voz é exposta ao navegador.
 
 ## Samuel Studio
 

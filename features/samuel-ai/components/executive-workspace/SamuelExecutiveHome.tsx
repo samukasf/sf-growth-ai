@@ -515,7 +515,9 @@ export function SamuelExecutiveHome({
     supported: speechSupported,
     voiceLabel: speechVoiceLabel,
     wordIndex: speechWordIndex,
-  } = useSamuelSpeech();
+  } = useSamuelSpeech({
+    companyId: data.executiveContext?.company.id ?? "default-company",
+  });
 
   const proactivePrefix = proactiveGreeting.spokenMessage.slice(
     0,

@@ -300,7 +300,7 @@ export function ChatPanel({
     supported: browserSpeechSupported,
     voiceLabel: browserVoiceLabel,
     wordIndex: browserSpeechWordIndex,
-  } = useSamuelSpeech({ enabled: voiceReplyEnabled });
+  } = useSamuelSpeech({ enabled: voiceReplyEnabled, companyId });
   const abortRef = useRef<AbortController | null>(null);
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
@@ -999,14 +999,14 @@ export function ChatPanel({
                 <p>Samuel Voice · masculina</p>
                 <strong>
                   {browserSpeechStatus === "preparing"
-                    ? `Preparando voz local · ${Math.round(browserVoiceLoadProgress * 100)}%`
+                    ? `Preparando ${browserVoiceLabel ?? "voz neural"} · ${Math.round(browserVoiceLoadProgress * 100)}%`
                     : browserSpeaking
-                      ? `${browserVoiceLabel ?? "Piper pt-BR"} · falando`
+                      ? `${browserVoiceLabel ?? "Samuel Neural"} · falando`
                       : realtimeActive
                         ? realtimeStateLabel(realtimeVoice.session.state)
                         : browserVoiceLabel
                           ? `${browserVoiceLabel} · pronta`
-                          : "Voz neural local pronta"}
+                          : "Voz neural pronta"}
                 </strong>
               </div>
             </div>
@@ -1063,12 +1063,12 @@ export function ChatPanel({
             <div className="samuel-voice-console__error" role="alert">
               <AlertTriangle aria-hidden="true" />
               <div>
-                <strong>Realtime indisponível · fallback local disponível</strong>
+                <strong>Realtime indisponível · voz de resposta disponível</strong>
                 <p>{realtimeVoice.session.error}</p>
                 <span>
                   {browserSpeechEngine === "piper-local"
-                    ? "A voz neural masculina pt-BR continua ativa neste aparelho."
-                    : "Toque em “Ouvir resposta” para carregar a voz neural masculina pt-BR."}
+                    ? "A voz local masculina pt-BR continua ativa neste aparelho."
+                    : "Toque em “Ouvir resposta” para usar a voz neural do Samuel."}
                 </span>
               </div>
             </div>

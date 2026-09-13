@@ -1,9 +1,21 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  resolveSamuelNeuralEngine,
+  resolveSamuelNeuralVoiceLabel,
   selectSamuelMasculineVoice,
   selectSamuelPortugueseFallbackVoice,
 } from "./use-samuel-speech";
+
+describe("Samuel neural provider metadata", () => {
+  it("identifica ElevenLabs, OpenAI e respostas antigas sem cabeçalho", () => {
+    expect(resolveSamuelNeuralEngine("elevenlabs")).toBe("elevenlabs-neural");
+    expect(resolveSamuelNeuralEngine("openai")).toBe("openai-neural");
+    expect(resolveSamuelNeuralEngine(null)).toBe("server-neural");
+    expect(resolveSamuelNeuralVoiceLabel("elevenlabs")).toBe("ElevenLabs · Samuel");
+    expect(resolveSamuelNeuralVoiceLabel("openai")).toBe("OpenAI · Samuel");
+  });
+});
 
 describe("selectSamuelMasculineVoice", () => {
   it("prioriza uma voz masculina brasileira no iPhone", () => {

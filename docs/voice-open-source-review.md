@@ -139,8 +139,9 @@ Samuel chat + action runtime
         │
         ▼
 Neural TTS
-   OpenAI gpt-4o-mini-tts
-        └── browser/Piper fallback
+   ElevenLabs eleven_flash_v2_5
+        └── OpenAI gpt-4o-mini-tts failover
+               └── browser/Piper fallback
         │
         ▼
 Independent cancellable audio output
@@ -155,3 +156,4 @@ Independent cancellable audio output
 5. An integration row in the database is not considered healthy until its token can actually be refreshed/validated.
 6. Voice events are logged server-side so a future failure can be diagnosed from production telemetry instead of guessed from the UI.
 7. No external project is copied wholesale. Only permissively licensed components/patterns are adopted, and model-specific licenses are kept separate.
+8. TTS credentials remain server-only, and diagnostics expose readiness metadata rather than secret values.
