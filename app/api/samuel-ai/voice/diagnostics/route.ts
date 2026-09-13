@@ -131,8 +131,8 @@ export async function GET(request: Request) {
       openai: tts.openai,
     },
     fallback: {
-      capture: "MediaRecorder",
-      transcriptionOrder: ["openai", "gemini"],
+      capture: "AudioContext PCM/WAV",
+      transcriptionOrder: ["elevenlabs", "openai", "gemini"],
       speechOrder: [...tts.order, "browser", "piper"],
       browserTts: true,
       piperTts: true,
