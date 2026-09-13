@@ -36,12 +36,21 @@ npm run dev
 ## 2. Inteligência Samuel (chat + voz)
 
 1. Crie uma chave em [OpenAI Platform](https://platform.openai.com).
-2. Em `.env.local`:
+2. Crie uma chave na ElevenLabs e copie o ID da voz escolhida em **Voices**.
+3. Em `.env.local`:
    - `OPENAI_API_KEY=...`
    - `OPENAI_MODEL=gpt-5.4-mini` (ou outro)
-   - `OPENAI_REALTIME_MODEL=gpt-realtime-2.1` (voz)
-3. (Opcional) Gateway textual: `AI_GATEWAY_API_KEY`, `AI_GATEWAY_BASE_URL`, `AI_GATEWAY_MODEL`.
-4. Reinicie `npm run dev` e teste o chat em `/samuel-ai`.
+   - `OPENAI_REALTIME_MODEL=gpt-realtime-2.1` (conversa Realtime)
+   - `SAMUEL_TTS_PROVIDER=elevenlabs`
+   - `ELEVENLABS_API_KEY=...`
+   - `ELEVENLABS_VOICE_ID=...`
+   - `ELEVENLABS_VOICE_NAME=Samuel` (rótulo seguro para diagnóstico)
+   - `ELEVENLABS_MODEL_ID=eleven_flash_v2_5`
+4. (Opcional) Gateway textual: `AI_GATEWAY_API_KEY`, `AI_GATEWAY_BASE_URL`, `AI_GATEWAY_MODEL`.
+5. Reinicie `npm run dev` e teste **Ouvir resposta** em `/samuel-ai`.
+6. Confirme o roteamento autenticado em `/api/samuel-ai/voice/diagnostics?probe=1`. A resposta mostra configuração, modelo, ordem de failover e validação da voz, mas nunca retorna a chave.
+
+Em produção, cadastre as mesmas variáveis secretas no ambiente do deploy. Não use prefixo `NEXT_PUBLIC_` e não grave a chave da ElevenLabs no repositório.
 
 ---
 

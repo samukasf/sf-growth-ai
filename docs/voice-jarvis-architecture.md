@@ -13,9 +13,11 @@ The reliable path therefore separates four concerns, following the architecture 
 
 ## Primary flow
 
-`Mic -> client VAD -> utterance recorder -> STT -> existing Samuel chat/action runtime -> neural TTS -> audio`
+`Mic -> client VAD -> utterance recorder -> STT -> existing Samuel chat/action runtime -> ElevenLabs/OpenAI TTS -> audio`
 
 The next utterance starts without another microphone click. The same `/api/samuel-ai/chat` path remains the brain so Gmail, Google Calendar and other action proposals keep the same policies and confirmation tokens.
+
+The response TTS router uses ElevenLabs as the configured primary provider and OpenAI as an automatic neural failover. Provider credentials stay server-side. If both remote providers fail, playback degrades to a Portuguese browser voice and then Piper. The browser primes one persistent audio element on the first user gesture so an asynchronous TTS response can still play on iOS.
 
 ## Barge-in
 

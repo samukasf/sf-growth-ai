@@ -520,6 +520,7 @@ export function SamuelVoiceReliabilityBridge() {
 
       event.preventDefault();
       event.stopImmediatePropagation();
+      window.dispatchEvent(new CustomEvent("samuel:voice-unlock"));
       if (sessionActive) endSession();
       else void startSession(cockpit, button);
     };
