@@ -602,6 +602,14 @@ export function ChatPanel({
             if (event.type === "action_result") {
               setActionResult(event.result);
             }
+            if (event.type === "content_project") {
+              try {
+                sessionStorage.setItem("sf-growth-ai:samuel-content:incoming", JSON.stringify(event.project));
+              } catch {
+                // The project can still be recreated manually if browser storage is blocked.
+              }
+              window.dispatchEvent(new CustomEvent("samuel-open-content-studio"));
+            }
             if (event.type === "delta") {
               setMessages((current) =>
                 current.map((message) =>
