@@ -160,7 +160,7 @@ export function ExecutiveWorkspaceCenter({
         return <AutonomousImprovementPanel />;
 
       case "studio":
-        return <SamuelStudio />;
+        return <SamuelStudio companyId={companyId} />;
 
       case "site-builder":
         return (
