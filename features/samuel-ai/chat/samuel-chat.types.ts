@@ -4,6 +4,7 @@ import type { CalendarActionPlan, CalendarToolResult } from "@/features/google-c
 import type { ExecutiveContext } from "@/services/executive-context.service";
 
 import type { ChatMessage } from "../types";
+import type { SamuelContentProject } from "../content-studio/samuel-content.types";
 
 export type SamuelChatCompanyContext = {
   executiveContext: ExecutiveContext | null;
@@ -46,6 +47,7 @@ export type SamuelChatStreamEvent =
   | { type: "step"; step: PipelineStep }
   | { type: "provider"; provider: string; model: string | null }
   | { type: "warning"; code: string; message: string }
+  | { type: "content_project"; project: SamuelContentProject }
   | { type: "delta"; delta: string }
   | {
       type: "action_proposal";

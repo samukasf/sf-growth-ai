@@ -53,10 +53,9 @@ describe("Samuel capability runtime", () => {
     expect(plan.missingRequirements).toEqual([]);
   });
 
-  it("does not claim planned media or social capabilities are executable", () => {
+  it("does not claim unimplemented vector or social capabilities are executable", () => {
     for (const capabilityId of [
       "creative.vector",
-      "creative.video",
       "social.publish",
     ]) {
       const plan = buildSamuelCapabilityExecutionPlan({
@@ -68,6 +67,18 @@ describe("Samuel capability runtime", () => {
       expect(plan.status).toBe("planned");
       expect(plan.executor).toBeNull();
     }
+  });
+
+  it("routes video creation to the verified Content Studio executor", () => {
+    const plan = buildSamuelCapabilityExecutionPlan({
+      capabilityId: "creative.video",
+      companyId: "company-1",
+      autonomy: 1,
+      approved: true,
+      input: { brief: "Crie um vídeo do produto" },
+    });
+    expect(plan.status).toBe("ready");
+    expect(plan.executor).toEqual({ kind: "server_route", endpoint: "/api/samuel-ai/content-studio", method: "POST" });
   });
 
   it("exposes only implementation-verified voice-enabled capabilities", () => {

@@ -40,6 +40,12 @@ export function ExecutiveWorkspace({ onSendMessage, onFirstMessage, isProcessing
     return () => controller.abort();
   }, [companyId]);
 
+  useEffect(() => {
+    const openStudio = () => setActiveSection("studio");
+    window.addEventListener("samuel-open-content-studio", openStudio);
+    return () => window.removeEventListener("samuel-open-content-studio", openStudio);
+  }, []);
+
   const handleInboxAction = useCallback(async (item: ExecutiveInboxItem, action: InboxActionType) => {
     const nextActions = await persistExecutiveInboxAction(companyId, item, action, inboxActions);
     setInboxActions(nextActions);
