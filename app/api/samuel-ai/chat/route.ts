@@ -37,6 +37,11 @@ import { SamuelConversationRepository } from "@/features/samuel-ai/server/samuel
 import { getWorkspaceSessionIdentity } from "@/features/samuel-ai/server/workspace-session";
 import type { ChatMessage } from "@/features/samuel-ai/types";
 import { authorizeCompanyRequest } from "@/features/auth/server/authorization";
+import {
+  contentRequestFromQuery,
+  generateContentProject,
+  isContentCreationRequest,
+} from "@/features/samuel-ai/content-studio/samuel-content.server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -273,6 +278,14 @@ export async function POST(request: Request) {
             : null;
         const toolFragments: string[] = [];
         let pendingAction: SamuelToolActionPlan | null = null;
+
+        if (isContentCreationRequest(chatRequest.query)) {
+          const generatedContent = await generateContentProject(contentRequestFromQuery(chatRequest.query));
+          send({ type: "content_project", project: generatedContent.project });
+          toolFragments.push(
+            `[STUDIO — CAMPANHA CRIADA] ${generatedContent.project.name}. O projeto foi aberto no Studio com roteiro, cenas e textos por rede. A narração ElevenLabs e o vídeo final podem ser gerados ali. Não afirme que houve publicação externa sem confirmação e ID da plataforma.`,
+          );
+        }
 
         if (gmailPlan) {
           if (gmailPlan.requiresConfirmation) {
