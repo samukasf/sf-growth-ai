@@ -17,9 +17,11 @@ import {
   ShieldCheck,
   Sparkles,
   WandSparkles,
+  Share2,
 } from "lucide-react";
 
 import { cn } from "@/utils/cn";
+import { SamuelContentStudio } from "@/features/samuel-ai/content-studio";
 
 import type {
   SamuelStudioGenerateRequest,
@@ -104,7 +106,8 @@ async function downloadProject(project: SamuelStudioProject) {
   URL.revokeObjectURL(url);
 }
 
-export function SamuelStudio() {
+export function SamuelStudio({ companyId = "default-company" }: { companyId?: string }) {
+  const [studioMode, setStudioMode] = useState<"content" | "digital">("content");
   const [type, setType] = useState<SamuelStudioProjectType>("site");
   const [brief, setBrief] = useState("");
   const [changeRequest, setChangeRequest] = useState("");
@@ -196,6 +199,12 @@ export function SamuelStudio() {
 
   return (
     <div className="samuel-studio">
+      <nav className="samuel-studio-mode" aria-label="Áreas do Samuel Studio">
+        <button type="button" className={cn(studioMode === "content" && "is-active")} onClick={() => setStudioMode("content")}><Share2 /> Conteúdo e redes sociais</button>
+        <button type="button" className={cn(studioMode === "digital" && "is-active")} onClick={() => setStudioMode("digital")}><Code2 /> Sites e aplicativos</button>
+      </nav>
+
+      {studioMode === "content" ? <SamuelContentStudio companyId={companyId} /> : <>
       <section className="samuel-studio-hero">
         <div className="samuel-studio-hero__grid" aria-hidden="true" />
         <div className="samuel-studio-hero__copy">
@@ -335,6 +344,7 @@ export function SamuelStudio() {
           ))}
         </div>
       </section>
+      </>}
     </div>
   );
 }
