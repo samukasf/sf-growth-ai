@@ -9,6 +9,13 @@ const PUBLIC_PAGE_PATHS = new Set([
   "/future-me",
 ]);
 
+const PUBLIC_API_PATHS = new Set([
+  "/api/samuel-ai/mobile/auth-config",
+  "/api/samuel-ai/autonomous-improvement",
+  "/api/samuel-desktop/device",
+  "/api/samuel-desktop/computer-step",
+]);
+
 const BEARER_AUTH_API_PATHS = new Set([
   "/api/samuel-ai/mobile/bootstrap",
   "/api/samuel-ai/chat",
@@ -22,11 +29,9 @@ const BEARER_AUTH_API_PATHS = new Set([
 function isPublicPath(pathname: string) {
   return (
     PUBLIC_PAGE_PATHS.has(pathname) ||
+    PUBLIC_API_PATHS.has(pathname) ||
     pathname.startsWith("/future-me-") ||
-    pathname === "/future-me.html" ||
-    pathname === "/api/samuel-ai/autonomous-improvement" ||
-    pathname === "/api/samuel-desktop/device" ||
-    pathname === "/api/samuel-desktop/computer-step"
+    pathname === "/future-me.html"
   );
 }
 
