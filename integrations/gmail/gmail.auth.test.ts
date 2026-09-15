@@ -6,11 +6,7 @@ describe("Google OAuth scope bundle", () => {
   it("keeps workspace, local and marketing capabilities in one reconnect flow", () => {
     const scopes = new Set(GMAIL_OAUTH_SCOPES.split(" "));
 
-    expect(scopes).toEqual(
-      expect.objectContaining({
-        size: expect.any(Number),
-      }),
-    );
+    expect(scopes.size).toBeGreaterThanOrEqual(14);
     expect(scopes.has("https://www.googleapis.com/auth/gmail.modify")).toBe(true);
     expect(scopes.has("https://www.googleapis.com/auth/calendar")).toBe(true);
     expect(scopes.has("https://www.googleapis.com/auth/business.manage")).toBe(true);
