@@ -57,15 +57,15 @@ export default function App() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data } = supabase.auth.onAuthStateChange((_event, next) => setSession(next));
+    const { data } = supabase.auth.onAuthStateChange((_event, next) => {
+      setSession(next);
+      if (!next) setBootstrap(null);
+    });
     return () => data.subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
-    if (!token) {
-      setBootstrap(null);
-      return;
-    }
+    if (!token) return;
     loadBootstrap(token, COMPANY_ID)
       .then((value) => {
         setBootstrap(value);
