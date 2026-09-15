@@ -30,6 +30,10 @@ import {
 } from "./src/samuel-api";
 
 const COMPANY_ID = "default-company";
+const VOICE_SILENCE_MS = 900;
+const VOICE_MAX_SEGMENT_MS = 20_000;
+const VOICE_MIN_SEGMENT_MS = 650;
+const VOICE_METER_THRESHOLD_DB = -42;
 
 function id() {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -51,11 +55,26 @@ export default function App() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [speaking, setSpeaking] = useState(false);
+  const [voiceLoop, setVoiceLoop] = useState(false);
   const [status, setStatus] = useState("Inicializando");
+
   const speakingSound = useRef<Audio.Sound | null>(null);
   const activeDesktopCommandId = useRef<string | null>(null);
+  const recordingRef = useRef<Audio.Recording | null>(null);
+  const finalizingRecordingRef = useRef(false);
+  const busyRef = useRef(false);
+  const voiceLoopRef = useRef(false);
+  const speechStartedAtRef = useRef<number | null>(null);
+  const lastSpeechAtRef = useRef<number | null>(null);
+  const playbackSerialRef = useRef(0);
+  const resumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const token = session?.access_token ?? "";
+
+  useEffect(() => {
+    busyRef.current = busy;
+  }, [busy]);
 
   useEffect(() => {
     let active = true;
@@ -103,15 +122,38 @@ export default function App() {
 
   useEffect(() => {
     return () => {
+      if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+      playbackSerialRef.current += 1;
       speakingSound.current?.unloadAsync().catch(() => undefined);
-      recording?.stopAndUnloadAsync().catch(() => undefined);
+      recordingRef.current?.stopAndUnloadAsync().catch(() => undefined);
     };
-  }, [recording]);
+  }, []);
 
   const connectedCapabilities = useMemo(
     () => bootstrap?.capabilities.filter((capability) => capability.availability === "connected").length ?? 0,
     [bootstrap],
   );
+
+  function setVoiceLoopEnabled(enabled: boolean) {
+    voiceLoopRef.current = enabled;
+    setVoiceLoop(enabled);
+  }
+
+  function scheduleVoiceLoopResume(delayMs = 300) {
+    if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+    resumeTimerRef.current = setTimeout(() => {
+      resumeTimerRef.current = null;
+      if (
+        voiceLoopRef.current &&
+        token &&
+        !busyRef.current &&
+        !recordingRef.current &&
+        !speakingSound.current
+      ) {
+        void startRecording();
+      }
+    }, delayMs);
+  }
 
   async function signIn() {
     if (!authClient) {
@@ -119,40 +161,87 @@ export default function App() {
       return;
     }
     setBusy(true);
+    busyRef.current = true;
     const { error } = await authClient.auth.signInWithPassword({ email: email.trim(), password });
     setBusy(false);
+    busyRef.current = false;
     if (error) setStatus(error.message);
   }
 
+  async function stopSpeech() {
+    playbackSerialRef.current += 1;
+    const sound = speakingSound.current;
+    speakingSound.current = null;
+    setSpeaking(false);
+    if (!sound) return;
+    await sound.stopAsync().catch(() => undefined);
+    await sound.unloadAsync().catch(() => undefined);
+  }
+
   async function speak(text: string) {
-    if (!token || !text.trim()) return;
+    if (!token || !text.trim()) {
+      scheduleVoiceLoopResume();
+      return;
+    }
+
+    const playbackSerial = playbackSerialRef.current + 1;
+    playbackSerialRef.current = playbackSerial;
+    let uri: string | null = null;
+
     try {
-      setStatus("Falando");
+      setStatus("Preparando voz");
       const bytes = await generateSpeech(token, text, COMPANY_ID);
-      const uri = `${FileSystem.cacheDirectory}samuel-${Date.now()}.mp3`;
+      uri = `${FileSystem.cacheDirectory}samuel-${Date.now()}.mp3`;
       await FileSystem.writeAsStringAsync(uri, fromByteArray(bytes), {
         encoding: FileSystem.EncodingType.Base64,
       });
-      await speakingSound.current?.unloadAsync().catch(() => undefined);
+
+      await stopSpeech();
+      playbackSerialRef.current = playbackSerial;
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+        shouldDuckAndroid: true,
+      });
+
       const { sound } = await Audio.Sound.createAsync({ uri }, { shouldPlay: true });
       speakingSound.current = sound;
+      setSpeaking(true);
+      setStatus("Falando");
+
       sound.setOnPlaybackStatusUpdate((playback) => {
-        if (playback.isLoaded && playback.didJustFinish) setStatus("Pronto");
+        if (!playback.isLoaded || !playback.didJustFinish) return;
+        if (playbackSerialRef.current !== playbackSerial) return;
+
+        speakingSound.current = null;
+        setSpeaking(false);
+        setStatus("Pronto");
+        void sound.unloadAsync().catch(() => undefined);
+        if (uri) void FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => undefined);
+        scheduleVoiceLoopResume(220);
       });
     } catch {
-      setStatus("Resposta pronta · voz indisponível");
+      if (playbackSerialRef.current === playbackSerial) {
+        speakingSound.current = null;
+        setSpeaking(false);
+        setStatus("Resposta pronta · voz indisponível");
+        if (uri) void FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => undefined);
+        scheduleVoiceLoopResume(450);
+      }
     }
   }
 
   async function runTurn(text: string) {
     const query = text.trim();
-    if (!query || !token || busy) return;
+    if (!query || !token || busyRef.current) return;
 
     const userMessage = message("user", query);
     const previousHistory = messages;
     setMessages((current) => [...current, userMessage]);
     setInput("");
     setBusy(true);
+    busyRef.current = true;
     setStatus("Pensando");
 
     try {
@@ -175,62 +264,154 @@ export default function App() {
       }
 
       setMessages((current) => [...current, message("assistant", answer)]);
+      setBusy(false);
+      busyRef.current = false;
       await speak(answer);
     } catch (error) {
       const text = error instanceof Error ? error.message : "Falha ao executar o turno.";
       setMessages((current) => [...current, message("assistant", text)]);
       setStatus(text);
+      setBusy(false);
+      busyRef.current = false;
+      scheduleVoiceLoopResume(700);
     } finally {
       activeDesktopCommandId.current = null;
-      setBusy(false);
+      if (busyRef.current) {
+        setBusy(false);
+        busyRef.current = false;
+      }
     }
   }
 
-  async function toggleRecording() {
-    if (!token || busy) return;
+  async function finalizeRecording(target: Audio.Recording) {
+    if (recordingRef.current !== target || finalizingRecordingRef.current) return;
+    finalizingRecordingRef.current = true;
+    target.setOnRecordingStatusUpdate(null);
+    setStatus("Entendendo sua voz");
 
-    if (recording) {
-      setStatus("Entendendo sua voz");
-      await recording.stopAndUnloadAsync();
-      const uri = recording.getURI();
+    try {
+      await target.stopAndUnloadAsync();
+      const uri = target.getURI();
+      recordingRef.current = null;
       setRecording(null);
+      speechStartedAtRef.current = null;
+      lastSpeechAtRef.current = null;
+
       if (!uri) {
         setStatus("Áudio não disponível");
+        scheduleVoiceLoopResume(600);
         return;
       }
-      try {
-        const transcript = await transcribeNativeAudio(token, uri, COMPANY_ID);
-        await runTurn(transcript);
-      } catch (error) {
-        setStatus(error instanceof Error ? error.message : "Falha na transcrição.");
-      }
-      return;
+
+      const transcript = await transcribeNativeAudio(token, uri, COMPANY_ID);
+      await FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => undefined);
+      await runTurn(transcript);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Falha na transcrição.");
+      scheduleVoiceLoopResume(700);
+    } finally {
+      finalizingRecordingRef.current = false;
+    }
+  }
+
+  async function startRecording() {
+    if (!token || recordingRef.current || finalizingRecordingRef.current || busyRef.current) return;
+
+    if (speakingSound.current) await stopSpeech();
+    if (resumeTimerRef.current) {
+      clearTimeout(resumeTimerRef.current);
+      resumeTimerRef.current = null;
     }
 
     const permission = await Audio.requestPermissionsAsync();
     if (!permission.granted) {
+      setVoiceLoopEnabled(false);
       setStatus("Permissão de microfone necessária");
       return;
     }
 
-    await Audio.setAudioModeAsync({
-      allowsRecordingIOS: true,
-      playsInSilentModeIOS: true,
-      staysActiveInBackground: false,
-      shouldDuckAndroid: true,
-    });
-    const next = new Audio.Recording();
-    await next.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
-    await next.startAsync();
-    setRecording(next);
-    setStatus("Ouvindo");
+    try {
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+        shouldDuckAndroid: true,
+      });
+
+      const next = new Audio.Recording();
+      await next.prepareToRecordAsync({
+        ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
+        isMeteringEnabled: true,
+      });
+      next.setProgressUpdateInterval(120);
+      next.setOnRecordingStatusUpdate((current) => {
+        if (!current.isRecording || finalizingRecordingRef.current) return;
+        const now = Date.now();
+        const metering = typeof current.metering === "number" ? current.metering : -160;
+
+        if (metering >= VOICE_METER_THRESHOLD_DB) {
+          if (!speechStartedAtRef.current) speechStartedAtRef.current = now;
+          lastSpeechAtRef.current = now;
+        }
+
+        const heardSpeech = speechStartedAtRef.current !== null;
+        const lastSpeechAt = lastSpeechAtRef.current;
+        const duration = current.durationMillis ?? 0;
+        const silenceComplete =
+          heardSpeech &&
+          lastSpeechAt !== null &&
+          now - lastSpeechAt >= VOICE_SILENCE_MS &&
+          duration >= VOICE_MIN_SEGMENT_MS;
+
+        if (silenceComplete || duration >= VOICE_MAX_SEGMENT_MS) {
+          void finalizeRecording(next);
+        }
+      });
+      await next.startAsync();
+      speechStartedAtRef.current = null;
+      lastSpeechAtRef.current = null;
+      recordingRef.current = next;
+      setRecording(next);
+      setStatus("Ouvindo · fale normalmente");
+    } catch (error) {
+      recordingRef.current = null;
+      setRecording(null);
+      setVoiceLoopEnabled(false);
+      setStatus(error instanceof Error ? error.message : "Não consegui abrir o microfone.");
+    }
+  }
+
+  async function toggleRecording() {
+    if (!token) return;
+
+    const currentRecording = recordingRef.current;
+    if (currentRecording) {
+      await finalizeRecording(currentRecording);
+      return;
+    }
+
+    if (busyRef.current && !speaking) return;
+    setVoiceLoopEnabled(true);
+    await startRecording();
   }
 
   async function stopSamuel() {
-    await speakingSound.current?.stopAsync().catch(() => undefined);
-    if (recording) {
-      await recording.stopAndUnloadAsync().catch(() => undefined);
-      setRecording(null);
+    setVoiceLoopEnabled(false);
+    if (resumeTimerRef.current) {
+      clearTimeout(resumeTimerRef.current);
+      resumeTimerRef.current = null;
+    }
+    await stopSpeech();
+
+    const currentRecording = recordingRef.current;
+    recordingRef.current = null;
+    setRecording(null);
+    speechStartedAtRef.current = null;
+    lastSpeechAtRef.current = null;
+    finalizingRecordingRef.current = false;
+    if (currentRecording) {
+      currentRecording.setOnRecordingStatusUpdate(null);
+      await currentRecording.stopAndUnloadAsync().catch(() => undefined);
     }
 
     const commandId = activeDesktopCommandId.current;
@@ -294,12 +475,14 @@ export default function App() {
           <View style={[styles.ring, styles.ringOuter]} />
           <View style={[styles.ring, styles.ringInner]} />
           <View style={styles.core}>
-            <Text style={styles.coreText}>{recording ? "OUVINDO" : busy ? "ATIVO" : "SAMUEL"}</Text>
+            <Text style={styles.coreText}>
+              {recording ? "OUVINDO" : speaking ? "FALANDO" : busy ? "PENSANDO" : voiceLoop ? "CONVERSA" : "SAMUEL"}
+            </Text>
           </View>
         </View>
 
         <Text style={styles.capabilityText}>
-          Núcleo compartilhado · {connectedCapabilities} capacidades conectadas · Desktop {bootstrap?.interaction.desktopControl ? "ativo" : "indisponível"}
+          Núcleo compartilhado · {connectedCapabilities} capacidades conectadas · Desktop {bootstrap?.interaction.desktopControl ? "ativo" : "indisponível"} · Voz {voiceLoop ? "contínua" : "pronta"}
         </Text>
 
         <FlatList
@@ -325,9 +508,9 @@ export default function App() {
             style={[styles.input, styles.composerInput]}
           />
           <Pressable
-            style={[styles.micButton, recording && styles.micButtonActive]}
+            style={[styles.micButton, (recording || voiceLoop) && styles.micButtonActive]}
             onPress={toggleRecording}
-            disabled={busy}
+            disabled={busy && !speaking}
           >
             <Text style={styles.micText}>{recording ? "■" : "●"}</Text>
           </Pressable>
