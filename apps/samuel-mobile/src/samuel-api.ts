@@ -156,6 +156,7 @@ export async function executeDesktopCommand(
   token: string,
   goal: string,
   companyId = "default-company",
+  onQueued?: (commandId: string) => void,
 ) {
   const response = await fetch(`${API_BASE_URL}/api/samuel-desktop/voice-command`, {
     method: "POST",
@@ -164,6 +165,7 @@ export async function executeDesktopCommand(
   });
   if (!response.ok) throw await errorFromResponse(response);
   const queued = await response.json() as { commandId: string; deviceName: string; status: string };
+  onQueued?.(queued.commandId);
 
   const deadline = Date.now() + 120_000;
   while (Date.now() < deadline) {
@@ -180,9 +182,19 @@ export async function executeDesktopCommand(
     };
     if (!status.terminal) continue;
     if (status.verified) return `Concluído no ${queued.deviceName}.`;
+    if (status.command.status === "cancelled") throw new Error("Execução interrompida.");
     throw new Error(status.command.error_message || `A execução terminou como ${status.command.status}.`);
   }
   throw new Error("O computador ainda está executando a tarefa.");
+}
+
+export async function cancelDesktopCommand(token: string, commandId: string) {
+  const response = await fetch(`${API_BASE_URL}/api/samuel-desktop/control`, {
+    method: "POST",
+    headers: await authHeaders(token, { "Content-Type": "application/json" }),
+    body: JSON.stringify({ operation: "cancel", commandId }),
+  });
+  if (!response.ok) throw await errorFromResponse(response);
 }
 
 export async function generateSpeech(token: string, text: string, companyId = "default-company") {
