@@ -14,6 +14,10 @@ export const GOOGLE_CAPABILITY_SCOPES = {
   businessProfile: "https://www.googleapis.com/auth/business.manage",
   places: "https://www.googleapis.com/auth/maps-platform.places",
   geocoding: "https://www.googleapis.com/auth/maps-platform.geocode",
+  googleAds: "https://www.googleapis.com/auth/adwords",
+  analytics: "https://www.googleapis.com/auth/analytics.readonly",
+  searchConsole: "https://www.googleapis.com/auth/webmasters.readonly",
+  youtube: "https://www.googleapis.com/auth/youtube.readonly",
 } as const;
 
 export type GoogleCapabilityKey = keyof typeof GOOGLE_CAPABILITY_SCOPES;
@@ -106,7 +110,7 @@ export async function getGoogleIntegrationStatus(
     healthMessage = friendlyGoogleHealthError(error);
   }
 
-  const reconnectRequired = !tokenHealthy || !capabilities.calendar;
+  const reconnectRequired = !tokenHealthy || missingCapabilities.length > 0;
   return {
     oauthConfigured: true,
     connected: tokenHealthy,
@@ -119,9 +123,9 @@ export async function getGoogleIntegrationStatus(
     reconnectRequired,
     healthMessage:
       healthMessage ??
-      (capabilities.calendar
-        ? null
-        : "A conta Google está conectada, mas falta a permissão do Google Agenda. Reconecte para conceder os scopes atuais."),
+      (missingCapabilities.length
+        ? `A conta Google está conectada, mas faltam ${missingCapabilities.length} permissões atuais. Reconecte para liberar Gmail, Agenda, Business Profile, Ads, Analytics, Search Console, YouTube e demais recursos configurados.`
+        : null),
   };
 }
 
