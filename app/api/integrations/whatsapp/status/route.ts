@@ -16,7 +16,7 @@ export async function GET(request: Request) {
   const auth = await authorizeCompanyRequest(companyId);
   if (!auth.ok) return auth.response;
 
-  return NextResponse.json(getWhatsAppConfigStatus(companyId), {
+  return NextResponse.json(await getWhatsAppConfigStatus(companyId), {
     headers: { "Cache-Control": "private, no-store" },
   });
 }
