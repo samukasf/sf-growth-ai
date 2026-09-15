@@ -18,6 +18,7 @@ import type { Session } from "@supabase/supabase-js";
 
 import { supabase } from "./src/supabase";
 import {
+  cancelDesktopCommand,
   executeDesktopCommand,
   generateSpeech,
   isLikelyDesktopCommand,
@@ -50,6 +51,7 @@ export default function App() {
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [status, setStatus] = useState("Pronto");
   const speakingSound = useRef<Audio.Sound | null>(null);
+  const activeDesktopCommandId = useRef<string | null>(null);
 
   const token = session?.access_token ?? "";
 
@@ -126,7 +128,9 @@ export default function App() {
       let answer: string;
       if (isLikelyDesktopCommand(query)) {
         setStatus("Executando no computador");
-        answer = await executeDesktopCommand(token, query, COMPANY_ID);
+        answer = await executeDesktopCommand(token, query, COMPANY_ID, (commandId) => {
+          activeDesktopCommandId.current = commandId;
+        });
       } else {
         const turn = await sendSamuelTurn({
           token,
@@ -146,6 +150,7 @@ export default function App() {
       setMessages((current) => [...current, message("assistant", text)]);
       setStatus(text);
     } finally {
+      activeDesktopCommandId.current = null;
       setBusy(false);
     }
   }
@@ -195,6 +200,13 @@ export default function App() {
     if (recording) {
       await recording.stopAndUnloadAsync().catch(() => undefined);
       setRecording(null);
+    }
+
+    const commandId = activeDesktopCommandId.current;
+    if (commandId && token) {
+      setStatus("Interrompendo execução no computador");
+      await cancelDesktopCommand(token, commandId).catch(() => undefined);
+      activeDesktopCommandId.current = null;
     }
     setStatus("Interrompido");
   }
