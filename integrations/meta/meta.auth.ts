@@ -26,43 +26,56 @@ export function resolveMetaGraphApiVersion(): string {
   return "v26.0";
 }
 
-export function resolveMetaPageId(companyId?: string): string {
-  const mapJson = process.env.META_PAGE_MAP;
-  if (companyId && mapJson) {
-    try {
-      const map = JSON.parse(mapJson) as Record<string, string>;
-      if (map[companyId]) return map[companyId];
-    } catch {
-      // ignore invalid JSON
-    }
+function readStringMap(value: string | undefined): Record<string, string> {
+  if (!value) return {};
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    return Object.fromEntries(
+      Object.entries(parsed as Record<string, unknown>)
+        .filter(([, item]) => typeof item === "string" && item.trim())
+        .map(([key, item]) => [key, (item as string).trim()]),
+    );
+  } catch {
+    return {};
   }
+}
 
+export function resolveMetaPageId(companyId?: string): string {
+  const map = readStringMap(process.env.META_PAGE_MAP);
+  if (companyId && map[companyId]) return map[companyId];
   return process.env.META_PAGE_ID ?? "";
 }
 
 export function resolveMetaAdAccountId(companyId?: string): string | undefined {
-  const mapJson = process.env.META_AD_ACCOUNT_MAP;
-  if (companyId && mapJson) {
-    try {
-      const map = JSON.parse(mapJson) as Record<string, string>;
-      if (map[companyId]) return map[companyId];
-    } catch {
-      // ignore invalid JSON
-    }
-  }
-
+  const map = readStringMap(process.env.META_AD_ACCOUNT_MAP);
+  if (companyId && map[companyId]) return map[companyId];
   const accountId = process.env.META_AD_ACCOUNT_ID;
   return accountId || undefined;
 }
 
-export function resolveMetaInstagramBusinessId(): string | undefined {
+export function resolveMetaInstagramBusinessId(companyId?: string): string | undefined {
+  const map = readStringMap(process.env.META_INSTAGRAM_BUSINESS_MAP);
+  if (companyId && map[companyId]) return map[companyId];
   return process.env.META_INSTAGRAM_BUSINESS_ID || undefined;
+}
+
+function canUseLegacyEnvCredentials(companyId?: string) {
+  if (!companyId) return true;
+  const ownerCompanyId = process.env.META_OWNER_COMPANY_ID?.trim();
+  if (ownerCompanyId && ownerCompanyId === companyId) return true;
+  return Boolean(readStringMap(process.env.META_PAGE_MAP)[companyId]);
 }
 
 export function resolveMetaClientConfig(
   overrides?: Partial<MetaClientConfig>,
   companyId?: string,
 ): MetaClientConfig | null {
+  const usingEnvAccessToken = !overrides?.accessToken;
+  if (usingEnvAccessToken && !canUseLegacyEnvCredentials(companyId)) {
+    return null;
+  }
+
   const accessToken = overrides?.accessToken ?? process.env.META_ACCESS_TOKEN ?? "";
   const pageId = overrides?.pageId ?? resolveMetaPageId(companyId);
 
@@ -74,7 +87,7 @@ export function resolveMetaClientConfig(
     accessToken,
     pageId,
     instagramBusinessId:
-      overrides?.instagramBusinessId ?? resolveMetaInstagramBusinessId(),
+      overrides?.instagramBusinessId ?? resolveMetaInstagramBusinessId(companyId),
     adAccountId: overrides?.adAccountId ?? resolveMetaAdAccountId(companyId),
   };
 }
@@ -82,23 +95,22 @@ export function resolveMetaClientConfig(
 export async function resolveMetaClientConfigForCompany(
   companyId: string,
 ): Promise<MetaClientConfig | null> {
-  const fromEnv = resolveMetaClientConfig(undefined, companyId);
-  if (fromEnv) return fromEnv;
-
   try {
     const { findMetaOAuthConnection } = await import("./meta-token.repository");
     const connection = await findMetaOAuthConnection(companyId);
-    if (!connection) return null;
-    return resolveMetaClientConfig(
-      {
+    if (connection?.selectedExplicitly && connection.accessToken && connection.pageId) {
+      return {
         accessToken: connection.accessToken,
         pageId: connection.pageId,
-      },
-      companyId,
-    );
+        instagramBusinessId: connection.instagramBusinessId ?? undefined,
+        adAccountId: connection.adAccountId ?? undefined,
+      };
+    }
   } catch {
-    return null;
+    // Fall through to the deliberately scoped legacy env fallback.
   }
+
+  return resolveMetaClientConfig(undefined, companyId);
 }
 
 export function resolveMetaOAuthConfig(): MetaOAuthConfig | null {
