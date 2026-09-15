@@ -8,6 +8,37 @@ export type DirectDesktopCommand = {
 
 const OPEN_VERB = /\b(abra|abrir|inicie|iniciar|execute|executar)\b/i;
 
+const FOLDERS: Array<{ pattern: RegExp; shellTarget: string }> = [
+  {
+    pattern: /\b(downloads?|transfer[eê]ncias)\b/i,
+    shellTarget: "shell:Downloads",
+  },
+  {
+    pattern: /\b(documentos?|meus documentos|documents?)\b/i,
+    shellTarget: "shell:Personal",
+  },
+  {
+    pattern: /\b([aá]rea de trabalho|desktop)\b/i,
+    shellTarget: "shell:Desktop",
+  },
+  {
+    pattern: /\b(imagens?|fotos?|pictures?)\b/i,
+    shellTarget: "shell:PicturesLibrary",
+  },
+  {
+    pattern: /\b(v[ií]deos?|videos?)\b/i,
+    shellTarget: "shell:VideosLibrary",
+  },
+  {
+    pattern: /\b(m[uú]sicas?|music)\b/i,
+    shellTarget: "shell:MusicLibrary",
+  },
+  {
+    pattern: /\b(este computador|meu computador|this pc)\b/i,
+    shellTarget: "shell:MyComputerFolder",
+  },
+];
+
 const APPLICATIONS: Array<{ pattern: RegExp; file: string }> = [
   { pattern: /\b(calculadora|calculator|calc)\b/i, file: "calc.exe" },
   { pattern: /\b(bloco de notas|notepad)\b/i, file: "notepad.exe" },
@@ -21,6 +52,16 @@ const APPLICATIONS: Array<{ pattern: RegExp; file: string }> = [
 
 export function resolveDirectDesktopCommand(goal: string): DirectDesktopCommand | null {
   if (!OPEN_VERB.test(goal)) return null;
+
+  const folder = FOLDERS.find(({ pattern }) => pattern.test(goal));
+  if (folder) {
+    return {
+      action: "system.app.open",
+      args: { file: "explorer.exe", args: [folder.shellTarget] },
+      risk: "mutate",
+    };
+  }
+
   const application = APPLICATIONS.find(({ pattern }) => pattern.test(goal));
   if (!application) return null;
   return {
