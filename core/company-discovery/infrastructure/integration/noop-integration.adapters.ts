@@ -1,4 +1,3 @@
-import type { CompanyProfile } from "../../domain";
 import type {
   EnterpriseBrainPort,
   ExecutiveInnovationPort,
@@ -12,52 +11,40 @@ export class NoopEnterpriseBrainAdapter implements EnterpriseBrainPort {
   isAvailable() {
     return false;
   }
-  async syncProfile(_profile: CompanyProfile) {}
+  async syncProfile() {}
 }
 
 export class NoopOrganizationBrainAdapter implements OrganizationBrainPort {
   isAvailable() {
     return false;
   }
-  async registerOrganization(_organizationId: string, _companyId: string) {}
+  async registerOrganization() {}
 }
 
 export class NoopExecutiveMemoryAdapter implements ExecutiveMemoryPort {
   isAvailable() {
     return false;
   }
-  async storeDiscoveryInsights(
-    _organizationId: string,
-    _companyId: string,
-    _insights: Record<string, unknown>,
-  ) {}
+  async storeDiscoveryInsights() {}
 }
 
 export class NoopExecutiveKnowledgeAdapter implements ExecutiveKnowledgePort {
   isAvailable() {
     return false;
   }
-  async ingestProfile(_profile: CompanyProfile) {}
+  async ingestProfile() {}
 }
 
 export class NoopExecutiveInnovationAdapter implements ExecutiveInnovationPort {
   isAvailable() {
     return false;
   }
-  async submitOpportunities(
-    _organizationId: string,
-    _companyId: string,
-    _opportunities: Record<string, unknown>[],
-  ) {}
+  async submitOpportunities() {}
 }
 
 export class NoopExecutiveProjectGeneratorAdapter implements ExecutiveProjectGeneratorPort {
   isAvailable() {
     return false;
   }
-  async generateFromGaps(
-    _organizationId: string,
-    _companyId: string,
-    _gaps: Record<string, unknown>[],
-  ) {}
+  async generateFromGaps() {}
 }

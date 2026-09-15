@@ -111,6 +111,7 @@ export class InMemoryBusinessOperatingRepository implements BusinessOperatingRep
   }
 
   async listPriorities(companyId: CompanyId, businessDayId?: BusinessDayId): Promise<BusinessPriority[]> {
+    void businessDayId;
     return [...this.priorities.values()].filter((p) => p.companyId === companyId);
   }
 

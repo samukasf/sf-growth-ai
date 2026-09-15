@@ -78,15 +78,15 @@ export class InMemoryAgencyRepository implements AgencyRepository {
     return [...this.kpis.values()].filter((kpi) => kpi.agencyId === agencyId);
   }
 
-  async countEmployees(_agencyId: AgencyId): Promise<number> {
+  async countEmployees(): Promise<number> {
     return 0;
   }
 
-  async countPartners(_agencyId: AgencyId): Promise<number> {
+  async countPartners(): Promise<number> {
     return 0;
   }
 
-  async sumPipelineValue(_agencyId: AgencyId): Promise<number> {
+  async sumPipelineValue(): Promise<number> {
     return 0;
   }
 }
