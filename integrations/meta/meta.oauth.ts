@@ -6,7 +6,11 @@ import {
   resolveMetaOAuthConfig,
   type MetaOAuthConfig,
 } from "./meta.auth";
-import { upsertMetaOAuthConnection } from "./meta-token.repository";
+import {
+  replaceMetaConnectedAssets,
+  upsertMetaOAuthConnection,
+  type MetaAssetType,
+} from "./meta-token.repository";
 import { MetaApiError } from "./meta.types";
 
 function graphApiBase() {
@@ -141,9 +145,31 @@ type MetaPageAccount = {
   access_token?: string;
 };
 
+type MetaInstagramAccount = {
+  id: string;
+  username?: string;
+};
+
+type MetaAdAccount = {
+  id: string;
+  name?: string;
+  account_id?: string;
+  account_status?: number;
+};
+
+type MetaBusiness = {
+  id: string;
+  name?: string;
+};
+
+type MetaUser = {
+  id?: string;
+  name?: string;
+};
+
 async function listManagedPages(userAccessToken: string): Promise<MetaPageAccount[]> {
   const response = await fetch(
-    `${graphApiBase()}/me/accounts?fields=id,name,access_token&limit=25&access_token=${encodeURIComponent(userAccessToken)}`,
+    `${graphApiBase()}/me/accounts?fields=id,name,access_token&limit=100&access_token=${encodeURIComponent(userAccessToken)}`,
     { cache: "no-store" },
   );
   const text = await response.text();
@@ -157,6 +183,65 @@ async function listManagedPages(userAccessToken: string): Promise<MetaPageAccoun
 
   const payload = JSON.parse(text) as { data?: MetaPageAccount[] };
   return payload.data ?? [];
+}
+
+async function resolveInstagramForPage(page: MetaPageAccount): Promise<MetaInstagramAccount | null> {
+  if (!page.access_token) return null;
+  try {
+    const fields = encodeURIComponent("instagram_business_account{id,username}");
+    const response = await fetch(
+      `${graphApiBase()}/${encodeURIComponent(page.id)}?fields=${fields}&access_token=${encodeURIComponent(page.access_token)}`,
+      { cache: "no-store" },
+    );
+    if (!response.ok) return null;
+    const payload = (await response.json()) as {
+      instagram_business_account?: MetaInstagramAccount;
+    };
+    return payload.instagram_business_account ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function listAdAccounts(userAccessToken: string): Promise<MetaAdAccount[]> {
+  try {
+    const response = await fetch(
+      `${graphApiBase()}/me/adaccounts?fields=id,name,account_id,account_status&limit=100&access_token=${encodeURIComponent(userAccessToken)}`,
+      { cache: "no-store" },
+    );
+    if (!response.ok) return [];
+    const payload = (await response.json()) as { data?: MetaAdAccount[] };
+    return payload.data ?? [];
+  } catch {
+    return [];
+  }
+}
+
+async function listBusinesses(userAccessToken: string): Promise<MetaBusiness[]> {
+  try {
+    const response = await fetch(
+      `${graphApiBase()}/me/businesses?fields=id,name&limit=100&access_token=${encodeURIComponent(userAccessToken)}`,
+      { cache: "no-store" },
+    );
+    if (!response.ok) return [];
+    const payload = (await response.json()) as { data?: MetaBusiness[] };
+    return payload.data ?? [];
+  } catch {
+    return [];
+  }
+}
+
+async function getMetaUser(userAccessToken: string): Promise<MetaUser> {
+  try {
+    const response = await fetch(
+      `${graphApiBase()}/me?fields=id,name&access_token=${encodeURIComponent(userAccessToken)}`,
+      { cache: "no-store" },
+    );
+    if (!response.ok) return {};
+    return (await response.json()) as MetaUser;
+  } catch {
+    return {};
+  }
 }
 
 async function listGrantedPermissions(userAccessToken: string): Promise<string[]> {
@@ -189,9 +274,12 @@ export async function completeMetaOAuthConnection(
 
   const shortLived = await exchangeCodeForUserToken(code, config);
   const longLived = await exchangeForLongLivedToken(shortLived.access_token, config);
-  const [pages, grantedPermissions] = await Promise.all([
+  const [pages, grantedPermissions, adAccounts, businesses, metaUser] = await Promise.all([
     listManagedPages(longLived.access_token),
     listGrantedPermissions(longLived.access_token),
+    listAdAccounts(longLived.access_token),
+    listBusinesses(longLived.access_token),
+    getMetaUser(longLived.access_token),
   ]);
 
   if (pages.length === 0) {
@@ -201,16 +289,20 @@ export async function completeMetaOAuthConnection(
     );
   }
 
+  const pageInstagramPairs = await Promise.all(
+    pages.map(async (page) => ({ page, instagram: await resolveInstagramForPage(page) })),
+  );
+
   const preferredPageId = process.env.META_PAGE_ID;
   const page =
-    pages.find((item) => item.id === preferredPageId) ??
+    pages.find((item) => item.id === preferredPageId && Boolean(item.access_token)) ??
     pages.find((item) => Boolean(item.access_token)) ??
     pages[0];
 
   if (!page.access_token) {
     throw new MetaApiError(
       "AUTH_ERROR",
-      "A página selecionada não devolveu page access token.",
+      "As páginas encontradas não devolveram um Page Access Token utilizável.",
     );
   }
 
@@ -219,14 +311,74 @@ export async function completeMetaOAuthConnection(
       ? new Date(Date.now() + longLived.expires_in * 1000).toISOString()
       : null;
 
-  return upsertMetaOAuthConnection({
+  const connection = await upsertMetaOAuthConnection({
     companyId,
     pageId: page.id,
     pageName: page.name ?? null,
     accessToken: page.access_token,
+    userAccessToken: longLived.access_token,
     tokenType: longLived.token_type ?? shortLived.token_type ?? "bearer",
     expiresAt,
     scopes: grantedPermissions.length > 0 ? grantedPermissions.join(",") : null,
+    metaUserId: metaUser.id ?? null,
+    metaUserName: metaUser.name ?? null,
+    businessId: null,
+    instagramBusinessId: null,
+    instagramUsername: null,
+    adAccountId: null,
+    adAccountName: null,
+    selectedExplicitly: false,
     connectedBy: connectedBy ?? null,
   });
+
+  const assets: Array<{
+    assetType: MetaAssetType;
+    assetId: string;
+    assetName?: string | null;
+    parentAssetId?: string | null;
+    accessToken?: string | null;
+    metadata?: Record<string, unknown>;
+  }> = [];
+
+  for (const { page: managedPage, instagram } of pageInstagramPairs) {
+    assets.push({
+      assetType: "facebook_page",
+      assetId: managedPage.id,
+      assetName: managedPage.name ?? null,
+      accessToken: managedPage.access_token ?? null,
+      metadata: instagram?.id ? { instagramBusinessId: instagram.id } : {},
+    });
+    if (instagram?.id) {
+      assets.push({
+        assetType: "instagram_account",
+        assetId: instagram.id,
+        assetName: instagram.username ?? null,
+        parentAssetId: managedPage.id,
+        metadata: { username: instagram.username ?? null },
+      });
+    }
+  }
+
+  for (const adAccount of adAccounts) {
+    assets.push({
+      assetType: "ad_account",
+      assetId: adAccount.id,
+      assetName: adAccount.name ?? adAccount.account_id ?? null,
+      metadata: {
+        accountId: adAccount.account_id ?? null,
+        accountStatus: adAccount.account_status ?? null,
+      },
+    });
+  }
+
+  for (const business of businesses) {
+    assets.push({
+      assetType: "business",
+      assetId: business.id,
+      assetName: business.name ?? null,
+    });
+  }
+
+  await replaceMetaConnectedAssets(companyId, connection.id, assets);
+  return connection;
 }
