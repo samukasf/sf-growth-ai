@@ -1,0 +1,33 @@
+name: Samuel Mobile CI
+
+on:
+  pull_request:
+    paths:
+      - "apps/samuel-mobile/**"
+      - "app/api/samuel-ai/mobile/**"
+      - "features/auth/server/authorization.ts"
+      - "features/samuel-ai/server/workspace-session.ts"
+      - ".github/workflows/samuel-mobile-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "apps/samuel-mobile/**"
+      - "app/api/samuel-ai/mobile/**"
+      - "features/auth/server/authorization.ts"
+      - "features/samuel-ai/server/workspace-session.ts"
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/samuel-mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/samuel-mobile/package.json
+      - run: npm install --no-audit --no-fund
+      - run: npm run typecheck

@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "Samuel AI",
+    "slug": "samuel-ai",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "scheme": "samuelai",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.sfgrowth.samuelai",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Samuel usa o microfone para ouvir seus comandos e conversar por voz."
+      }
+    },
+    "android": {
+      "package": "com.sfgrowth.samuelai",
+      "permissions": ["RECORD_AUDIO"]
+    },
+    "plugins": ["expo-secure-store"],
+    "extra": {
+      "samuelCore": "shared"
+    }
+  }
+}

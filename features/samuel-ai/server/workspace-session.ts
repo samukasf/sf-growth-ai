@@ -2,11 +2,23 @@ import "server-only";
 
 import { createHash, randomUUID } from "node:crypto";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 const SESSION_COOKIE = "sf_growth_ai_chat_session";
+const NATIVE_SESSION_PATTERN = /^[a-zA-Z0-9._:-]{16,160}$/;
 
 export async function getWorkspaceSessionIdentity() {
+  const requestHeaders = await headers();
+  const nativeSessionId = requestHeaders.get("x-samuel-session-id")?.trim() ?? "";
+
+  if (NATIVE_SESSION_PATTERN.test(nativeSessionId)) {
+    const sessionKey = `native:${nativeSessionId}`;
+    return {
+      sessionKey,
+      sessionHash: createHash("sha256").update(sessionKey).digest("hex"),
+    };
+  }
+
   const cookieStore = await cookies();
   let sessionKey = cookieStore.get(SESSION_COOKIE)?.value;
 

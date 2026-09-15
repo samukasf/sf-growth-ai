@@ -40,6 +40,7 @@
     "node_modules",
     "node_modules.failed-install",
     "apps/mobile",
+    "apps/samuel-mobile",
     "apps/samuel-desktop-agent"
   ]
 }

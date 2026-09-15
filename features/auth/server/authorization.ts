@@ -1,9 +1,10 @@
 import "server-only";
 
+import { headers } from "next/headers";
 import type { User } from "@supabase/supabase-js";
 
 import { createAuthServerSupabase } from "@/lib/supabase/auth-server";
-import { createServerSupabaseAdmin } from "@/lib/supabase/server";
+import { createServerSupabase, createServerSupabaseAdmin } from "@/lib/supabase/server";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -12,7 +13,31 @@ export type RequestAuthorization =
   | { ok: true; user: User }
   | { ok: false; response: Response };
 
+async function getBearerAccessToken(): Promise<string | null> {
+  try {
+    const requestHeaders = await headers();
+    const authorization = requestHeaders.get("authorization")?.trim() ?? "";
+    const match = /^Bearer\s+(.+)$/i.exec(authorization);
+    return match?.[1]?.trim() || null;
+  } catch {
+    // Unit tests and non-request server contexts may not expose request headers.
+    return null;
+  }
+}
+
 export async function getAuthenticatedUser(): Promise<User | null> {
+  const bearerToken = await getBearerAccessToken();
+  if (bearerToken) {
+    const supabase = createServerSupabase();
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser(bearerToken);
+
+    if (!error && user) return user;
+    return null;
+  }
+
   const supabase = await createAuthServerSupabase();
   const {
     data: { user },
