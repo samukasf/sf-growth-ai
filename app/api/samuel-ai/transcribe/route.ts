@@ -9,7 +9,14 @@ const ELEVENLABS_TRANSCRIPTION_MODEL =
 const OPENAI_TRANSCRIPTION_MODEL =
   process.env.OPENAI_TRANSCRIPTION_MODEL?.trim() || "gpt-4o-mini-transcribe";
 const GEMINI_TRANSCRIPTION_MODEL =
-  process.env.GEMINI_TRANSCRIPTION_MODEL?.trim() || "gemini-2.5-flash";
+  process.env.GEMINI_TRANSCRIPTION_MODEL?.trim() || "gemini-3.6-flash";
+const GEMINI_FALLBACK_MODELS = [
+  "gemini-3.6-flash",
+  "gemini-3.5-flash",
+  "gemini-3-flash",
+  "gemini-2.5-flash",
+  "gemini-2.0-flash",
+] as const;
 
 type ProviderResult = {
   ok: boolean;
@@ -19,6 +26,21 @@ type ProviderResult = {
   status?: number;
   error?: string;
   code?: string;
+};
+
+type GeminiGeneratePayload = {
+  candidates?: Array<{
+    content?: { parts?: Array<{ text?: string }> };
+  }>;
+  error?: { message?: string };
+};
+
+type GeminiModelListPayload = {
+  models?: Array<{
+    name?: string;
+    supportedGenerationMethods?: string[];
+    supportedActions?: string[];
+  }>;
 };
 
 function jsonError(message: string, status: number, code: string) {
@@ -32,6 +54,118 @@ function resolveGeminiApiKey(): string | null {
     process.env.GOOGLE_API_KEY?.trim() ||
     null
   );
+}
+
+function normalizeGeminiModelName(name: string) {
+  return name.trim().replace(/^models\//, "");
+}
+
+function uniqueGeminiModels(models: string[]) {
+  return [...new Set(models.map(normalizeGeminiModelName).filter(Boolean))];
+}
+
+async function discoverGeminiModels(apiKey: string): Promise<string[]> {
+  try {
+    const response = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/models?pageSize=100",
+      {
+        headers: { "x-goog-api-key": apiKey },
+        cache: "no-store",
+      },
+    );
+    if (!response.ok) return [];
+
+    const payload = (await response.json().catch(() => null)) as GeminiModelListPayload | null;
+    const supported = (payload?.models ?? [])
+      .filter((model) => {
+        const methods = [
+          ...(model.supportedGenerationMethods ?? []),
+          ...(model.supportedActions ?? []),
+        ];
+        return methods.includes("generateContent");
+      })
+      .map((model) => normalizeGeminiModelName(model.name ?? ""))
+      .filter((name) => name.startsWith("gemini-"));
+
+    return supported.sort((left, right) => {
+      const leftFlash = left.includes("flash") ? 1 : 0;
+      const rightFlash = right.includes("flash") ? 1 : 0;
+      return rightFlash - leftFlash;
+    });
+  } catch {
+    return [];
+  }
+}
+
+async function requestGeminiTranscription(input: {
+  apiKey: string;
+  model: string;
+  bytes: Buffer;
+  mimeType: string;
+}): Promise<ProviderResult> {
+  const model = normalizeGeminiModelName(input.model);
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": input.apiKey,
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: "Transcreva exatamente a fala deste áudio em português. Retorne somente a transcrição, sem explicações, aspas ou comentários.",
+            },
+            {
+              inline_data: {
+                mime_type: input.mimeType,
+                data: input.bytes.toString("base64"),
+              },
+            },
+          ],
+        },
+      ],
+      generationConfig: { maxOutputTokens: 2048, temperature: 0 },
+    }),
+    cache: "no-store",
+  });
+
+  const payload = (await response.json().catch(() => null)) as GeminiGeneratePayload | null;
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      status: response.status,
+      code: response.status === 429 ? "GEMINI_RATE_LIMITED" : "GEMINI_PROVIDER_ERROR",
+      error: payload?.error?.message || "Gemini transcription failed",
+      model,
+    };
+  }
+
+  const text = payload?.candidates?.[0]?.content?.parts
+    ?.map((part) => part.text ?? "")
+    .join("")
+    .trim();
+
+  if (!text) {
+    return {
+      ok: false,
+      status: 422,
+      code: "GEMINI_NO_SPEECH",
+      error: "No speech detected",
+      model,
+    };
+  }
+
+  return {
+    ok: true,
+    text,
+    provider: "gemini",
+    model,
+  };
 }
 
 export async function transcribeWithElevenLabs(audio: File): Promise<ProviderResult> {
@@ -189,68 +323,37 @@ async function transcribeWithGemini(audio: File): Promise<ProviderResult> {
   try {
     const bytes = Buffer.from(await audio.arrayBuffer());
     const mimeType = audio.type?.trim() || "audio/wav";
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_TRANSCRIPTION_MODEL)}:generateContent`;
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-key": apiKey,
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: "user",
-            parts: [
-              {
-                text: "Transcreva exatamente a fala deste áudio em português. Retorne somente a transcrição, sem explicações, aspas ou comentários.",
-              },
-              {
-                inline_data: {
-                  mime_type: mimeType,
-                  data: bytes.toString("base64"),
-                },
-              },
-            ],
-          },
-        ],
-        generationConfig: { maxOutputTokens: 2048, temperature: 0 },
-      }),
-      cache: "no-store",
+    const configuredModel = normalizeGeminiModelName(GEMINI_TRANSCRIPTION_MODEL);
+
+    const first = await requestGeminiTranscription({
+      apiKey,
+      model: configuredModel,
+      bytes,
+      mimeType,
     });
+    if (first.ok || first.status !== 404) return first;
 
-    const payload = (await response.json().catch(() => null)) as
-      | {
-          candidates?: Array<{
-            content?: { parts?: Array<{ text?: string }> };
-          }>;
-          error?: { message?: string };
-        }
-      | null;
+    const discoveredModels = await discoverGeminiModels(apiKey);
+    const candidates = uniqueGeminiModels([
+      ...GEMINI_FALLBACK_MODELS,
+      ...discoveredModels,
+    ]).filter((model) => model !== configuredModel);
 
-    if (!response.ok) {
-      return {
-        ok: false,
-        status: response.status,
-        code: response.status === 429 ? "GEMINI_RATE_LIMITED" : "GEMINI_PROVIDER_ERROR",
-        error: payload?.error?.message || "Gemini transcription failed",
-      };
+    let last = first;
+    for (const model of candidates) {
+      const attempt = await requestGeminiTranscription({ apiKey, model, bytes, mimeType });
+      if (attempt.ok) {
+        console.info("Samuel Gemini transcription recovered with available model", {
+          configuredModel,
+          selectedModel: attempt.model,
+        });
+        return attempt;
+      }
+      last = attempt;
+      if (attempt.status !== 404) return attempt;
     }
 
-    const text = payload?.candidates?.[0]?.content?.parts
-      ?.map((part) => part.text ?? "")
-      .join("")
-      .trim();
-
-    if (!text) {
-      return { ok: false, status: 422, code: "GEMINI_NO_SPEECH", error: "No speech detected" };
-    }
-
-    return {
-      ok: true,
-      text,
-      provider: "gemini",
-      model: GEMINI_TRANSCRIPTION_MODEL,
-    };
+    return last;
   } catch (error) {
     return {
       ok: false,
@@ -322,6 +425,7 @@ export async function POST(request: Request) {
     openaiCode: openai.code,
     geminiStatus: gemini.status,
     geminiCode: gemini.code,
+    geminiModel: gemini.model,
   });
 
   if (
