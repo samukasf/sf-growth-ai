@@ -30,7 +30,7 @@ import {
 } from "./samuel-video-renderer.client";
 
 type Props = { companyId: string };
-type MetaPublishPlatform = "facebook" | "instagram";
+type MetaPublishPlatform = SocialPlatform;
 type PublishJob = {
   id: string;
   platform: MetaPublishPlatform;
@@ -401,6 +401,7 @@ export function SamuelContentStudio({ companyId }: Props) {
   }
 
   async function publishMetaVideo(platform: MetaPublishPlatform, caption: string) {
+    if (platform !== "facebook" && platform !== "instagram") return;
     if (!project || publishState[platform]?.busy) return;
     if (!readiness?.publishing[platform].ready) {
       setError(readiness?.publishing[platform].detail || `Conecte ${LABELS[platform]} antes de publicar.`);
