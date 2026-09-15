@@ -54,18 +54,27 @@ export default async function GoogleMarketingPage({ searchParams }: PageProps) {
     ? `/api/integrations/google/oauth/authorize?companyId=${encodeURIComponent(company.id)}`
     : "/api/integrations/google/oauth/authorize";
 
-  const adsDetail = overview?.ads.ok
-    ? `${overview.ads.data.accounts.length} conta(s) Google Ads acessível(is) pela conta autorizada.`
-    : overview?.ads.error ?? "Conecte uma empresa e autorize o Google.";
-  const analyticsDetail = overview?.analytics.ok
-    ? `${overview.analytics.data.accounts.length} conta(s) Analytics disponível(is), com ${overview.analytics.data.accounts.reduce((sum, account) => sum + account.properties.length, 0)} propriedade(s) GA4.`
-    : overview?.analytics.error ?? "Conecte uma empresa e autorize o Google.";
-  const searchConsoleDetail = overview?.searchConsole.ok
-    ? `${overview.searchConsole.data.sites.length} propriedade(s) Search Console acessível(is).`
-    : overview?.searchConsole.error ?? "Conecte uma empresa e autorize o Google.";
-  const youtubeDetail = overview?.youtube.ok
-    ? `${overview.youtube.data.channels.length} canal(is) YouTube encontrado(s).`
-    : overview?.youtube.error ?? "Conecte uma empresa e autorize o Google.";
+  const disconnected = "Conecte uma empresa e autorize o Google.";
+  const adsDetail = !overview
+    ? disconnected
+    : overview.ads.ok
+      ? `${overview.ads.data.accounts.length} conta(s) Google Ads acessível(is) pela conta autorizada.`
+      : overview.ads.error;
+  const analyticsDetail = !overview
+    ? disconnected
+    : overview.analytics.ok
+      ? `${overview.analytics.data.accounts.length} conta(s) Analytics disponível(is), com ${overview.analytics.data.accounts.reduce((sum, account) => sum + account.properties.length, 0)} propriedade(s) GA4.`
+      : overview.analytics.error;
+  const searchConsoleDetail = !overview
+    ? disconnected
+    : overview.searchConsole.ok
+      ? `${overview.searchConsole.data.sites.length} propriedade(s) Search Console acessível(is).`
+      : overview.searchConsole.error;
+  const youtubeDetail = !overview
+    ? disconnected
+    : overview.youtube.ok
+      ? `${overview.youtube.data.channels.length} canal(is) YouTube encontrado(s).`
+      : overview.youtube.error;
 
   return (
     <main className="min-h-dvh bg-[#04080d] px-4 py-6 text-white sm:px-6 lg:px-10">
