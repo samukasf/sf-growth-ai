@@ -12,7 +12,7 @@ import {
   Store,
   TriangleAlert,
   UsersRound,
-  Youtube,
+  Video,
 } from "lucide-react";
 
 import { resolveActiveCompany } from "@/services/executive-context.server";
@@ -49,7 +49,7 @@ const CAPABILITIES: Array<{
   { key: "googleAds", label: "Google Ads", description: "Acessar contas e preparar análises de campanhas e performance.", icon: Megaphone },
   { key: "analytics", label: "Google Analytics 4", description: "Ler propriedades e métricas de tráfego, eventos e conversões.", icon: BarChart3 },
   { key: "searchConsole", label: "Search Console", description: "Consultar propriedades e desempenho orgânico no Google Search.", icon: Search },
-  { key: "youtube", label: "YouTube", description: "Consultar canais, audiência e métricas da conta autorizada.", icon: Youtube },
+  { key: "youtube", label: "YouTube", description: "Consultar canais, audiência e métricas da conta autorizada.", icon: Video },
 ];
 
 export default async function GoogleConnectPage({ searchParams }: ConnectPageProps) {
