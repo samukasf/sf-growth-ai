@@ -53,7 +53,20 @@ const APPLICATIONS: Array<{ pattern: RegExp; file: string }> = [
 export function resolveDirectDesktopCommand(goal: string): DirectDesktopCommand | null {
   if (!OPEN_VERB.test(goal)) return null;
 
+  const application = APPLICATIONS.find(({ pattern }) => pattern.test(goal));
   const folder = FOLDERS.find(({ pattern }) => pattern.test(goal));
+
+  // If a real application is explicitly named, prefer it over incidental
+  // phrases such as "no meu computador". Explorer is the exception: when a
+  // well-known folder is present, open that folder directly in Explorer.
+  if (application && application.file !== "explorer.exe") {
+    return {
+      action: "system.app.open",
+      args: { file: application.file },
+      risk: "mutate",
+    };
+  }
+
   if (folder) {
     return {
       action: "system.app.open",
@@ -62,7 +75,6 @@ export function resolveDirectDesktopCommand(goal: string): DirectDesktopCommand 
     };
   }
 
-  const application = APPLICATIONS.find(({ pattern }) => pattern.test(goal));
   if (!application) return null;
   return {
     action: "system.app.open",
