@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Confirmação explícita obrigatória." }, { status: 400 });
   }
 
-  const config = resolveWhatsAppConfig(companyId);
+  const config = await resolveWhatsAppConfig(companyId);
   if (!config) {
     return NextResponse.json(
       { error: "WhatsApp Business não está configurado para esta empresa." },

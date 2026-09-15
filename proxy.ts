@@ -14,6 +14,7 @@ const PUBLIC_API_PATHS = new Set([
   "/api/samuel-ai/autonomous-improvement",
   "/api/samuel-desktop/device",
   "/api/samuel-desktop/computer-step",
+  "/api/integrations/whatsapp/webhook",
 ]);
 
 const BEARER_AUTH_API_PATHS = new Set([
