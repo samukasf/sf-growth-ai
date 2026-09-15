@@ -30,7 +30,7 @@ type CardStatus = "connected" | "partial" | "disconnected" | "setup";
 function StatusBadge({ status }: { status: CardStatus }) {
   const labels: Record<CardStatus, string> = {
     connected: "Conectado",
-    partial: "Reconectar",
+    partial: "Ação necessária",
     disconnected: "Desconectado",
     setup: "Configuração necessária",
   };
@@ -47,14 +47,14 @@ export default async function IntegrationsPage({ searchParams }: IntegrationsPag
   const company = await resolveActiveCompany(params.companyId?.trim() || null).catch(() => null);
   const companyId = company?.id ?? null;
 
-  const [google, meta] = companyId
+  const [google, meta, whatsapp] = companyId
     ? await Promise.all([
         getGoogleIntegrationStatus(companyId),
         findMetaOAuthConnection(companyId).catch(() => null),
+        getWhatsAppConfigStatus(companyId).catch(() => null),
       ])
-    : [null, null];
+    : [null, null, null];
 
-  const whatsapp = companyId ? getWhatsAppConfigStatus(companyId) : null;
   const linkedIn = companyId ? isLinkedInConfigured(companyId) : false;
 
   const googleWorkspaceReady = Boolean(
@@ -85,9 +85,11 @@ export default async function IntegrationsPage({ searchParams }: IntegrationsPag
         : "disconnected";
   const metaStatus: CardStatus = !resolveMetaOAuthConfig()
     ? "setup"
-    : meta
+    : meta?.selectedExplicitly
       ? "connected"
-      : "disconnected";
+      : meta
+        ? "partial"
+        : "disconnected";
   const whatsappStatus: CardStatus = whatsapp?.configured ? "connected" : "setup";
   const linkedInStatus: CardStatus = linkedIn ? "connected" : "setup";
 
@@ -118,21 +120,21 @@ export default async function IntegrationsPage({ searchParams }: IntegrationsPag
     },
     {
       title: "Meta",
-      description: "Facebook Page, Instagram, insights, publicação de conteúdo e gestão de anúncios quando as permissões da app estiverem aprovadas.",
+      description: "Cada cliente conecta a própria Página Facebook, Instagram e conta de anúncios. Ativos ficam isolados por empresa.",
       href: withCompany("/integrations/meta/connect"),
       icon: PanelsTopLeft,
       status: metaStatus,
-      action: meta ? "Gerir / reconectar" : "Conectar Meta",
-      detail: meta?.pageName ?? meta?.pageId ?? "Facebook/Instagram não ligados",
+      action: meta?.selectedExplicitly ? "Gerir / reconectar" : meta ? "Selecionar ativos" : "Conectar Meta",
+      detail: meta?.selectedExplicitly ? meta.pageName ?? meta.pageId : meta ? "Autorizada · falta selecionar ativos" : "Facebook/Instagram não ligados",
     },
     {
       title: "WhatsApp Business",
-      description: "Mensagens empresariais pela plataforma oficial da Meta, com isolamento por empresa e confirmação antes do envio.",
-      href: withCompany("/samuel-ai"),
+      description: "Onboarding oficial por empresa para números WhatsApp Business, mensagens e webhooks sem partilhar credenciais entre clientes.",
+      href: withCompany("/integrations/whatsapp/connect"),
       icon: MessageCircleMore,
       status: whatsappStatus,
-      action: whatsapp?.configured ? "Abrir WhatsApp" : "Configurar WhatsApp",
-      detail: whatsapp?.configured ? "Número empresarial configurado" : "Credenciais empresariais ainda necessárias",
+      action: whatsapp?.configured ? "Gerir WhatsApp" : "Conectar WhatsApp",
+      detail: whatsapp?.displayPhoneNumber ?? whatsapp?.verifiedName ?? (whatsapp?.configured ? "Número empresarial configurado" : "Onboarding empresarial necessário"),
     },
     {
       title: "LinkedIn",
@@ -152,7 +154,7 @@ export default async function IntegrationsPage({ searchParams }: IntegrationsPag
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[.22em] text-cyan-200/45">SF Growth AI</p>
             <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">Central de integrações</h1>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-white/38">Conecte os serviços que o Samuel pode realmente usar. O estado abaixo é calculado para a empresa ativa; funções sem credencial ou permissão não são apresentadas como conectadas.</p>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-white/38">Conecte os serviços que o Samuel pode realmente usar. O estado abaixo é calculado para a empresa ativa; funções sem credencial, ativo selecionado ou permissão não são apresentadas como conectadas.</p>
             <div className="mt-3 flex items-center gap-2 text-[10px] text-white/28"><Store className="size-3.5" /><span>{company?.name ?? "Nenhuma empresa ativa"}</span></div>
           </div>
           <div className="flex gap-2">
@@ -181,7 +183,7 @@ export default async function IntegrationsPage({ searchParams }: IntegrationsPag
         <section className="mt-5 grid gap-3 lg:grid-cols-3">
           <div className="rounded-2xl border border-white/[.06] bg-white/[.02] p-4"><div className="flex items-center gap-3"><Mail className="size-4 text-cyan-200/45" /><div><strong className="text-xs text-white/65">Gmail + Agenda</strong><p className="mt-1 text-[10px] leading-5 text-white/27">Usam o mesmo OAuth Google. Não é necessário conectar separadamente.</p></div></div></div>
           <div className="rounded-2xl border border-white/[.06] bg-white/[.02] p-4"><div className="flex items-center gap-3"><MapPin className="size-4 text-cyan-200/45" /><div><strong className="text-xs text-white/65">Maps + Business Profile</strong><p className="mt-1 text-[10px] leading-5 text-white/27">Também usam a conexão Google, mas as APIs correspondentes precisam estar habilitadas no Google Cloud.</p></div></div></div>
-          <div className="rounded-2xl border border-white/[.06] bg-white/[.02] p-4"><div className="flex items-center gap-3"><PanelsTopLeft className="size-4 text-cyan-200/45" /><div><strong className="text-xs text-white/65">Meta + WhatsApp</strong><p className="mt-1 text-[10px] leading-5 text-white/27">São produtos Meta, mas usam credenciais e permissões distintas para proteger cada empresa.</p></div></div></div>
+          <div className="rounded-2xl border border-white/[.06] bg-white/[.02] p-4"><div className="flex items-center gap-3"><PanelsTopLeft className="size-4 text-cyan-200/45" /><div><strong className="text-xs text-white/65">Meta + WhatsApp</strong><p className="mt-1 text-[10px] leading-5 text-white/27">A app Meta é central, mas Facebook/Instagram e WhatsApp têm ativos, tokens e onboarding separados por empresa.</p></div></div></div>
         </section>
       </div>
     </main>
