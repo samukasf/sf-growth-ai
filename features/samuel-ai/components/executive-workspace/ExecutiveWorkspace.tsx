@@ -6,10 +6,10 @@ import {
   BarChart3,
   BrainCircuit,
   BriefcaseBusiness,
+  Film,
   Inbox,
   Menu,
   MessageSquareText,
-  WandSparkles,
 } from "lucide-react";
 
 import { cn } from "@/utils/cn";
@@ -115,7 +115,7 @@ function MobileCommandBar({ activeSection, onSectionChange }: { activeSection: W
     { section: "dashboard" as WorkspaceSection, label: "Growth", icon: BarChart3 },
     { section: "executive-inbox" as WorkspaceSection, label: "Work", icon: Inbox },
     { section: "samuel-ai" as WorkspaceSection, label: "Samuel", icon: MessageSquareText, primary: true },
-    { section: "studio" as WorkspaceSection, label: "Studio", icon: WandSparkles },
+    { section: "studio" as WorkspaceSection, label: "Vídeos", icon: Film },
     { section: "crm" as WorkspaceSection, label: "Clients", icon: BriefcaseBusiness },
   ];
   return <nav className="fixed inset-x-3 bottom-3 z-40 grid grid-cols-5 rounded-[22px] border border-white/[.08] bg-[#0a0d13]/92 px-2 py-2 shadow-2xl backdrop-blur-2xl lg:hidden">{items.map((item) => { const active = activeSection === item.section; return <button key={item.section} type="button" onClick={() => onSectionChange(item.section)} className={cn("relative flex min-h-12 flex-col items-center justify-center gap-1 rounded-2xl text-[8px] font-medium transition", active ? "text-cyan-100" : "text-white/30", item.primary && "mx-auto -mt-7 size-[62px] min-h-0 rounded-full border border-cyan-200/15 bg-[radial-gradient(circle_at_38%_30%,#164e63,#0f172a_58%,#05070b)] text-cyan-50 shadow-[0_0_30px_rgba(34,211,238,.20)]")}><item.icon className={item.primary ? "size-6" : "size-[18px]"} />{!item.primary && <span>{item.label}</span>}</button>; })}</nav>;

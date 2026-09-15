@@ -375,12 +375,10 @@ export function SamuelVoiceReliabilityBridge() {
         setState("error", message);
       } finally {
         pendingTranscriptions = Math.max(0, pendingTranscriptions - 1);
-        if (
-          turnCompleted &&
-          sessionActive &&
-          pendingTranscriptions === 0 &&
-          !assistantSpeaking
-        ) {
+        // A routed turn stays in processing until TTS emits output-start/end.
+        // Returning to listening here made mobile users think Samuel ignored the
+        // command while the chat/model was still generating the answer.
+        if (!turnCompleted && sessionActive && pendingTranscriptions === 0 && !assistantSpeaking) {
           setState("listening");
         }
       }

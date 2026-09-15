@@ -30,8 +30,9 @@ export type SamuelTtsGeneration =
     };
 
 export const DEFAULT_ELEVENLABS_MODEL = "eleven_flash_v2_5";
-export const DEFAULT_ELEVENLABS_VOICE_ID = "JBFqnCBsd6RMkjVDRZzb";
-export const DEFAULT_ELEVENLABS_VOICE_NAME = "George";
+export const DEFAULT_ELEVENLABS_VOICE_ID = "fpqzllOdDmER4wwFESLO";
+export const DEFAULT_ELEVENLABS_VOICE_NAME = "Athena";
+const LEGACY_ELEVENLABS_VOICE_ID = "JBFqnCBsd6RMkjVDRZzb";
 export const DEFAULT_ELEVENLABS_OUTPUT_FORMAT = "mp3_44100_128";
 export const DEFAULT_OPENAI_TTS_MODEL = "gpt-4o-mini-tts";
 export const DEFAULT_OPENAI_TTS_VOICE = "onyx";
@@ -69,14 +70,19 @@ export function resolveElevenLabsModel(env: NodeJS.ProcessEnv = process.env) {
 }
 
 export function resolveElevenLabsVoiceId(env: NodeJS.ProcessEnv = process.env) {
-  return env.ELEVENLABS_VOICE_ID?.trim() || DEFAULT_ELEVENLABS_VOICE_ID;
+  const configured = env.ELEVENLABS_VOICE_ID?.trim();
+  // Existing deployments used George. Migrate that legacy default to the new
+  // feminine profile without overriding a genuinely custom voice.
+  return !configured || configured === LEGACY_ELEVENLABS_VOICE_ID
+    ? DEFAULT_ELEVENLABS_VOICE_ID
+    : configured;
 }
 
 export function resolveElevenLabsVoiceName(env: NodeJS.ProcessEnv = process.env) {
-  return env.ELEVENLABS_VOICE_NAME?.trim() ||
-    (resolveElevenLabsVoiceId(env) === DEFAULT_ELEVENLABS_VOICE_ID
-      ? DEFAULT_ELEVENLABS_VOICE_NAME
-      : "Samuel");
+  if (resolveElevenLabsVoiceId(env) === DEFAULT_ELEVENLABS_VOICE_ID) {
+    return DEFAULT_ELEVENLABS_VOICE_NAME;
+  }
+  return env.ELEVENLABS_VOICE_NAME?.trim() || "Samuel";
 }
 
 export function resolveElevenLabsOutputFormat(env: NodeJS.ProcessEnv = process.env) {
@@ -212,7 +218,17 @@ async function generateWithElevenLabs(
   try {
     const url = new URL(`${ELEVENLABS_SPEECH_URL}/${encodeURIComponent(voice)}`);
     url.searchParams.set("output_format", outputFormat);
-    const body: Record<string, unknown> = { text, model_id: model };
+    const body: Record<string, unknown> = {
+      text,
+      model_id: model,
+      voice_settings: {
+        stability: 0.48,
+        similarity_boost: 0.78,
+        style: 0.18,
+        speed: 1.03,
+        use_speaker_boost: true,
+      },
+    };
     if (model !== "eleven_multilingual_v2") body.language_code = "pt";
 
     const response = await fetcher(url, {

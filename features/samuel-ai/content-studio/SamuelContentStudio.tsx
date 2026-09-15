@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Check,
   Download,
@@ -60,6 +60,7 @@ export function SamuelContentStudio({ companyId }: Props) {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
+  const [autoProduce, setAutoProduce] = useState(false);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -68,7 +69,7 @@ export function SamuelContentStudio({ companyId }: Props) {
         if (!incoming) return;
         const next = JSON.parse(incoming) as SamuelContentProject;
         if (!next?.id || !Array.isArray(next.scenes)) return;
-        setProject(next); setBrief(next.objective); setFormat(next.format); setPlatforms(next.platforms);
+        setProject(next); setBrief(next.objective); setFormat(next.format); setPlatforms(next.platforms); setAutoProduce(true);
         sessionStorage.removeItem("sf-growth-ai:samuel-content:incoming");
       } catch {
         // Ignore malformed browser state.
@@ -126,7 +127,7 @@ export function SamuelContentStudio({ companyId }: Props) {
     finally { setGenerating(false); }
   }
 
-  async function generateNarrationAndVideo() {
+  const generateNarrationAndVideo = useCallback(async () => {
     if (!project || rendering) return;
     setRendering(true); setRenderProgress(0); setError(null);
     try {
@@ -140,14 +141,41 @@ export function SamuelContentStudio({ companyId }: Props) {
       }
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Falha ao produzir o conteúdo."); }
     finally { setRendering(false); }
-  }
+  }, [companyId, project, rendering]);
+
+  useEffect(() => {
+    if (!autoProduce || !project || rendering) return;
+    setAutoProduce(false);
+    void generateNarrationAndVideo();
+  }, [autoProduce, generateNarrationAndVideo, project, rendering]);
 
   return (
     <section className="samuel-content-studio">
       <div className="samuel-content-studio__header">
-        <div><span><Sparkles /> SOCIAL CONTENT ENGINE</span><h2>Vídeos e posts, do pedido à publicação.</h2><p>Escreva ou fale com o Samuel. Ele cria a estratégia, o roteiro, a voz ElevenLabs e adapta a campanha para cada rede.</p></div>
+        <div><span><Sparkles /> SOCIAL CONTENT ENGINE</span><h2>Vídeos e posts, do pedido à publicação.</h2><p>Escreva ou fale com o Samuel. Ele cria a estratégia, o roteiro, a voz feminina ElevenLabs e adapta a campanha para cada rede. Pedidos vindos da conversa entram em produção automaticamente.</p></div>
         <div className="samuel-content-status"><strong>{connectedCount}/5</strong><span>redes prontas para publicar</span></div>
       </div>
+
+      <section className="samuel-content-connections" aria-label="Conexões das redes sociais">
+        <div className="samuel-content-connections__heading">
+          <div><span>CONTAS DE PUBLICAÇÃO</span><h3>Conecte uma vez. Revise antes de publicar.</h3></div>
+          <strong>{connectedCount === 5 ? "Todas conectadas" : `${connectedCount} de 5 conectadas`}</strong>
+        </div>
+        <div className="samuel-content-connections__grid">
+          {SOCIAL_PLATFORMS.map((platform) => {
+            const Icon = ICONS[platform];
+            const item = readiness?.publishing[platform];
+            return (
+              <article key={platform} className={cn(item?.ready && "is-ready")}>
+                <Icon />
+                <div><strong>{LABELS[platform]}</strong><small>{item?.ready ? "Conta pronta" : item?.detail ?? "Verificando conexão…"}</small></div>
+                <button type="button" onClick={() => openPlatformSetup(platform)}>{item?.ready ? "Gerenciar" : "Conectar"}</button>
+              </article>
+            );
+          })}
+        </div>
+        <p>Nenhuma publicação é enviada sem sua confirmação final. YouTube e TikTok também exigem aprovação do aplicativo pelas próprias plataformas.</p>
+      </section>
 
       <div className="samuel-content-grid">
         <div className="samuel-content-composer">

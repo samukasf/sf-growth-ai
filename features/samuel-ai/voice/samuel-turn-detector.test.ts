@@ -52,6 +52,13 @@ describe("SamuelTurnDetector", () => {
     expect(detector.currentNoiseFloor).toBeLessThan(0.006);
     expect(detector.isActive).toBe(false);
   });
+
+  it("detects quieter mobile microphone speech", () => {
+    const detector = new SamuelTurnDetector();
+    expect(detector.observe(0.014, 1_000, false).started).toBe(false);
+    const decision = detector.observe(0.014, 1_045, false);
+    expect(decision.started).toBe(true);
+  });
 });
 
 describe("voice PCM helpers", () => {

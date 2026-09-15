@@ -49,13 +49,16 @@ export class SamuelTurnDetector {
   private activeBargeIn = false;
 
   constructor(options: SamuelTurnDetectorOptions = {}) {
-    this.speechFloor = options.speechFloor ?? 0.018;
+    // Mobile microphones (notably iOS Safari) often deliver normalized speech
+    // below 0.018. Keep the adaptive noise gate, but do not make normal speech
+    // depend on desktop microphone gain.
+    this.speechFloor = options.speechFloor ?? 0.009;
     this.bargeFloor = options.bargeFloor ?? 0.032;
-    this.speechNoiseMultiplier = options.speechNoiseMultiplier ?? 2.7;
+    this.speechNoiseMultiplier = options.speechNoiseMultiplier ?? 2.2;
     this.bargeNoiseMultiplier = options.bargeNoiseMultiplier ?? 4.0;
-    this.speechStartMs = options.speechStartMs ?? 50;
+    this.speechStartMs = options.speechStartMs ?? 35;
     this.bargeStartMs = options.bargeStartMs ?? 75;
-    this.endSilenceMs = options.endSilenceMs ?? 800;
+    this.endSilenceMs = options.endSilenceMs ?? 650;
     this.maxUtteranceMs = options.maxUtteranceMs ?? 45_000;
   }
 

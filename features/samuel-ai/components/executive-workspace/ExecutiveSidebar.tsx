@@ -14,6 +14,7 @@ import {
   ChevronDown,
   CircleDollarSign,
   Globe2,
+  Film,
   Gauge,
   Inbox,
   Mail,
@@ -24,7 +25,6 @@ import {
   Search,
   ShieldCheck,
   UsersRound,
-  WandSparkles,
 } from "lucide-react";
 
 import { cn } from "@/utils/cn";
@@ -49,7 +49,7 @@ const PRIMARY_ITEMS: NavItem[] = [
   { id: "samuel-ai", label: "Samuel", description: "Comando e conversa", icon: Bot },
   { id: "executive-inbox", label: "Work", description: "Inbox, agenda e execução", icon: Inbox },
   { id: "dashboard", label: "Growth", description: "Prioridades e crescimento", icon: BarChart3 },
-  { id: "studio", label: "Studio", description: "Criação e produção", icon: WandSparkles },
+  { id: "studio", label: "Vídeos e Redes", description: "Criar, adaptar e publicar", icon: Film },
   { id: "crm", label: "Clients", description: "Clientes e oportunidades", icon: BriefcaseBusiness },
 ];
 
