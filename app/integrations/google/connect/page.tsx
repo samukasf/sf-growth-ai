@@ -52,6 +52,8 @@ const CAPABILITIES: Array<{
   { key: "youtube", label: "YouTube", description: "Consultar canais, audiência e métricas da conta autorizada.", icon: Video },
 ];
 
+const SERVER_CREDENTIAL_CAPABILITIES = new Set<GoogleCapabilityKey>(["places", "geocoding"]);
+
 export default async function GoogleConnectPage({ searchParams }: ConnectPageProps) {
   const params = await Promise.resolve(searchParams ?? {});
   const company = await resolveActiveCompany(params.companyId?.trim() || null).catch(() => null);
@@ -75,7 +77,7 @@ export default async function GoogleConnectPage({ searchParams }: ConnectPagePro
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[.22em] text-cyan-200/45">SF Growth AI · Integrações</p>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">Google</h1>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-white/38">Uma única autorização pode dar ao Samuel acesso operacional ao Gmail, Agenda, Drive, Contatos, Google Business Profile, Maps/Places, Google Ads, Analytics, Search Console e YouTube. Cada capacidade permanece separada e só fica ativa quando a permissão correspondente foi concedida.</p>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-white/38">Uma autorização Google dá ao Samuel acesso aos produtos pessoais e empresariais permitidos pela conta, enquanto Google Maps/Places e Geocoding usam credenciais server-side separadas do projeto Google Cloud. Assim o login não é bloqueado por scopes de Maps.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Link href={marketingHref} className="rounded-xl border border-emerald-300/15 bg-emerald-300/[.06] px-4 py-2.5 text-xs font-semibold text-emerald-100">Marketing & Performance</Link>
@@ -85,7 +87,7 @@ export default async function GoogleConnectPage({ searchParams }: ConnectPagePro
         </header>
 
         {params.connected === "1" && (
-          <div className="mt-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/[.06] px-4 py-3 text-xs text-emerald-100/80">Google conectado com sucesso. As capacidades abaixo foram atualizadas de acordo com as permissões realmente concedidas.</div>
+          <div className="mt-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/[.06] px-4 py-3 text-xs text-emerald-100/80">Google conectado com sucesso. As capacidades abaixo foram atualizadas de acordo com as permissões e credenciais realmente disponíveis.</div>
         )}
         {params.error && (
           <div className="mt-5 rounded-2xl border border-rose-400/20 bg-rose-400/[.06] px-4 py-3 text-xs text-rose-100/80">Falha na conexão: {params.error}</div>
@@ -108,11 +110,21 @@ export default async function GoogleConnectPage({ searchParams }: ConnectPagePro
             <div className="mt-6 grid gap-2 sm:grid-cols-2">
               {CAPABILITIES.map((capability) => {
                 const connected = Boolean(status?.capabilities[capability.key]);
+                const serverCredential = SERVER_CREDENTIAL_CAPABILITIES.has(capability.key);
+                const stateLabel = connected
+                  ? serverCredential
+                    ? "Credencial server-side pronta"
+                    : "Permissão concedida"
+                  : serverCredential
+                    ? "Configurar chave Maps no servidor"
+                    : status?.connected
+                      ? "Reconexão necessária"
+                      : "Não conectado";
                 return (
                   <div key={capability.key} className="rounded-2xl border border-white/[.06] bg-white/[.02] p-4">
                     <div className="flex items-start gap-3">
                       <span className={`flex size-9 shrink-0 items-center justify-center rounded-xl border ${connected ? "border-emerald-300/15 bg-emerald-300/[.06] text-emerald-200" : "border-white/[.06] bg-white/[.025] text-white/25"}`}><capability.icon className="size-4" /></span>
-                      <div className="min-w-0"><div className="flex items-center gap-2"><strong className="text-xs text-white/72">{capability.label}</strong>{connected ? <CheckCircle2 className="size-3.5 text-emerald-300" /> : <TriangleAlert className="size-3.5 text-amber-200/45" />}</div><p className="mt-1 text-[10px] leading-5 text-white/28">{capability.description}</p><span className={`mt-2 block text-[9px] font-semibold uppercase tracking-[.12em] ${connected ? "text-emerald-200/60" : "text-amber-200/45"}`}>{connected ? "Permissão concedida" : status?.connected ? "Reconexão necessária" : "Não conectado"}</span></div>
+                      <div className="min-w-0"><div className="flex items-center gap-2"><strong className="text-xs text-white/72">{capability.label}</strong>{connected ? <CheckCircle2 className="size-3.5 text-emerald-300" /> : <TriangleAlert className="size-3.5 text-amber-200/45" />}</div><p className="mt-1 text-[10px] leading-5 text-white/28">{capability.description}</p><span className={`mt-2 block text-[9px] font-semibold uppercase tracking-[.12em] ${connected ? "text-emerald-200/60" : "text-amber-200/45"}`}>{stateLabel}</span></div>
                     </div>
                   </div>
                 );
@@ -128,9 +140,9 @@ export default async function GoogleConnectPage({ searchParams }: ConnectPagePro
             <div className="mt-5 space-y-2 text-[10px] leading-5 text-white/35">
               <p>• Gmail, Agenda, Drive e Contatos funcionam com a mesma conta autorizada.</p>
               <p>• Business Profile precisa das APIs Business Profile habilitadas no projeto Google Cloud.</p>
-              <p>• Places/Maps e Geocoding precisam das APIs correspondentes habilitadas e de faturamento válido no Google Cloud.</p>
+              <p>• Places/Maps e Geocoding não entram no consentimento pessoal; usam chave server-side restrita, APIs habilitadas e faturamento válido no Google Cloud.</p>
               <p>• Google Ads, GA4, Search Console e YouTube precisam das respetivas APIs habilitadas e de acesso aos produtos na conta escolhida.</p>
-              <p>• Contas conectadas antes destes novos recursos precisam ser reconectadas para conceder os novos scopes.</p>
+              <p>• Contas conectadas antes destes novos recursos precisam ser reconectadas para conceder os novos scopes OAuth válidos.</p>
             </div>
 
             {!status?.oauthConfigured && <div className="mt-5 rounded-2xl border border-amber-300/15 bg-amber-300/[.05] p-4 text-[10px] leading-5 text-amber-100/65">O backend ainda não encontrou GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET e GOOGLE_OAUTH_REDIRECT_URI. O botão de conexão só funcionará depois dessas variáveis estarem presentes em produção.</div>}

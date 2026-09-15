@@ -12,8 +12,8 @@ export const GOOGLE_CAPABILITY_SCOPES = {
   drive: "https://www.googleapis.com/auth/drive.readonly",
   contacts: "https://www.googleapis.com/auth/contacts.readonly",
   businessProfile: "https://www.googleapis.com/auth/business.manage",
-  places: "https://www.googleapis.com/auth/maps-platform.places",
-  geocoding: "https://www.googleapis.com/auth/maps-platform.geocode",
+  places: null,
+  geocoding: null,
   googleAds: "https://www.googleapis.com/auth/adwords",
   analytics: "https://www.googleapis.com/auth/analytics.readonly",
   searchConsole: "https://www.googleapis.com/auth/webmasters.readonly",
@@ -49,6 +49,15 @@ function normalizeScopes(scope: string | null | undefined) {
   );
 }
 
+function resolveGoogleMapsApiKey() {
+  return (
+    process.env.GOOGLE_MAPS_API_KEY ??
+    process.env.GOOGLE_MAPS_PLATFORM_API_KEY ??
+    process.env.MAPS_API_KEY ??
+    ""
+  ).trim();
+}
+
 function friendlyGoogleHealthError(error: unknown) {
   const message = error instanceof Error ? error.message : "A conexão Google não respondeu.";
   if (/refresh|token|401|403|reconect|oauth|auth/i.test(message)) {
@@ -63,13 +72,24 @@ export async function getGoogleIntegrationStatus(
   const oauthConfigured = Boolean(resolveGoogleOAuthConfig());
   const connection = await findGoogleOAuthConnection(companyId).catch(() => null);
   const scopes = normalizeScopes(connection?.scope);
+  const mapsConfigured = Boolean(resolveGoogleMapsApiKey());
+
   const capabilities = Object.fromEntries(
-    Object.entries(GOOGLE_CAPABILITY_SCOPES).map(([key, scope]) => [key, scopes.has(scope)]),
+    Object.entries(GOOGLE_CAPABILITY_SCOPES).map(([key, scope]) => [
+      key,
+      scope ? scopes.has(scope) : mapsConfigured,
+    ]),
   ) as Record<GoogleCapabilityKey, boolean>;
 
   const missingCapabilities = (Object.keys(capabilities) as GoogleCapabilityKey[]).filter(
     (key) => !capabilities[key],
   );
+  const missingOauthCapabilities = (Object.entries(GOOGLE_CAPABILITY_SCOPES) as Array<
+    [GoogleCapabilityKey, string | null]
+  >)
+    .filter(([, scope]) => Boolean(scope))
+    .map(([key]) => key)
+    .filter((key) => !capabilities[key]);
 
   if (!oauthConfigured) {
     return {
@@ -110,7 +130,7 @@ export async function getGoogleIntegrationStatus(
     healthMessage = friendlyGoogleHealthError(error);
   }
 
-  const reconnectRequired = !tokenHealthy || missingCapabilities.length > 0;
+  const reconnectRequired = !tokenHealthy || missingOauthCapabilities.length > 0;
   return {
     oauthConfigured: true,
     connected: tokenHealthy,
@@ -123,9 +143,11 @@ export async function getGoogleIntegrationStatus(
     reconnectRequired,
     healthMessage:
       healthMessage ??
-      (missingCapabilities.length
-        ? `A conta Google está conectada, mas faltam ${missingCapabilities.length} permissões atuais. Reconecte para liberar Gmail, Agenda, Business Profile, Ads, Analytics, Search Console, YouTube e demais recursos configurados.`
-        : null),
+      (missingOauthCapabilities.length
+        ? `A conta Google está conectada, mas faltam ${missingOauthCapabilities.length} permissões OAuth atuais. Reconecte para liberar Gmail, Agenda, Business Profile, Ads, Analytics, Search Console, YouTube e demais recursos autorizáveis.`
+        : !mapsConfigured
+          ? "A conta Google está conectada. Google Maps/Places e Geocoding ficam separados do consentimento pessoal e precisam de uma chave server-side do Google Maps Platform."
+          : null),
   };
 }
 
@@ -190,14 +212,21 @@ export async function searchGooglePlaces(
   query: string,
   maxResults = 10,
 ): Promise<GooglePlaceSearchResult[]> {
+  void companyId;
   const cleanQuery = query.trim();
   if (!cleanQuery) return [];
 
-  const accessToken = await resolveGmailAccessToken(companyId);
+  const apiKey = resolveGoogleMapsApiKey();
+  if (!apiKey) {
+    throw new Error(
+      "Google Places ainda não está configurado no servidor. Defina GOOGLE_MAPS_API_KEY com uma chave restrita à Places API (New).",
+    );
+  }
+
   const response = await fetch("https://places.googleapis.com/v1/places:searchText", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${accessToken}`,
+      "X-Goog-Api-Key": apiKey,
       "Content-Type": "application/json",
       "X-Goog-FieldMask": [
         "places.id",

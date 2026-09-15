@@ -14,10 +14,14 @@ const GOOGLE_OAUTH_TOKEN_URL = "https://oauth2.googleapis.com/token";
  * - Calendar: leitura e escrita de compromissos.
  * - Drive/Contacts: contexto e pesquisa.
  *
- * Local/Maps:
+ * Local:
  * - Business Profile: gestão dos perfis/locais do Google Business.
- * - Places: pesquisa de empresas/locais para prospecção e contexto.
- * - Geocoding: endereços/coordenadas para rotas e contexto geográfico.
+ *
+ * Maps Platform:
+ * - Places e Geocoding ficam fora do consentimento OAuth de utilizador.
+ * - Essas APIs devem usar credencial server-side própria do projeto Google Cloud
+ *   (API key restrita ou autenticação de workload/service account), evitando
+ *   bloquear o login Google com scopes de Maps que não pertencem ao fluxo 3LO.
  *
  * Marketing/Performance:
  * - Google Ads: contas e performance publicitária.
@@ -37,8 +41,6 @@ export const GMAIL_OAUTH_SCOPES = [
   "https://www.googleapis.com/auth/contacts.readonly",
   "https://www.googleapis.com/auth/drive.readonly",
   "https://www.googleapis.com/auth/business.manage",
-  "https://www.googleapis.com/auth/maps-platform.places",
-  "https://www.googleapis.com/auth/maps-platform.geocode",
   "https://www.googleapis.com/auth/adwords",
   "https://www.googleapis.com/auth/analytics.readonly",
   "https://www.googleapis.com/auth/webmasters.readonly",
