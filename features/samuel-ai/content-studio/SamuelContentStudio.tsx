@@ -145,7 +145,11 @@ export function SamuelContentStudio({ companyId }: Props) {
 
   useEffect(() => {
     if (!autoProduce || !project || rendering) return;
-    void generateNarrationAndVideo().finally(() => setAutoProduce(false));
+    const timer = window.setTimeout(() => {
+      setAutoProduce(false);
+      void generateNarrationAndVideo();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [autoProduce, generateNarrationAndVideo, project, rendering]);
 
   return (
