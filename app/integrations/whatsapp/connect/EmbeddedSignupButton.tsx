@@ -109,7 +109,7 @@ export function EmbeddedSignupButton({ appId, configId, graphVersion, companyId 
   }, [appId, graphVersion]);
 
   useEffect(() => {
-    if (!pendingCode || !session?.wabaId || busy) return;
+    if (!pendingCode || !session?.wabaId) return;
     let cancelled = false;
     const complete = async () => {
       setBusy(true);
@@ -144,7 +144,7 @@ export function EmbeddedSignupButton({ appId, configId, graphVersion, companyId 
     return () => {
       cancelled = true;
     };
-  }, [busy, companyId, pendingCode, session]);
+  }, [companyId, pendingCode, session]);
 
   const launch = () => {
     setError(null);
