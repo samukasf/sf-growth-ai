@@ -1,5 +1,19 @@
 import Link from "next/link";
-import { CalendarDays, CheckCircle2, FolderOpen, Mail, MapPin, RefreshCw, Store, TriangleAlert, UsersRound } from "lucide-react";
+import {
+  BarChart3,
+  CalendarDays,
+  CheckCircle2,
+  FolderOpen,
+  Mail,
+  MapPin,
+  Megaphone,
+  RefreshCw,
+  Search,
+  Store,
+  TriangleAlert,
+  UsersRound,
+  Video,
+} from "lucide-react";
 
 import { resolveActiveCompany } from "@/services/executive-context.server";
 import { getGoogleIntegrationStatus, type GoogleCapabilityKey } from "@/features/google-integrations/google-capabilities.server";
@@ -32,6 +46,10 @@ const CAPABILITIES: Array<{
   { key: "businessProfile", label: "Google Business Profile", description: "Acessar os perfis empresariais exibidos no Google e Maps.", icon: Store },
   { key: "places", label: "Google Maps / Places", description: "Pesquisar empresas, locais, telefones, sites e endereços.", icon: MapPin },
   { key: "geocoding", label: "Geocoding", description: "Transformar endereços em coordenadas e contexto geográfico.", icon: MapPin },
+  { key: "googleAds", label: "Google Ads", description: "Acessar contas e preparar análises de campanhas e performance.", icon: Megaphone },
+  { key: "analytics", label: "Google Analytics 4", description: "Ler propriedades e métricas de tráfego, eventos e conversões.", icon: BarChart3 },
+  { key: "searchConsole", label: "Search Console", description: "Consultar propriedades e desempenho orgânico no Google Search.", icon: Search },
+  { key: "youtube", label: "YouTube", description: "Consultar canais, audiência e métricas da conta autorizada.", icon: Video },
 ];
 
 export default async function GoogleConnectPage({ searchParams }: ConnectPageProps) {
@@ -42,6 +60,9 @@ export default async function GoogleConnectPage({ searchParams }: ConnectPagePro
   const authorizeHref = company
     ? `/api/integrations/google/oauth/authorize?companyId=${encodeURIComponent(company.id)}`
     : "/api/integrations/google/oauth/authorize";
+  const marketingHref = company
+    ? `/integrations/google/marketing?companyId=${encodeURIComponent(company.id)}`
+    : "/integrations/google/marketing";
 
   const connectedCount = status
     ? CAPABILITIES.filter((capability) => status.capabilities[capability.key]).length
@@ -54,9 +75,10 @@ export default async function GoogleConnectPage({ searchParams }: ConnectPagePro
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[.22em] text-cyan-200/45">SF Growth AI · Integrações</p>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">Google</h1>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-white/38">Uma única autorização pode dar ao Samuel acesso operacional ao Gmail, Agenda, Drive, Contatos, Google Business Profile e Google Maps/Places. Cada capacidade permanece separada e só fica ativa quando a permissão correspondente foi concedida.</p>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-white/38">Uma única autorização pode dar ao Samuel acesso operacional ao Gmail, Agenda, Drive, Contatos, Google Business Profile, Maps/Places, Google Ads, Analytics, Search Console e YouTube. Cada capacidade permanece separada e só fica ativa quando a permissão correspondente foi concedida.</p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <Link href={marketingHref} className="rounded-xl border border-emerald-300/15 bg-emerald-300/[.06] px-4 py-2.5 text-xs font-semibold text-emerald-100">Marketing & Performance</Link>
             <Link href="/integrations" className="rounded-xl border border-white/[.08] bg-white/[.03] px-4 py-2.5 text-xs font-semibold text-white/55 transition hover:bg-white/[.06] hover:text-white">Integrações</Link>
             <Link href={company ? `/samuel-ai?companyId=${company.id}` : "/samuel-ai"} className="rounded-xl border border-cyan-300/20 bg-cyan-300/[.07] px-4 py-2.5 text-xs font-semibold text-cyan-50">Voltar ao Samuel</Link>
           </div>
@@ -104,9 +126,10 @@ export default async function GoogleConnectPage({ searchParams }: ConnectPagePro
             <p className="mt-2 text-xs leading-6 text-white/36">Ao conectar, o Google mostrará a tela oficial de consentimento. O SF Growth AI guarda apenas os tokens necessários no backend e associa a conexão à empresa ativa.</p>
 
             <div className="mt-5 space-y-2 text-[10px] leading-5 text-white/35">
-              <p>• Gmail e Agenda funcionam com a mesma conta autorizada.</p>
-              <p>• Business Profile precisa da API Business Profile habilitada no projeto Google Cloud.</p>
+              <p>• Gmail, Agenda, Drive e Contatos funcionam com a mesma conta autorizada.</p>
+              <p>• Business Profile precisa das APIs Business Profile habilitadas no projeto Google Cloud.</p>
               <p>• Places/Maps e Geocoding precisam das APIs correspondentes habilitadas e de faturamento válido no Google Cloud.</p>
+              <p>• Google Ads, GA4, Search Console e YouTube precisam das respetivas APIs habilitadas e de acesso aos produtos na conta escolhida.</p>
               <p>• Contas conectadas antes destes novos recursos precisam ser reconectadas para conceder os novos scopes.</p>
             </div>
 

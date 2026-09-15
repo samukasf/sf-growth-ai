@@ -19,6 +19,12 @@ const GOOGLE_OAUTH_TOKEN_URL = "https://oauth2.googleapis.com/token";
  * - Places: pesquisa de empresas/locais para prospecção e contexto.
  * - Geocoding: endereços/coordenadas para rotas e contexto geográfico.
  *
+ * Marketing/Performance:
+ * - Google Ads: contas e performance publicitária.
+ * - Google Analytics: propriedades e métricas GA4.
+ * - Search Console: propriedades, consultas e desempenho orgânico.
+ * - YouTube: leitura dos canais ligados à conta autorizada.
+ *
  * Contas ligadas antes da inclusão de novos scopes devem usar "Reconectar Google"
  * para conceder as permissões adicionais.
  */
@@ -33,6 +39,10 @@ export const GMAIL_OAUTH_SCOPES = [
   "https://www.googleapis.com/auth/business.manage",
   "https://www.googleapis.com/auth/maps-platform.places",
   "https://www.googleapis.com/auth/maps-platform.geocode",
+  "https://www.googleapis.com/auth/adwords",
+  "https://www.googleapis.com/auth/analytics.readonly",
+  "https://www.googleapis.com/auth/webmasters.readonly",
+  "https://www.googleapis.com/auth/youtube.readonly",
 ].join(" ");
 
 export function resolveGoogleOAuthConfig(): GoogleOAuthConfig | null {
