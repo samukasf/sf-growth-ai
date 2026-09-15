@@ -5,6 +5,7 @@ import {
   queueDesktopCommand,
 } from "@/features/samuel-desktop/server/desktop-agent.server";
 import { authorizeAuthenticatedRequest } from "@/features/auth/server/authorization";
+import { resolveDirectDesktopCommand } from "@/features/samuel-ai/desktop/samuel-desktop-direct-command";
 import { getSupabaseServiceClient } from "@/lib/supabase/service-client";
 
 export const runtime = "nodejs";
@@ -68,13 +69,14 @@ export async function POST(request: Request) {
       );
     }
 
+    const directCommand = resolveDirectDesktopCommand(goal);
     const command = await queueDesktopCommand({
       userId: auth.user.id,
       deviceId: device.id,
       companyId: requestedCompanyId,
-      action: "computer.task",
-      args: { goal },
-      risk: "sensitive",
+      action: directCommand?.action ?? "computer.task",
+      args: directCommand?.args ?? { goal },
+      risk: directCommand?.risk ?? "sensitive",
       approved: true,
       approvalReference: approvalReference(auth.user.id, goal),
     });
@@ -86,6 +88,7 @@ export async function POST(request: Request) {
         status: command.status,
         deviceId: device.id,
         deviceName: device.device_name,
+        executionMode: directCommand ? "direct" : "visual",
       },
       { headers: { "Cache-Control": "private, no-store" } },
     );
