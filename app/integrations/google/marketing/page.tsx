@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BarChart3, Megaphone, RefreshCw, Search, Youtube } from "lucide-react";
+import { BarChart3, Megaphone, RefreshCw, Search, Video } from "lucide-react";
 
 import { getGoogleMarketingOverview } from "@/features/google-integrations/google-marketing.server";
 import { resolveActiveCompany } from "@/services/executive-context.server";
@@ -96,7 +96,7 @@ export default async function GoogleMarketingPage({ searchParams }: PageProps) {
           <StatusCard title="Google Ads" subtitle="Contas de anúncios que o Samuel poderá analisar e operar conforme as permissões da API." ok={Boolean(overview?.ads.ok)} detail={adsDetail} icon={Megaphone} />
           <StatusCard title="Google Analytics 4" subtitle="Contas e propriedades GA4 para tráfego, conversões e performance." ok={Boolean(overview?.analytics.ok)} detail={analyticsDetail} icon={BarChart3} />
           <StatusCard title="Search Console" subtitle="Sites verificados, consultas orgânicas, cliques, impressões e posições." ok={Boolean(overview?.searchConsole.ok)} detail={searchConsoleDetail} icon={Search} />
-          <StatusCard title="YouTube" subtitle="Canais ligados à conta Google para análise de conteúdo e audiência." ok={Boolean(overview?.youtube.ok)} detail={youtubeDetail} icon={Youtube} />
+          <StatusCard title="YouTube" subtitle="Canais ligados à conta Google para análise de conteúdo e audiência." ok={Boolean(overview?.youtube.ok)} detail={youtubeDetail} icon={Video} />
         </section>
 
         <section className="mt-5 rounded-3xl border border-white/[.08] bg-[#07131f] p-5 text-[10px] leading-5 text-white/35">
