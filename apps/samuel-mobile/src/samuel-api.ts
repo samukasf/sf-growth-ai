@@ -1,6 +1,10 @@
+import * as SecureStore from "expo-secure-store";
+
 const API_BASE_URL =
   process.env.EXPO_PUBLIC_SF_GROWTH_API_BASE_URL?.trim().replace(/\/$/, "") ||
   "https://sf-growth-ai.vercel.app";
+const SESSION_KEY = "samuel.native.session-id";
+let cachedSessionId: string | null = null;
 
 export type MobileMessage = {
   id: string;
@@ -37,9 +41,23 @@ type ChatEvent = {
   code?: string;
 };
 
-function headers(token: string, extra?: Record<string, string>) {
+async function deviceSessionId() {
+  if (cachedSessionId) return cachedSessionId;
+  const stored = await SecureStore.getItemAsync(SESSION_KEY);
+  if (stored) {
+    cachedSessionId = stored;
+    return stored;
+  }
+  const created = `mobile-${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
+  await SecureStore.setItemAsync(SESSION_KEY, created);
+  cachedSessionId = created;
+  return created;
+}
+
+async function authHeaders(token: string, extra?: Record<string, string>) {
   return {
     Authorization: `Bearer ${token}`,
+    "x-samuel-session-id": await deviceSessionId(),
     ...extra,
   };
 }
@@ -56,7 +74,7 @@ async function errorFromResponse(response: Response) {
 export async function loadBootstrap(token: string, companyId = "default-company") {
   const response = await fetch(
     `${API_BASE_URL}/api/samuel-ai/mobile/bootstrap?companyId=${encodeURIComponent(companyId)}`,
-    { headers: headers(token) },
+    { headers: await authHeaders(token) },
   );
   if (!response.ok) throw await errorFromResponse(response);
   return response.json() as Promise<SamuelBootstrap>;
@@ -76,7 +94,7 @@ export async function transcribeNativeAudio(
 
   const response = await fetch(`${API_BASE_URL}/api/samuel-ai/transcribe`, {
     method: "POST",
-    headers: headers(token, { "x-samuel-company-id": companyId }),
+    headers: await authHeaders(token, { "x-samuel-company-id": companyId }),
     body,
   });
   if (!response.ok) throw await errorFromResponse(response);
@@ -95,7 +113,7 @@ export async function sendSamuelTurn(input: {
   const companyId = input.companyId || "default-company";
   const response = await fetch(`${API_BASE_URL}/api/samuel-ai/chat`, {
     method: "POST",
-    headers: headers(input.token, { "Content-Type": "application/json" }),
+    headers: await authHeaders(input.token, { "Content-Type": "application/json" }),
     body: JSON.stringify({
       query: input.query,
       companyId,
@@ -105,25 +123,22 @@ export async function sendSamuelTurn(input: {
   });
   if (!response.ok) throw await errorFromResponse(response);
 
-  const raw = await response.text();
-  const events = raw
+  const events = (await response.text())
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean)
     .map((line) => JSON.parse(line) as ChatEvent);
-
   const terminalError = events.find((event) => event.type === "error");
   if (terminalError) {
     const error = new Error("Samuel não conseguiu concluir este turno.") as Error & { code?: string };
     error.code = terminalError.code;
     throw error;
   }
-
   const complete = [...events].reverse().find((event) => event.type === "complete");
-  const content =
-    complete?.message?.content ||
-    events.filter((event) => event.type === "delta").map((event) => event.delta || "").join("");
-
+  const content = complete?.message?.content || events
+    .filter((event) => event.type === "delta")
+    .map((event) => event.delta || "")
+    .join("");
   return {
     conversationId: complete?.conversationId || input.conversationId || null,
     content: content.trim(),
@@ -144,22 +159,18 @@ export async function executeDesktopCommand(
 ) {
   const response = await fetch(`${API_BASE_URL}/api/samuel-desktop/voice-command`, {
     method: "POST",
-    headers: headers(token, { "Content-Type": "application/json" }),
+    headers: await authHeaders(token, { "Content-Type": "application/json" }),
     body: JSON.stringify({ goal, companyId }),
   });
   if (!response.ok) throw await errorFromResponse(response);
-  const queued = await response.json() as {
-    commandId: string;
-    deviceName: string;
-    status: string;
-  };
+  const queued = await response.json() as { commandId: string; deviceName: string; status: string };
 
   const deadline = Date.now() + 120_000;
   while (Date.now() < deadline) {
     await new Promise((resolve) => setTimeout(resolve, 1_000));
     const statusResponse = await fetch(
       `${API_BASE_URL}/api/samuel-desktop/voice-command?commandId=${encodeURIComponent(queued.commandId)}`,
-      { headers: headers(token) },
+      { headers: await authHeaders(token) },
     );
     if (!statusResponse.ok) throw await errorFromResponse(statusResponse);
     const status = await statusResponse.json() as {
@@ -168,23 +179,16 @@ export async function executeDesktopCommand(
       command: { status: string; error_message?: string | null };
     };
     if (!status.terminal) continue;
-    if (status.verified) {
-      return `Concluído no ${queued.deviceName}.`;
-    }
+    if (status.verified) return `Concluído no ${queued.deviceName}.`;
     throw new Error(status.command.error_message || `A execução terminou como ${status.command.status}.`);
   }
-
   throw new Error("O computador ainda está executando a tarefa.");
 }
 
-export async function generateSpeech(
-  token: string,
-  text: string,
-  companyId = "default-company",
-) {
+export async function generateSpeech(token: string, text: string, companyId = "default-company") {
   const response = await fetch(`${API_BASE_URL}/api/samuel-ai/voice/tts`, {
     method: "POST",
-    headers: headers(token, { "Content-Type": "application/json" }),
+    headers: await authHeaders(token, { "Content-Type": "application/json" }),
     body: JSON.stringify({ companyId, text }),
   });
   if (!response.ok) throw await errorFromResponse(response);
