@@ -9,6 +9,16 @@ const PUBLIC_PAGE_PATHS = new Set([
   "/future-me",
 ]);
 
+const BEARER_AUTH_API_PATHS = new Set([
+  "/api/samuel-ai/mobile/bootstrap",
+  "/api/samuel-ai/chat",
+  "/api/samuel-ai/transcribe",
+  "/api/samuel-ai/voice/tts",
+  "/api/samuel-ai/realtime/offer",
+  "/api/samuel-desktop/voice-command",
+  "/api/samuel-desktop/control",
+]);
+
 function isPublicPath(pathname: string) {
   return (
     PUBLIC_PAGE_PATHS.has(pathname) ||
@@ -18,6 +28,12 @@ function isPublicPath(pathname: string) {
     pathname === "/api/samuel-desktop/device" ||
     pathname === "/api/samuel-desktop/computer-step"
   );
+}
+
+function delegatesBearerAuthToRoute(request: NextRequest) {
+  if (!BEARER_AUTH_API_PATHS.has(request.nextUrl.pathname)) return false;
+  const authorization = request.headers.get("authorization")?.trim() ?? "";
+  return /^Bearer\s+\S+/i.test(authorization);
 }
 
 function authRequiredResponse(request: NextRequest) {
@@ -48,6 +64,11 @@ export async function proxy(request: NextRequest) {
       { status: 503 },
     );
   }
+
+  // Native Samuel clients authenticate with a Supabase Bearer token instead of
+  // browser cookies. Only explicitly listed endpoints may bypass cookie auth,
+  // and every listed route validates the Bearer token again server-side.
+  if (delegatesBearerAuthToRoute(request)) return response;
 
   const supabase = createServerClient(url, key, {
     cookies: {
