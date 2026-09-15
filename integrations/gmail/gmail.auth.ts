@@ -5,6 +5,8 @@ import type { GoogleOAuthConfig, GoogleTokenResponse } from "./gmail.types";
 
 const GOOGLE_OAUTH_AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_OAUTH_TOKEN_URL = "https://oauth2.googleapis.com/token";
+const GOOGLE_OAUTH_CALLBACK_PATH = "/api/integrations/google/oauth/callback";
+const CANONICAL_PRODUCTION_ORIGIN = "https://sf-growth-ai.vercel.app";
 
 /**
  * Uma única autorização Google alimenta as capacidades operacionais do Samuel.
@@ -47,10 +49,49 @@ export const GMAIL_OAUTH_SCOPES = [
   "https://www.googleapis.com/auth/youtube.readonly",
 ].join(" ");
 
+function normalizeProductionOrigin(value: string | undefined): string | null {
+  const clean = value?.trim();
+  if (!clean) return null;
+
+  const candidate = /^https?:\/\//i.test(clean) ? clean : `https://${clean}`;
+  try {
+    const url = new URL(candidate);
+    const hostname = url.hostname.toLowerCase();
+    if (
+      url.protocol !== "https:" ||
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "::1"
+    ) {
+      return null;
+    }
+    return url.origin;
+  } catch {
+    return null;
+  }
+}
+
+export function resolveGoogleOAuthRedirectUri(): string {
+  const configured = process.env.GOOGLE_OAUTH_REDIRECT_URI?.trim() ?? "";
+
+  if (process.env.VERCEL_ENV === "production") {
+    const productionOrigin =
+      normalizeProductionOrigin(process.env.SF_GROWTH_AI_URL) ??
+      normalizeProductionOrigin(process.env.NEXT_PUBLIC_APP_URL) ??
+      normalizeProductionOrigin(process.env.VERCEL_PROJECT_PRODUCTION_URL) ??
+      normalizeProductionOrigin(configured) ??
+      CANONICAL_PRODUCTION_ORIGIN;
+
+    return new URL(GOOGLE_OAUTH_CALLBACK_PATH, `${productionOrigin}/`).toString();
+  }
+
+  return configured;
+}
+
 export function resolveGoogleOAuthConfig(): GoogleOAuthConfig | null {
   const clientId = process.env.GOOGLE_CLIENT_ID ?? "";
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET ?? "";
-  const redirectUri = process.env.GOOGLE_OAUTH_REDIRECT_URI ?? "";
+  const redirectUri = resolveGoogleOAuthRedirectUri();
 
   if (!clientId || !clientSecret || !redirectUri) {
     return null;
