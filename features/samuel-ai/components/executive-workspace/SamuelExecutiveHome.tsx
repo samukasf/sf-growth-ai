@@ -689,7 +689,7 @@ export function SamuelExecutiveHome({
                   )}
                   {speechStatus === "preparing" && (
                     <p className="samuel-proactive-card__notice">
-                      Preparando {speechVoiceLabel ?? "a voz neural masculina"} · {Math.round(speechLoadProgress * 100)}%
+                      Preparando {speechVoiceLabel ?? "a voz neural feminina"} · {Math.round(speechLoadProgress * 100)}%
                     </p>
                   )}
                   <div className="samuel-proactive-card__actions">

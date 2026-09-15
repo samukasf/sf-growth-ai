@@ -248,6 +248,15 @@ export function SamuelVoiceReliabilityBridge() {
                     : "Iniciar conversa por voz",
         );
       }
+      window.dispatchEvent(
+        new CustomEvent("samuel:voice-state", {
+          detail: {
+            phase,
+            active: sessionActive,
+            error: errorMessage ?? null,
+          },
+        }),
+      );
     };
 
     const clearAudioBuffers = () => {

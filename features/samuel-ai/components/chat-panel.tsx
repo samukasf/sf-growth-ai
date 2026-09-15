@@ -10,7 +10,6 @@ import {
 } from "react";
 import {
   AlertTriangle,
-  Headphones,
   Mic,
   MicOff,
   Radio,
@@ -59,6 +58,12 @@ type ChatPanelProps = {
 type LocalHistory = {
   conversationId: string | null;
   messages: ChatMessage[];
+};
+
+type ContinuousVoiceState = {
+  phase: "idle" | "connecting" | "listening" | "processing" | "speaking" | "error";
+  active: boolean;
+  error: string | null;
 };
 
 function actionSurfaceLabel(action: SamuelToolActionPlan | null | undefined) {
@@ -123,25 +128,6 @@ function createMessageId(role: ChatMessage["role"]) {
 
 function storageKey(companyId: string) {
   return `sf-growth-ai:samuel-chat:${companyId}`;
-}
-
-function realtimeStateLabel(state: ReturnType<typeof useSamuelRealtimeVoice>["session"]["state"]) {
-  switch (state) {
-    case "requesting_permission":
-      return "Solicitando microfone";
-    case "listening":
-      return "Ouvindo";
-    case "processing":
-      return "Processando";
-    case "speaking":
-      return "Samuel falando";
-    case "paused":
-      return "Pausado";
-    case "error":
-      return "Realtime indisponível";
-    default:
-      return "Inativo";
-  }
 }
 
 function readLocalHistory(companyId: string): LocalHistory | null {
@@ -283,6 +269,11 @@ export function ChatPanel({
   const [voiceAutoSend, setVoiceAutoSend] = useState(true);
   const [voiceReplyEnabled, setVoiceReplyEnabled] = useState(true);
   const [voiceConsoleOpen, setVoiceConsoleOpen] = useState(false);
+  const [continuousVoice, setContinuousVoice] = useState<ContinuousVoiceState>({
+    phase: "idle",
+    active: false,
+    error: null,
+  });
   const [historyExpanded, setHistoryExpanded] = useState(false);
   const presenceSleeping = useSamuelIdlePresence();
   const [activeBrowserMessageId, setActiveBrowserMessageId] = useState<string | null>(null);
@@ -292,7 +283,6 @@ export function ChatPanel({
   const {
     blocked: browserSpeechBlocked,
     cancel: cancelBrowserSpeech,
-    engine: browserSpeechEngine,
     errorMessage: browserSpeechError,
     loadProgress: browserVoiceLoadProgress,
     mouthLevel: browserMouthLevel,
@@ -366,6 +356,15 @@ export function ChatPanel({
     },
     [cancelBrowserSpeech],
   );
+
+  useEffect(() => {
+    const handleVoiceState = (event: Event) => {
+      const detail = (event as CustomEvent<ContinuousVoiceState>).detail;
+      if (detail) setContinuousVoice(detail);
+    };
+    window.addEventListener("samuel:voice-state", handleVoiceState as EventListener);
+    return () => window.removeEventListener("samuel:voice-state", handleVoiceState as EventListener);
+  }, []);
 
   const speakSamuel = useCallback((content: string, messageId: string, force = false) => {
     if (!voiceReplyEnabled) return;
@@ -470,9 +469,8 @@ export function ChatPanel({
     };
   }, [realtimeVoice.session.state]);
 
-  const realtimeActive = !["idle", "error"].includes(realtimeVoice.session.state);
   const samuelSpeaking =
-    browserSpeaking || realtimeVoice.session.state === "speaking";
+    browserSpeaking || continuousVoice.phase === "speaking" || realtimeVoice.session.state === "speaking";
   const realtimeSpeechWordIndex = useMemo(
     () => Math.max(0, realtimeVoice.session.assistantTranscript.trim().split(/\s+/).length - 1),
     [realtimeVoice.session.assistantTranscript],
@@ -497,13 +495,13 @@ export function ChatPanel({
       : 0;
   const hologramState: SamuelHologramState = samuelSpeaking
     ? "speaking"
-    : realtimeVoice.session.state === "error"
+    : continuousVoice.phase === "error"
       ? "error"
-      : browserSpeechSettling || realtimeSettling || listening || realtimeVoice.session.state === "listening"
+      : browserSpeechSettling || realtimeSettling || listening || continuousVoice.phase === "listening" || realtimeVoice.session.state === "listening"
         ? "listening"
-        : busy || realtimeVoice.session.state === "processing"
+        : busy || continuousVoice.phase === "processing" || realtimeVoice.session.state === "processing"
           ? "processing"
-          : realtimeVoice.session.state === "requesting_permission"
+          : continuousVoice.phase === "connecting" || realtimeVoice.session.state === "requesting_permission"
             ? "executing"
             : presenceSleeping
               ? "sleeping"
@@ -893,7 +891,7 @@ export function ChatPanel({
             <strong>Samuel está pronto para começar</strong>
             <p>
               Escreva sua mensagem ou use o microfone. As respostas podem ser
-              reproduzidas com a voz masculina do Samuel.
+              reproduzidas com a voz feminina do Samuel pela ElevenLabs.
             </p>
           </div>
         )}
@@ -1017,26 +1015,32 @@ export function ChatPanel({
         <div
           className={cn(
             "samuel-voice-console",
-            (realtimeActive || browserSpeaking || browserSpeechStatus === "preparing") && "samuel-voice-console--active",
+            (continuousVoice.active || browserSpeaking || browserSpeechStatus === "preparing") && "samuel-voice-console--active",
             samuelSpeaking && "samuel-voice-console--speaking",
-            realtimeVoice.session.state === "error" && "samuel-voice-console--error",
+            continuousVoice.phase === "error" && "samuel-voice-console--error",
           )}
         >
           <div className="samuel-voice-console__topline">
             <div className="samuel-voice-console__identity">
               <span><Radio aria-hidden="true" /></span>
               <div>
-                <p>Samuel Voice · masculina</p>
+                <p>Samuel Voice · feminina</p>
                 <strong>
                   {browserSpeechStatus === "preparing"
                     ? `Preparando ${browserVoiceLabel ?? "voz neural"} · ${Math.round(browserVoiceLoadProgress * 100)}%`
                     : browserSpeaking
                       ? `${browserVoiceLabel ?? "Samuel Neural"} · falando`
-                      : realtimeActive
-                        ? realtimeStateLabel(realtimeVoice.session.state)
+                      : continuousVoice.phase === "connecting"
+                        ? "Abrindo o microfone"
+                        : continuousVoice.phase === "listening"
+                          ? "Ouvindo continuamente"
+                          : continuousVoice.phase === "processing"
+                            ? "Entendendo sua fala"
+                            : continuousVoice.phase === "speaking"
+                              ? "Respondendo pela ElevenLabs"
                         : browserVoiceLabel
                           ? `${browserVoiceLabel} · pronta`
-                          : "Voz neural pronta"}
+                          : "Camilla · ElevenLabs pronta"}
                 </strong>
               </div>
             </div>
@@ -1049,8 +1053,8 @@ export function ChatPanel({
                 <span
                   key={weight}
                   style={{
-                    height: `${8 + Math.round((browserSpeaking ? browserMouthLevel : realtimeVoice.session.state === "speaking" ? realtimeVoice.session.outputAudioLevel : realtimeVoice.session.audioLevel) * weight * 28)}px`,
-                    opacity: realtimeActive || browserSpeaking ? 1 : 0.35 + index * 0.08,
+                    height: `${8 + Math.round((browserSpeaking ? browserMouthLevel : continuousVoice.active ? 0.65 : 0) * weight * 28)}px`,
+                    opacity: continuousVoice.active || browserSpeaking ? 1 : 0.35 + index * 0.08,
                   }}
                 />
               ))}
@@ -1060,23 +1064,16 @@ export function ChatPanel({
           <div className="samuel-voice-console__primary-actions">
             <button
               type="button"
-              onClick={() => {
-                if (realtimeActive) realtimeVoice.end();
-                else {
-                  setVoiceConsoleOpen(true);
-                  void realtimeVoice.start();
-                }
-              }}
               disabled={busy || !hydrated}
-              className="samuel-voice-console__start"
-              aria-pressed={realtimeActive}
+              className="samuel-reference-mic samuel-voice-console__start"
+              aria-pressed={continuousVoice.active}
             >
-              {realtimeActive ? <MicOff aria-hidden="true" /> : <Mic aria-hidden="true" />}
-              {realtimeActive
+              {continuousVoice.active ? <MicOff aria-hidden="true" /> : <Mic aria-hidden="true" />}
+              {continuousVoice.active
                 ? "Encerrar conversa"
-                : realtimeVoice.session.state === "error"
-                  ? "Tentar voz novamente"
-                  : "Iniciar conversa por voz"}
+                : continuousVoice.phase === "error"
+                  ? "Tentar microfone novamente"
+                  : "Conversar por voz"}
             </button>
             <button
               type="button"
@@ -1089,49 +1086,29 @@ export function ChatPanel({
             </button>
           </div>
 
-          {realtimeVoice.session.error && (
+          {continuousVoice.phase === "error" && continuousVoice.error && (
             <div className="samuel-voice-console__error" role="alert">
               <AlertTriangle aria-hidden="true" />
               <div>
-                <strong>Realtime indisponível · voz de resposta disponível</strong>
-                <p>{realtimeVoice.session.error}</p>
-                <span>
-                  {browserSpeechEngine === "piper-local"
-                    ? "A voz local masculina pt-BR continua ativa neste aparelho."
-                    : "Toque em “Ouvir resposta” para usar a voz neural do Samuel."}
-                </span>
+                <strong>Não foi possível abrir o microfone</strong>
+                <p>{continuousVoice.error}</p>
+                <span>Confirme a permissão de microfone do Safari e tente novamente.</span>
               </div>
             </div>
           )}
 
-          {(voiceConsoleOpen || realtimeActive) && (
+          {(voiceConsoleOpen || continuousVoice.active) && (
             <div className="samuel-voice-console__details">
               <div className="samuel-voice-console__controls">
                 <button
                   type="button"
-                  onClick={realtimeVoice.interrupt}
-                  disabled={!realtimeActive || realtimeVoice.session.state !== "speaking"}
+                  onClick={cancelBrowserSpeech}
+                  disabled={!browserSpeaking}
                 >
                   <VolumeX aria-hidden="true" /> Interromper Samuel
                 </button>
-                <button
-                  type="button"
-                  onClick={() => realtimeVoice.setMuted(!realtimeVoice.session.muted)}
-                  disabled={!realtimeActive}
-                >
-                  {realtimeVoice.session.muted ? <Mic aria-hidden="true" /> : <MicOff aria-hidden="true" />}
-                  {realtimeVoice.session.muted ? "Ativar microfone" : "Silenciar microfone"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => realtimeVoice.setTextMode(!realtimeVoice.session.textMode)}
-                  disabled={!realtimeActive}
-                >
-                  <Headphones aria-hidden="true" />
-                  {realtimeVoice.session.textMode ? "Retomar conversa" : "Somente resposta"}
-                </button>
               </div>
-              <p>Toque para iniciar. A conversa Realtime usa microfone e encerra automaticamente.</p>
+              <p>O microfone permanece ativo, a ElevenLabs transcreve sua fala e cada pedido segue pelo mesmo fluxo seguro do texto.</p>
             </div>
           )}
         </div>

@@ -14,7 +14,7 @@ export type SamuelSpeechEngine =
   | "elevenlabs-neural"
   | "openai-neural"
   | "piper-local"
-  | "browser-male"
+  | "browser-female"
   | null;
 
 export type SpeakOptions = {
@@ -37,10 +37,10 @@ const EMPTY: Playback = { text: "", charIndex: 0, wordIndex: -1, progress: 0, mo
 const PIPER_VOICE = "pt_BR-faber-medium" as const;
 const SILENT_WAV_DATA_URI =
   "data:audio/wav;base64,UklGRjQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YRAAAAAAAAAAAAAAAAAAAAAAAAAA";
-const MALE_VOICE_HINTS = [
-  "male", "masculino", "antonio", "antónio", "carlos", "daniel", "duarte",
-  "eddy", "felipe", "francisco", "jorge", "luciano", "miguel", "paulo",
-  "reed", "ricardo", "rocko", "ruben", "tiago", "thiago", "joão",
+const FEMALE_VOICE_HINTS = [
+  "female", "feminina", "luciana", "joana", "francisca", "mariana", "camila",
+  "camilla", "beatriz", "bruna", "victoria", "vitória", "leticia", "letícia",
+  "heloisa", "heloísa", "fernanda", "alessandra", "raquel", "keren", "priscila",
 ];
 
 export type SamuelVoiceCandidate = { name: string; lang: string; localService?: boolean };
@@ -54,8 +54,8 @@ export function resolveSamuelNeuralEngine(provider: string | null): SamuelSpeech
 }
 
 export function resolveSamuelNeuralVoiceLabel(provider: string | null) {
-  if (provider === "elevenlabs") return "ElevenLabs · Samuel";
-  if (provider === "openai") return "OpenAI · Samuel";
+  if (provider === "elevenlabs") return "ElevenLabs · Camilla";
+  if (provider === "openai") return "OpenAI · voz feminina";
   return "Samuel Neural";
 }
 
@@ -80,12 +80,12 @@ function emitOutputEvent(
   window.dispatchEvent(new CustomEvent(`samuel:voice-output-${type}`, { detail }));
 }
 
-export function selectSamuelMasculineVoice<T extends SamuelVoiceCandidate>(voices: readonly T[]) {
+export function selectSamuelFeminineVoice<T extends SamuelVoiceCandidate>(voices: readonly T[]) {
   return voices
     .filter((voice) => voice.lang.toLowerCase().startsWith("pt"))
     .filter((voice) => {
       const name = voice.name.toLowerCase();
-      return MALE_VOICE_HINTS.some((hint) => name.includes(hint));
+      return FEMALE_VOICE_HINTS.some((hint) => name.includes(hint));
     })
     .sort((left, right) => {
       const score = (voice: T) =>
@@ -262,17 +262,17 @@ export function useSamuelSpeech({ enabled = true, companyId = "default-company" 
     ) return false;
 
     const voices = window.speechSynthesis.getVoices();
-    const voice = selectSamuelMasculineVoice(voices) ?? selectSamuelPortugueseFallbackVoice(voices);
+    const voice = selectSamuelFeminineVoice(voices) ?? selectSamuelPortugueseFallbackVoice(voices);
     const utterance = new SpeechSynthesisUtterance(text);
     if (voice) utterance.voice = voice;
     utterance.lang = voice?.lang ?? "pt-BR";
-    utterance.rate = 0.96;
-    utterance.pitch = voice && selectSamuelMasculineVoice([voice]) ? 0.8 : 0.88;
+    utterance.rate = 1;
+    utterance.pitch = 1.02;
     utterance.volume = 1;
     utteranceRef.current = utterance;
     activeTextRef.current = text;
-    activeEngineRef.current = "browser-male";
-    setEngine("browser-male");
+    activeEngineRef.current = "browser-female";
+    setEngine("browser-female");
     setVoiceLabel(voice?.name ?? "Voz nativa do dispositivo · Português");
     setLoadProgress(1);
 
@@ -280,7 +280,7 @@ export function useSamuelSpeech({ enabled = true, companyId = "default-company" 
       if (requestRef.current !== requestId) return;
       setStatus("speaking");
       beginProgress(text);
-      emitOutputEvent("start", { text, engine: "browser-male" });
+      emitOutputEvent("start", { text, engine: "browser-female" });
       options.onStart?.();
     };
     utterance.onboundary = (event) => {
@@ -304,7 +304,7 @@ export function useSamuelSpeech({ enabled = true, companyId = "default-company" 
           ? "O navegador bloqueou a reprodução de áudio."
           : "A voz nativa foi interrompida.",
       );
-      emitOutputEvent("error", { text, engine: "browser-male" });
+      emitOutputEvent("error", { text, engine: "browser-female" });
       activeTextRef.current = "";
       activeEngineRef.current = null;
       options.onError?.();

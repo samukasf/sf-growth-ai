@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   resolveSamuelNeuralEngine,
   resolveSamuelNeuralVoiceLabel,
-  selectSamuelMasculineVoice,
+  selectSamuelFeminineVoice,
   selectSamuelPortugueseFallbackVoice,
 } from "./use-samuel-speech";
 
@@ -12,43 +12,43 @@ describe("Samuel neural provider metadata", () => {
     expect(resolveSamuelNeuralEngine("elevenlabs")).toBe("elevenlabs-neural");
     expect(resolveSamuelNeuralEngine("openai")).toBe("openai-neural");
     expect(resolveSamuelNeuralEngine(null)).toBe("server-neural");
-    expect(resolveSamuelNeuralVoiceLabel("elevenlabs")).toBe("ElevenLabs · Samuel");
-    expect(resolveSamuelNeuralVoiceLabel("openai")).toBe("OpenAI · Samuel");
+    expect(resolveSamuelNeuralVoiceLabel("elevenlabs")).toBe("ElevenLabs · Camilla");
+    expect(resolveSamuelNeuralVoiceLabel("openai")).toBe("OpenAI · voz feminina");
   });
 });
 
-describe("selectSamuelMasculineVoice", () => {
-  it("prioriza uma voz masculina brasileira no iPhone", () => {
+describe("selectSamuelFeminineVoice", () => {
+  it("prioriza uma voz feminina brasileira no iPhone", () => {
     const voices = [
       { name: "Luciana", lang: "pt-BR", localService: true },
       { name: "Daniel", lang: "pt-PT", localService: true },
       { name: "Felipe", lang: "pt-BR", localService: true },
     ];
 
-    expect(selectSamuelMasculineVoice(voices)?.name).toBe("Felipe");
+    expect(selectSamuelFeminineVoice(voices)?.name).toBe("Luciana");
   });
 
-  it("não presume que uma voz neutra seja masculina", () => {
+  it("não presume que uma voz neutra seja feminina", () => {
     const voices = [
       { name: "Luciana", lang: "pt-BR", localService: true },
       { name: "Português Brasil", lang: "pt-BR", localService: false },
     ];
 
-    expect(selectSamuelMasculineVoice(voices)).toBeNull();
+    expect(selectSamuelFeminineVoice(voices)?.name).toBe("Luciana");
   });
 
-  it("não troca português por uma voz masculina de outro idioma", () => {
+  it("não troca português por uma voz feminina de outro idioma", () => {
     const voices = [
       { name: "Alex", lang: "en-US", localService: true },
       { name: "Daniel", lang: "pt-PT", localService: true },
     ];
 
-    expect(selectSamuelMasculineVoice(voices)?.name).toBe("Daniel");
+    expect(selectSamuelFeminineVoice(voices)).toBeNull();
   });
 });
 
 describe("selectSamuelPortugueseFallbackVoice", () => {
-  it("usa uma voz portuguesa disponível quando nenhuma masculina específica existe", () => {
+  it("usa uma voz portuguesa disponível quando nenhuma feminina específica existe", () => {
     const voices = [
       { name: "Samantha", lang: "en-US", localService: true },
       { name: "Luciana", lang: "pt-BR", localService: true },
