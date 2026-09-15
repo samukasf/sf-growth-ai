@@ -104,7 +104,7 @@ export function SamuelContentStudio({ companyId }: Props) {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [aiVideoBusy, setAiVideoBusy] = useState(false);
   const [aiVideoStatus, setAiVideoStatus] = useState<string | null>(null);
-  const [publishState, setPublishState] = useState<Partial<Record<MetaPublishPlatform, PublishState>>>({});
+  const [publishState, setPublishState] = useState<Partial<Record<SocialPlatform, PublishState>>>({});
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [autoProduce, setAutoProduce] = useState(false);
