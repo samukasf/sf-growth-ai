@@ -57,7 +57,7 @@ describe("Realtime voice server configuration", () => {
     expect(session).not.toHaveProperty("input_audio_transcription");
     expect(session).not.toHaveProperty("turn_detection");
     expect(session.instructions).toContain("Empresa de teste");
-    expect(session.instructions).toContain("Voz masculina adulta");
+    expect(session.instructions).toContain("Voz feminina adulta");
     expect(session.instructions).toContain("pare de falar imediatamente");
     expect(session.instructions).toContain("Nunca invente ações");
     expect(session.instructions).toContain(

@@ -48,14 +48,14 @@ describe("ttsProviderReadiness", () => {
     const readiness = ttsProviderReadiness(env({
       ELEVENLABS_API_KEY: "never-return-this",
       OPENAI_API_KEY: "never-return-this-either",
-      ELEVENLABS_VOICE_ID: "voice-samuel",
-      ELEVENLABS_VOICE_NAME: "Samuel",
+      ELEVENLABS_FEMALE_VOICE_ID: "voice-camilla",
+      ELEVENLABS_FEMALE_VOICE_NAME: "Camilla personalizada",
     }));
 
     expect(readiness.order).toEqual(["elevenlabs", "openai"]);
     expect(readiness.elevenlabs).toMatchObject({
       configured: true,
-      voiceName: "Samuel",
+      voiceName: "Camilla personalizada",
       customVoice: true,
     });
     expect(JSON.stringify(readiness)).not.toContain("never-return-this");
@@ -70,7 +70,7 @@ describe("generateSamuelSpeech", () => {
       text: "Bom dia, vamos crescer.",
       env: env({
         ELEVENLABS_API_KEY: "eleven-secret",
-        ELEVENLABS_VOICE_ID: "voice-samuel",
+        ELEVENLABS_FEMALE_VOICE_ID: "voice-camilla",
         ELEVENLABS_MODEL_ID: "eleven_flash_v2_5",
       }),
       fetcher,
@@ -81,7 +81,7 @@ describe("generateSamuelSpeech", () => {
     expect(result).toMatchObject({
       provider: "elevenlabs",
       model: "eleven_flash_v2_5",
-      voice: "voice-samuel",
+      voice: "voice-camilla",
       requestId: "eleven-request",
       fallback: false,
       attempts: [],
@@ -89,7 +89,7 @@ describe("generateSamuelSpeech", () => {
 
     const [request, init] = fetcher.mock.calls[0];
     expect(String(request)).toBe(
-      "https://api.elevenlabs.io/v1/text-to-speech/voice-samuel?output_format=mp3_44100_128",
+      "https://api.elevenlabs.io/v1/text-to-speech/voice-camilla?output_format=mp3_44100_128",
     );
     expect(init?.headers).toMatchObject({
       Accept: "audio/mpeg",

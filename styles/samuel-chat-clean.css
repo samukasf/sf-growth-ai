@@ -95,7 +95,9 @@
 /* Conversation: normal document flow, no fixed dock, no scaled desktop. */
 .samuel-conversation-dialog .samuel-chat-shell--hologram {
   display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
   grid-template-rows: minmax(160px, 0.75fr) minmax(180px, 1fr) auto !important;
+  grid-template-areas: "presence" "history" "composer" !important;
   width: 100% !important;
   height: 100% !important;
   min-height: 0 !important;
@@ -242,7 +244,9 @@
   .samuel-conversation-dialog { border: 0 !important; border-radius: 0 !important; }
 
   .samuel-conversation-dialog .samuel-chat-shell--hologram {
+    grid-template-columns: minmax(0, 1fr) !important;
     grid-template-rows: 128px minmax(110px, 1fr) auto !important;
+    grid-template-areas: "presence" "history" "composer" !important;
     gap: 0.42rem !important;
     padding: 0.45rem !important;
   }
