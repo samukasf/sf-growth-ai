@@ -1,3 +1,3 @@
 "use client";
 
-export { SamuelAiFocusV2 as SamuelAiFocus } from "./SamuelAiFocusV2";
+export { SamuelAiFocusV3 as SamuelAiFocus } from "./SamuelAiFocusV3";
