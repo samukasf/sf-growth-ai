@@ -41,7 +41,7 @@ export async function GET(request: Request) {
         nativeMicrophone: true,
         neuralVoice: true,
         desktopControl: true,
-        proactiveNotifications: true,
+        proactiveNotifications: false,
       },
       voice: {
         persona: "Camilla",
