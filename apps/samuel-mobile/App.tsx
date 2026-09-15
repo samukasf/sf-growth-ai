@@ -14,9 +14,9 @@ import {
 import { Audio } from "expo-av";
 import * as FileSystem from "expo-file-system/legacy";
 import { fromByteArray } from "base64-js";
-import type { Session } from "@supabase/supabase-js";
+import type { Session, SupabaseClient } from "@supabase/supabase-js";
 
-import { supabase } from "./src/supabase";
+import { getSupabaseClient } from "./src/supabase";
 import {
   cancelDesktopCommand,
   executeDesktopCommand,
@@ -40,6 +40,8 @@ function message(role: MobileMessage["role"], content: string): MobileMessage {
 }
 
 export default function App() {
+  const [authClient, setAuthClient] = useState<SupabaseClient | null>(null);
+  const [authReady, setAuthReady] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
   const [bootstrap, setBootstrap] = useState<SamuelBootstrap | null>(null);
   const [messages, setMessages] = useState<MobileMessage[]>([]);
@@ -49,19 +51,44 @@ export default function App() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
-  const [status, setStatus] = useState("Pronto");
+  const [status, setStatus] = useState("Inicializando");
   const speakingSound = useRef<Audio.Sound | null>(null);
   const activeDesktopCommandId = useRef<string | null>(null);
 
   const token = session?.access_token ?? "";
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data } = supabase.auth.onAuthStateChange((_event, next) => {
-      setSession(next);
-      if (!next) setBootstrap(null);
-    });
-    return () => data.subscription.unsubscribe();
+    let active = true;
+    let unsubscribe: (() => void) | undefined;
+
+    getSupabaseClient()
+      .then(async (client) => {
+        if (!active) return;
+        setAuthClient(client);
+
+        const { data } = await client.auth.getSession();
+        if (!active) return;
+        setSession(data.session);
+        setAuthReady(true);
+        setStatus(data.session ? "Conectando ao Samuel" : "Pronto para entrar");
+
+        const listener = client.auth.onAuthStateChange((_event, next) => {
+          if (!active) return;
+          setSession(next);
+          if (!next) setBootstrap(null);
+        });
+        unsubscribe = () => listener.data.subscription.unsubscribe();
+      })
+      .catch((error: Error) => {
+        if (!active) return;
+        setAuthReady(false);
+        setStatus(error.message);
+      });
+
+    return () => {
+      active = false;
+      unsubscribe?.();
+    };
   }, []);
 
   useEffect(() => {
@@ -87,8 +114,12 @@ export default function App() {
   );
 
   async function signIn() {
+    if (!authClient) {
+      setStatus("Autenticação ainda não inicializada");
+      return;
+    }
     setBusy(true);
-    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    const { error } = await authClient.auth.signInWithPassword({ email: email.trim(), password });
     setBusy(false);
     if (error) setStatus(error.message);
   }
@@ -234,8 +265,8 @@ export default function App() {
             onChangeText={setPassword}
             style={styles.input}
           />
-          <Pressable style={styles.primaryButton} onPress={signIn} disabled={busy}>
-            {busy ? <ActivityIndicator /> : <Text style={styles.primaryButtonText}>Entrar</Text>}
+          <Pressable style={styles.primaryButton} onPress={signIn} disabled={busy || !authReady}>
+            {busy || !authReady ? <ActivityIndicator /> : <Text style={styles.primaryButtonText}>Entrar</Text>}
           </Pressable>
           <Text style={styles.status}>{status}</Text>
         </View>
