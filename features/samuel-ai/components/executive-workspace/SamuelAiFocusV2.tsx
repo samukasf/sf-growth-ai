@@ -9,6 +9,7 @@ import {
   BrainCircuit,
   CalendarDays,
   FileText,
+  Film,
   Home,
   Keyboard,
   ListChecks,
@@ -17,6 +18,7 @@ import {
   MessageCircleMore,
   MessageSquareText,
   Mic,
+  MonitorUp,
   MonitorCog,
   Search,
   Settings,
@@ -24,7 +26,6 @@ import {
   Sun,
   UserRoundSearch,
   UsersRound,
-  WandSparkles,
   type LucideIcon,
 } from "lucide-react";
 
@@ -53,6 +54,7 @@ type Action = {
   label: string;
   icon: LucideIcon;
   section?: WorkspaceSection;
+  href?: string;
   prompt?: string;
 };
 
@@ -89,11 +91,14 @@ const LEFT_NAV: NavItem[] = [
   { label: "Sites & Apps", icon: MonitorCog, section: "site-builder" },
   { label: "Pesquisas", icon: Search, section: "executive-watchers" },
   { label: "Relatórios", icon: BarChart3, section: "dashboard" },
-  { label: "Studio IA", icon: WandSparkles, section: "studio" },
+  { label: "Vídeos e Redes", icon: Film, section: "studio" },
+  { label: "Meu computador", icon: MonitorUp, href: "/samuel-ai/desktop" },
   { label: "Configurações", icon: Settings, href: "/integrations" },
 ];
 
 const RIGHT_ACTIONS: Action[] = [
+  { label: "Criar vídeo e posts", icon: Film, section: "studio" },
+  { label: "Controlar computador", icon: MonitorUp, href: "/samuel-ai/desktop" },
   { label: "Encontrar clientes", icon: UserRoundSearch, section: "crm" },
   { label: "Analisar empresas", icon: BarChart3, section: "executive-watchers" },
   { label: "Criar sites e apps", icon: FileText, section: "site-builder" },
@@ -103,6 +108,7 @@ const RIGHT_ACTIONS: Action[] = [
 ];
 
 const QUICK_ACTIONS: Action[] = [
+  { label: "Vídeos e posts", icon: Film, section: "studio" },
   { label: "Clientes", icon: UserRoundSearch, section: "crm" },
   { label: "Analisar empresa", icon: BarChart3, section: "executive-watchers" },
   { label: "Criar site", icon: MonitorCog, section: "site-builder" },
@@ -161,6 +167,7 @@ export function SamuelAiFocusV2({ data, handlers, onNavigate }: Props) {
 
   const runAction = (action: Action) => {
     if (action.section) onNavigate(action.section);
+    else if (action.href) window.location.assign(action.href);
     else if (action.prompt) sendThroughSamuel(action.prompt);
   };
 
@@ -227,7 +234,7 @@ export function SamuelAiFocusV2({ data, handlers, onNavigate }: Props) {
               <RoundControl icon={Square} label="Encerrar" onClick={stopSamuel} />
             </div>
 
-            <div className="mx-auto mt-4 grid max-w-[900px] grid-cols-5 gap-2">
+            <div className="mx-auto mt-4 grid max-w-[980px] grid-cols-6 gap-2">
               {QUICK_ACTIONS.map((action) => (
                 <button key={action.label} type="button" onClick={() => runAction(action)} className="flex min-h-[58px] items-center justify-center gap-2 rounded-xl border border-[#0b5d9d] bg-[#03101b]/90 px-3 text-[11px] text-white transition hover:border-[#119dff] hover:bg-[#061a2c]">
                   <action.icon className="size-5 shrink-0 text-[#179dff]" />
@@ -328,7 +335,7 @@ function MobilePanel({ voiceActive, voicePhase, processing, onOpenConversation, 
         <div className="mt-5 flex items-start justify-center gap-8"><RoundControl icon={Keyboard} label="Digitar" onClick={onOpenConversation} compact /><button type="button" className="samuel-reference-mic flex flex-col items-center gap-2 text-xs font-semibold"><span className="relative flex size-20 items-center justify-center rounded-full border border-[#0b71e6] bg-[radial-gradient(circle,#083671,#020b16)] shadow-[0_0_28px_rgba(0,152,255,.5)]"><span className={`absolute inset-[-8px] rounded-full border border-cyan-300/15 ${voiceActive ? "animate-ping" : "animate-pulse"}`} /><Mic className="size-8" /></span>{voicePhase === "processing" ? "Pensando" : voicePhase === "speaking" ? "Falando" : voiceActive ? "Ouvindo" : "Falar"}</button><RoundControl icon={Square} label="Parar" onClick={onStop} compact /></div>
         <div className="mt-6 grid grid-cols-2 gap-2">{RIGHT_ACTIONS.map((action) => <button key={action.label} type="button" onClick={() => onAction(action)} className="flex min-h-[78px] items-center gap-3 rounded-2xl border border-[#0a426e] bg-[#051321] p-3 text-left text-xs"><action.icon className="size-6 shrink-0 text-[#1cb4ff]" /><span>{action.label}</span></button>)}</div>
       </main>
-      <nav className="fixed inset-x-3 bottom-3 z-40 grid grid-cols-5 rounded-2xl border border-white/[.08] bg-[#07111c]/95 p-2 shadow-2xl backdrop-blur-xl"><MobileNav icon={Home} label="Início" onClick={() => onNavigate("samuel-ai")} /><MobileNav icon={CalendarDays} label="Agenda" onClick={() => onNavigate("executive-agenda")} /><MobileNav icon={Mic} label="Samuel" onClick={onOpenConversation} primary /><MobileNav icon={Mail} label="E-mail" onClick={() => onNavigate("gmail")} /><MobileNav icon={UsersRound} label="CRM" onClick={() => onNavigate("crm")} /></nav>
+      <nav className="fixed inset-x-3 bottom-3 z-40 grid grid-cols-5 rounded-2xl border border-white/[.08] bg-[#07111c]/95 p-2 shadow-2xl backdrop-blur-xl"><MobileNav icon={Home} label="Início" onClick={() => onNavigate("samuel-ai")} /><MobileNav icon={Film} label="Vídeos" onClick={() => onNavigate("studio")} /><MobileNav icon={Mic} label="Samuel" onClick={onOpenConversation} primary /><MobileNav icon={MonitorUp} label="Computador" onClick={() => window.location.assign("/samuel-ai/desktop")} /><MobileNav icon={UsersRound} label="CRM" onClick={() => onNavigate("crm")} /></nav>
     </div>
   );
 }

@@ -160,9 +160,28 @@ export default function SamuelDesktopPage() {
         {error && <div className="mb-5 rounded-2xl border border-rose-400/25 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">{error}</div>}
         {notice && <div className="mb-5 rounded-2xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">{notice}</div>}
 
+        <section className="mb-5 overflow-hidden rounded-3xl border border-cyan-300/15 bg-[radial-gradient(circle_at_85%_20%,rgba(14,165,233,.18),transparent_30%),linear-gradient(135deg,#071828,#050a12)] p-5 sm:p-7">
+          <div className="grid gap-6 lg:grid-cols-[1fr_.75fr] lg:items-center">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[.2em] text-cyan-300/70">1 · Instalar o agente local</p>
+              <h2 className="mt-2 text-xl font-semibold">O site não controla seu computador sozinho.</h2>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-white/48">Instale o Samuel Desktop no Windows. Ele cria uma conexão somente de saída, mostra tudo que está sendo executado e pode ser interrompido a qualquer momento.</p>
+              <div className="mt-5 flex flex-wrap gap-3">
+                <a href="https://github.com/samukasf/sf-growth-ai/actions/workflows/samuel-desktop-windows.yml" target="_blank" rel="noreferrer" className="rounded-2xl bg-blue-500 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-400">Baixar instalador Windows</a>
+                <a href="https://github.com/samukasf/sf-growth-ai/tree/main/apps/samuel-desktop-agent" target="_blank" rel="noreferrer" className="rounded-2xl border border-white/10 bg-white/[.04] px-5 py-3 text-sm text-white/65 hover:bg-white/[.08]">Ver código e instruções</a>
+              </div>
+            </div>
+            <div className="grid gap-2 text-xs text-white/48 sm:grid-cols-2 lg:grid-cols-1">
+              <p className="rounded-2xl border border-white/[.07] bg-black/20 px-4 py-3"><strong className="block text-emerald-200">Controle local</strong><span className="mt-1 block">STOP SAMUEL e Ctrl + Alt + Esc interrompem imediatamente.</span></p>
+              <p className="rounded-2xl border border-white/[.07] bg-black/20 px-4 py-3"><strong className="block text-cyan-200">Acesso mínimo</strong><span className="mt-1 block">Arquivos só em pastas que você autorizar.</span></p>
+              <p className="rounded-2xl border border-white/[.07] bg-black/20 px-4 py-3"><strong className="block text-amber-200">Takeover obrigatório</strong><span className="mt-1 block">Senhas, 2FA, CAPTCHA e pagamentos ficam com você.</span></p>
+            </div>
+          </div>
+        </section>
+
         <section className="grid gap-5 lg:grid-cols-[.8fr_1.2fr]">
           <div className="rounded-3xl border border-white/[.08] bg-white/[.035] p-5">
-            <p className="text-[10px] font-semibold uppercase tracking-[.2em] text-white/35">1 · Parear computador</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[.2em] text-white/35">2 · Parear computador</p>
             <h2 className="mt-2 text-lg font-semibold">Digite o código do aplicativo Windows</h2>
             <input
               value={pairingCode}
@@ -177,7 +196,7 @@ export default function SamuelDesktopPage() {
 
           <div className="rounded-3xl border border-white/[.08] bg-white/[.035] p-5">
             <div className="flex items-center justify-between gap-3">
-              <div><p className="text-[10px] font-semibold uppercase tracking-[.2em] text-white/35">2 · Dispositivos</p><h2 className="mt-2 text-lg font-semibold">Computadores conectados</h2></div>
+              <div><p className="text-[10px] font-semibold uppercase tracking-[.2em] text-white/35">3 · Dispositivos</p><h2 className="mt-2 text-lg font-semibold">Computadores conectados</h2></div>
               <button type="button" onClick={() => void load()} className="rounded-xl border border-white/10 px-3 py-2 text-xs text-white/55">Atualizar</button>
             </div>
             <div className="mt-4 space-y-3">
@@ -203,7 +222,7 @@ export default function SamuelDesktopPage() {
         </section>
 
         <section className="mt-5 rounded-3xl border border-white/[.08] bg-white/[.035] p-5">
-          <p className="text-[10px] font-semibold uppercase tracking-[.2em] text-white/35">3 · Teste de computer use</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[.2em] text-white/35">4 · Teste de computer use</p>
           <h2 className="mt-2 text-lg font-semibold">Diga o que o Samuel deve fazer neste computador</h2>
           <p className="mt-2 text-xs leading-5 text-white/35">Ao clicar em Executar você confirma esta tarefa específica. A cada passo o Samuel recebe uma nova captura de tela e só conclui quando houver evidência visual.</p>
           <textarea

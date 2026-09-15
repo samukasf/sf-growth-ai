@@ -100,6 +100,13 @@ describe("generateSamuelSpeech", () => {
       text: "Bom dia, vamos crescer.",
       model_id: "eleven_flash_v2_5",
       language_code: "pt",
+      voice_settings: {
+        stability: 0.48,
+        similarity_boost: 0.78,
+        style: 0.18,
+        speed: 1.03,
+        use_speaker_boost: true,
+      },
     });
   });
 

@@ -38,7 +38,7 @@ export const WORKSPACE_NAV_ITEMS: WorkspaceNavItem[] = [
   { id: "samuel-ai", label: "Samuel", group: "core" },
   { id: "executive-inbox", label: "Work", group: "core" },
   { id: "dashboard", label: "Growth", group: "core" },
-  { id: "studio", label: "Studio", group: "core" },
+  { id: "studio", label: "Vídeos e Redes Sociais", group: "core" },
   { id: "crm", label: "Clients", group: "core" },
   { id: "gmail", label: "E-mails", group: "executive" },
   { id: "whatsapp", label: "WhatsApp Business", group: "executive" },

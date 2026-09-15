@@ -2268,6 +2268,21 @@ input:focus-visible {
 .samuel-content-status { display:flex; width:180px; aspect-ratio:1; flex:none; flex-direction:column; align-items:center; justify-content:center; border:1px solid rgba(80,225,255,.3); border-radius:50%; background:radial-gradient(circle,rgba(19,105,177,.46),rgba(3,10,29,.88) 67%); box-shadow:0 0 48px rgba(38,201,255,.18),inset 0 0 28px rgba(54,209,255,.12); }
 .samuel-content-status strong { font-size:2.8rem; line-height:1; color:#fff; }
 .samuel-content-status span { max-width:110px; margin-top:.5rem; text-align:center; font-size:.5rem; line-height:1.5; letter-spacing:.05em; color:#9bdcef; }
+.samuel-content-connections { border:1px solid rgba(60,196,255,.14); border-radius:1.15rem; padding:1rem; background:linear-gradient(145deg,#071427,#050c19); }
+.samuel-content-connections__heading { display:flex; align-items:flex-end; justify-content:space-between; gap:1rem; }
+.samuel-content-connections__heading span { font-size:.52rem; font-weight:800; letter-spacing:.16em; color:#52e4ff; }
+.samuel-content-connections__heading h3 { margin-top:.3rem; font-size:1rem; color:#eef9ff; }
+.samuel-content-connections__heading > strong { font-size:.58rem; color:#9fdcf1; }
+.samuel-content-connections__grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:.5rem; margin-top:.8rem; }
+.samuel-content-connections article { display:grid; min-width:0; grid-template-columns:auto minmax(0,1fr); align-items:center; gap:.55rem; border:1px solid rgba(104,154,202,.12); border-radius:.8rem; padding:.7rem; background:#030a16; }
+.samuel-content-connections article.is-ready { border-color:rgba(57,231,130,.28); background:linear-gradient(145deg,rgba(10,75,55,.28),#030a16); }
+.samuel-content-connections article > svg { width:1.2rem; height:1.2rem; color:#4bdcf7; }
+.samuel-content-connections article div { min-width:0; }
+.samuel-content-connections article strong,.samuel-content-connections article small { display:block; }
+.samuel-content-connections article strong { font-size:.58rem; color:#e9f8ff; }
+.samuel-content-connections article small { min-height:2.5em; margin-top:.15rem; overflow:hidden; font-size:.43rem; line-height:1.35; color:#71869f; }
+.samuel-content-connections article button { grid-column:1/-1; min-height:2rem; border:1px solid rgba(65,205,246,.18); border-radius:.58rem; font-size:.49rem; font-weight:720; color:#b8efff; background:#071b2b; }
+.samuel-content-connections > p { margin-top:.7rem; font-size:.5rem; line-height:1.5; color:#6f849c; }
 .samuel-content-grid { display:grid; grid-template-columns:minmax(0,1.55fr) minmax(250px,.55fr); gap:1rem; }
 .samuel-content-composer,.samuel-content-pipeline,.samuel-content-result { border:1px solid rgba(60,196,255,.14); border-radius:1.15rem; background:linear-gradient(145deg,#071427,#050c19); box-shadow:0 18px 50px rgba(0,8,25,.22); }
 .samuel-content-composer { padding:1.25rem; }
@@ -2340,6 +2355,7 @@ input:focus-visible {
 .samuel-content-copies button svg { width:.7rem; height:.7rem; }
 
 @media (max-width: 1100px) {
+  .samuel-content-connections__grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
   .samuel-content-grid { grid-template-columns:1fr; }
   .samuel-content-pipeline { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:.4rem; }
   .samuel-content-pipeline > span { grid-column:1/-1; }
@@ -2358,6 +2374,10 @@ input:focus-visible {
   .samuel-content-studio__header h2 { max-width:90%; font-size:2.3rem; }
   .samuel-content-studio__header p { max-width:78%; font-size:.62rem; }
   .samuel-content-status { position:absolute !important; right:-35px; bottom:-40px; width:145px; opacity:.55; }
+  .samuel-content-connections__heading { align-items:flex-start; flex-direction:column; }
+  .samuel-content-connections__grid { grid-template-columns:1fr; }
+  .samuel-content-connections article { grid-template-columns:auto minmax(0,1fr) auto; }
+  .samuel-content-connections article button { grid-column:auto; min-width:76px; }
   .samuel-content-composer { padding:.85rem; }
   .samuel-platform-picker { grid-template-columns:repeat(3,minmax(0,1fr)); }
   .samuel-content-pipeline { grid-template-columns:1fr; }

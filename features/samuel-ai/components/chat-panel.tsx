@@ -27,6 +27,10 @@ import { cn } from "@/utils/cn";
 
 import { loadSamuelChatHistory } from "../chat/samuel-chat.client";
 import {
+  isDesktopExecutionRequest,
+  runSamuelDesktopCommand,
+} from "../desktop/samuel-desktop-command.client";
+import {
   SamuelHologram,
   type SamuelHologramState,
 } from "./samuel-hologram";
@@ -584,6 +588,24 @@ export function ChatPanel({
       abortRef.current = controller;
 
       try {
+        if (isDesktopExecutionRequest(trimmed)) {
+          const desktopResult = await runSamuelDesktopCommand({
+            companyId,
+            goal: trimmed,
+            signal: controller.signal,
+          });
+          const completedMessage: ChatMessage = {
+            ...assistantMessage,
+            content: desktopResult,
+            status: "complete",
+          };
+          setMessages((current) => current.map((message) =>
+            message.id === assistantId ? completedMessage : message,
+          ));
+          speakSamuel(desktopResult, assistantId);
+          return;
+        }
+
         const result = await onSendMessage(trimmed, {
           conversationId,
           history,
@@ -1137,7 +1159,7 @@ export function ChatPanel({
             )}
           >
             {voiceReplyEnabled ? <Volume2 aria-hidden="true" /> : <VolumeX aria-hidden="true" />}
-            Voz masculina {voiceReplyEnabled ? "ativa" : "desativada"}
+            Voz feminina {voiceReplyEnabled ? "ativa" : "desativada"}
           </button>
           <button
             type="button"
