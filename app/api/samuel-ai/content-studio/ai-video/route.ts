@@ -155,7 +155,7 @@ export async function POST(request: Request) {
       shots: shots.length,
       generate_audio: generateAudio,
     };
-    if (provider === "fal") {
+    if (provider === "fal" && "statusUrl" in generation && "responseUrl" in generation) {
       output.status_url = generation.statusUrl;
       output.response_url = generation.responseUrl;
     }
