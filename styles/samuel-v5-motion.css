@@ -1,0 +1,33 @@
+@keyframes samuel-v5-float {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-7px) scale(1.012); }
+}
+
+@keyframes samuel-v5-glow {
+  0%, 100% { filter: drop-shadow(0 0 22px rgba(0,163,255,.34)) brightness(1); }
+  50% { filter: drop-shadow(0 0 42px rgba(0,190,255,.52)) brightness(1.08); }
+}
+
+@keyframes samuel-v5-backdrop {
+  0% { opacity: .72; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.035); }
+  100% { opacity: .72; transform: scale(1); }
+}
+
+.samuel-v5-shell .samuel-focus-cockpit img[src*="samuel-orb-reference.svg"] {
+  animation: samuel-v5-float 5.5s ease-in-out infinite, samuel-v5-glow 3.8s ease-in-out infinite;
+  transform-origin: center;
+  will-change: transform, filter;
+}
+
+.samuel-v5-shell .samuel-focus-cockpit main > div[aria-hidden="true"] > div:first-child {
+  animation: samuel-v5-backdrop 9s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .samuel-v5-shell .samuel-focus-cockpit img[src*="samuel-orb-reference.svg"],
+  .samuel-v5-shell .samuel-focus-cockpit main > div[aria-hidden="true"] > div:first-child {
+    animation: none !important;
+  }
+}
