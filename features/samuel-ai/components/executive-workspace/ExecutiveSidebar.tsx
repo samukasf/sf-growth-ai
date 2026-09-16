@@ -13,9 +13,9 @@ import {
   CalendarDays,
   ChevronDown,
   CircleDollarSign,
-  Globe2,
   Film,
   Gauge,
+  Globe2,
   Inbox,
   Mail,
   Megaphone,
@@ -28,7 +28,6 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/utils/cn";
-
 import type { WorkspaceSection } from "./workspace-navigation";
 
 type ExecutiveSidebarProps = {
@@ -38,32 +37,27 @@ type ExecutiveSidebarProps = {
   onMobileClose?: () => void;
 };
 
-type NavItem = {
-  id: WorkspaceSection;
-  label: string;
-  description?: string;
-  icon: LucideIcon;
-};
+type NavItem = { id: WorkspaceSection; label: string; description?: string; icon: LucideIcon };
 
 const PRIMARY_ITEMS: NavItem[] = [
-  { id: "samuel-ai", label: "Samuel", description: "Comando e conversa", icon: Bot },
-  { id: "executive-inbox", label: "Work", description: "Inbox, agenda e execução", icon: Inbox },
-  { id: "dashboard", label: "Growth", description: "Prioridades e crescimento", icon: BarChart3 },
-  { id: "studio", label: "Vídeos e Redes", description: "Criar, adaptar e publicar", icon: Film },
-  { id: "crm", label: "Clients", description: "Clientes e oportunidades", icon: BriefcaseBusiness },
+  { id: "samuel-ai", label: "Início / Samuel", description: "Falar e executar", icon: Bot },
+  { id: "studio", label: "Vídeos e Redes", description: "Criar, revisar e publicar", icon: Film },
+  { id: "executive-alerts", label: "Alertas", description: "O que precisa de atenção", icon: BellRing },
+  { id: "executive-inbox", label: "Tarefas", description: "Inbox e execução", icon: Inbox },
+  { id: "crm", label: "Clientes", description: "CRM e oportunidades", icon: BriefcaseBusiness },
+  { id: "dashboard", label: "Resultados", description: "Indicadores e crescimento", icon: BarChart3 },
 ];
 
 const ADVANCED_ITEMS: NavItem[] = [
   { id: "gmail", label: "E-mails", icon: Mail },
-  { id: "executive-agenda", label: "Google Agenda", icon: CalendarDays },
+  { id: "executive-agenda", label: "Agenda", icon: CalendarDays },
   { id: "whatsapp", label: "WhatsApp Business", icon: MessageCircleMore },
-  { id: "executive-tasks", label: "Tarefas e decisões", icon: ShieldCheck },
-  { id: "executive-alerts", label: "Alertas", icon: BellRing },
+  { id: "executive-tasks", label: "Decisões e tarefas", icon: ShieldCheck },
   { id: "executive-watchers", label: "Monitorização", icon: Radar },
   { id: "executive-timeline", label: "Linha do tempo", icon: Activity },
-  { id: "site-builder", label: "Criador de sites", icon: Globe2 },
+  { id: "site-builder", label: "Sites e Apps", icon: Globe2 },
   { id: "autonomous-improvement", label: "Autoevolução", icon: BrainCircuit },
-  { id: "marketing", label: "Marketing", icon: Megaphone },
+  { id: "marketing", label: "Marketing e anúncios", icon: Megaphone },
   { id: "sales", label: "Vendas", icon: BriefcaseBusiness },
   { id: "finance", label: "Finanças", icon: CircleDollarSign },
   { id: "operations", label: "Operações", icon: Gauge },
@@ -76,131 +70,40 @@ const ADVANCED_ITEMS: NavItem[] = [
   { id: "linkedin", label: "LinkedIn", icon: UsersRound },
 ];
 
-export function ExecutiveSidebar({
-  activeSection,
-  onSectionChange,
-  mobileOpen = false,
-  onMobileClose,
-}: ExecutiveSidebarProps) {
-  const handleSelect = (section: WorkspaceSection) => {
+export function ExecutiveSidebar({ activeSection, onSectionChange, mobileOpen = false, onMobileClose }: ExecutiveSidebarProps) {
+  const select = (section: WorkspaceSection) => {
     onSectionChange(section);
     onMobileClose?.();
   };
 
   const content = (
-    <nav className="flex min-h-full flex-col bg-[#070a0f] p-4 text-white">
-      <div className="mb-6 flex items-center gap-3 px-2 pt-1">
-        <span className="relative flex size-10 items-center justify-center rounded-2xl border border-cyan-200/15 bg-cyan-300/[.06] text-cyan-100 shadow-[0_0_30px_rgba(34,211,238,.08)]">
-          <BrainCircuit className="size-[18px]" strokeWidth={1.7} />
-          <span className="absolute -right-0.5 -top-0.5 size-2 rounded-full border border-[#070a0f] bg-emerald-300" />
-        </span>
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/80">SF Growth AI</p>
-          <p className="mt-0.5 text-[9px] tracking-[0.08em] text-white/30">Executive command center</p>
-        </div>
-      </div>
+    <nav className="flex min-h-full flex-col bg-[linear-gradient(180deg,#04101a,#02080e)] p-4 text-white">
+      <button type="button" onClick={() => select("samuel-ai")} className="mb-5 flex items-center gap-3 rounded-2xl px-2 py-1 text-left">
+        <span className="relative flex size-10 items-center justify-center rounded-2xl border border-cyan-300/15 bg-cyan-300/[.07] text-cyan-100 shadow-[0_0_26px_rgba(34,211,238,.10)]"><BrainCircuit className="size-[18px]" /><span className="absolute -right-0.5 -top-0.5 size-2 rounded-full border border-[#04101a] bg-emerald-300" /></span>
+        <div><p className="text-[11px] font-semibold uppercase tracking-[0.19em] text-white/85">Samuel IA</p><p className="mt-0.5 text-[9px] text-white/30">SF Growth AI</p></div>
+      </button>
 
-      <div className="space-y-1.5">
+      <p className="mb-2 px-2 text-[8px] font-semibold uppercase tracking-[.2em] text-white/24">Acesso rápido</p>
+      <div className="space-y-1">
         {PRIMARY_ITEMS.map((item) => {
           const active = activeSection === item.id;
-          return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => handleSelect(item.id)}
-              className={cn(
-                "group flex w-full items-center gap-3 rounded-2xl border px-3 py-3 text-left transition-all duration-200",
-                active
-                  ? "border-cyan-200/15 bg-white/[.075] text-white shadow-[0_10px_30px_rgba(0,0,0,.18),inset_0_1px_0_rgba(255,255,255,.05)]"
-                  : "border-transparent text-white/48 hover:border-white/[.06] hover:bg-white/[.035] hover:text-white/82",
-              )}
-            >
-              <span className={cn(
-                "flex size-9 shrink-0 items-center justify-center rounded-xl border transition",
-                active
-                  ? "border-cyan-200/15 bg-cyan-300/[.08] text-cyan-100"
-                  : "border-white/[.06] bg-white/[.025] text-white/38 group-hover:text-white/70",
-              )}>
-                <item.icon className="size-4" strokeWidth={1.65} />
-              </span>
-              <span className="min-w-0">
-                <strong className="block text-[11px] font-semibold tracking-[0.02em]">{item.label}</strong>
-                <small className="mt-0.5 block truncate text-[9px] font-normal text-white/28">{item.description}</small>
-              </span>
-              {active && <span className="ml-auto size-1.5 rounded-full bg-cyan-300 shadow-[0_0_12px_rgba(103,232,249,.7)]" />}
-            </button>
-          );
+          return <button key={item.id} type="button" onClick={() => select(item.id)} className={cn("group flex min-h-[54px] w-full items-center gap-3 rounded-2xl border px-3 text-left transition", active ? "border-cyan-300/20 bg-cyan-300/[.075] text-white shadow-[inset_0_1px_0_rgba(255,255,255,.04)]" : "border-transparent text-white/52 hover:border-white/[.06] hover:bg-white/[.035] hover:text-white/82")}><span className={cn("flex size-9 shrink-0 items-center justify-center rounded-xl border", active ? "border-cyan-300/18 bg-cyan-300/[.09] text-cyan-100" : "border-white/[.06] bg-white/[.02] text-white/36 group-hover:text-white/68")}><item.icon className="size-4" /></span><span className="min-w-0 flex-1"><strong className="block truncate text-[11px] font-semibold">{item.label}</strong><small className="mt-0.5 block truncate text-[9px] font-normal text-white/28">{item.description}</small></span>{active && <span className="size-1.5 rounded-full bg-cyan-300 shadow-[0_0_10px_rgba(103,232,249,.7)]" />}</button>;
         })}
       </div>
 
-      <details className="group mt-5 rounded-2xl border border-white/[.055] bg-white/[.018]">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-3 text-[10px] font-medium text-white/38 transition hover:text-white/68">
-          <span>Recursos avançados</span>
-          <ChevronDown className="size-3.5 transition group-open:rotate-180" />
-        </summary>
-        <div className="max-h-[42dvh] space-y-0.5 overflow-y-auto border-t border-white/[.05] p-2">
-          {ADVANCED_ITEMS.map((item) => {
-            const active = activeSection === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => handleSelect(item.id)}
-                className={cn(
-                  "flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-[10px] transition",
-                  active ? "bg-white/[.07] text-white" : "text-white/34 hover:bg-white/[.035] hover:text-white/64",
-                )}
-              >
-                <item.icon className="size-3.5 shrink-0" strokeWidth={1.6} />
-                {item.label}
-              </button>
-            );
-          })}
+      <details className="group mt-4 rounded-2xl border border-white/[.055] bg-white/[.018]">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-3 text-[10px] font-medium text-white/42 transition hover:text-white/72"><span>Mais ferramentas</span><ChevronDown className="size-3.5 transition group-open:rotate-180" /></summary>
+        <div className="max-h-[38dvh] space-y-0.5 overflow-y-auto border-t border-white/[.05] p-2">
+          {ADVANCED_ITEMS.map((item) => <button key={item.id} type="button" onClick={() => select(item.id)} className={cn("flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-left text-[10px] transition", activeSection === item.id ? "bg-cyan-300/[.07] text-cyan-50" : "text-white/38 hover:bg-white/[.035] hover:text-white/68")}><item.icon className="size-3.5 shrink-0" />{item.label}</button>)}
         </div>
       </details>
 
-      <div className="mt-auto space-y-2 pt-5">
-        <Link
-          href="/integrations"
-          className="flex items-center justify-between rounded-xl px-3 py-2 text-[9px] text-white/30 transition hover:bg-white/[.035] hover:text-white/60"
-        >
-          <span>Integrações e configuração</span>
-          <span aria-hidden="true">→</span>
-        </Link>
-        <div className="rounded-2xl border border-white/[.055] bg-white/[.025] p-3">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[8px] uppercase tracking-[.16em] text-white/24">Samuel Runtime</p>
-              <p className="mt-1 text-[10px] font-medium text-white/62">Operacional</p>
-            </div>
-            <span className="flex items-center gap-1.5 text-[8px] text-emerald-200/70">
-              <span className="size-1.5 rounded-full bg-emerald-300" /> online
-            </span>
-          </div>
-        </div>
+      <div className="mt-auto space-y-2 pt-4">
+        <Link href="/samuel-ai/desktop" className="flex min-h-10 items-center justify-between rounded-xl border border-white/[.055] px-3 text-[9px] text-white/38 transition hover:bg-white/[.035] hover:text-white/70"><span>Meu computador</span><span>→</span></Link>
+        <Link href="/integrations" className="flex min-h-10 items-center justify-between rounded-xl border border-white/[.055] px-3 text-[9px] text-white/38 transition hover:bg-white/[.035] hover:text-white/70"><span>Integrações e configuração</span><span>→</span></Link>
       </div>
     </nav>
   );
 
-  return (
-    <>
-      {mobileOpen && (
-        <button
-          type="button"
-          aria-label="Fechar menu"
-          className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm transition-opacity duration-300 lg:hidden"
-          onClick={onMobileClose}
-        />
-      )}
-
-      <aside
-        className={cn(
-          "fixed inset-y-0 left-0 z-50 w-[272px] shrink-0 border-r border-white/[.055] bg-[#070a0f]/98 shadow-[12px_0_40px_rgba(0,0,0,.22)] backdrop-blur-2xl transition-transform duration-300 lg:static lg:z-auto lg:translate-x-0",
-          mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
-        )}
-      >
-        <div className="flex h-full flex-col overflow-y-auto">{content}</div>
-      </aside>
-    </>
-  );
+  return <>{mobileOpen && <button type="button" aria-label="Fechar menu" className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm lg:hidden" onClick={onMobileClose} />}<aside className={cn("fixed inset-y-0 left-0 z-50 w-[276px] shrink-0 border-r border-cyan-300/[.07] bg-[#04101a]/98 shadow-[12px_0_40px_rgba(0,0,0,.22)] backdrop-blur-2xl transition-transform duration-300 lg:static lg:z-auto lg:translate-x-0", mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0")}><div className="flex h-full flex-col overflow-y-auto">{content}</div></aside></>;
 }
