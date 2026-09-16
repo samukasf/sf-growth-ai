@@ -40,6 +40,19 @@ function bitrateFor(quality: SamuelVideoQuality, fps: 24 | 30 | 60) {
   return fps === 60 ? Math.round(base * 1.45) : base;
 }
 
+function storedReferenceUrls() {
+  if (typeof window === "undefined") return [] as string[];
+  try {
+    const raw = sessionStorage.getItem("sf-growth-ai:studio:active-reference-urls");
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item): item is string => typeof item === "string" && /^https?:|^blob:|^data:/.test(item)).slice(0, 30);
+  } catch {
+    return [];
+  }
+}
+
 function wrapText(context: CanvasRenderingContext2D, text: string, maxWidth: number) {
   const words = text.split(/\s+/);
   const lines: string[] = [];
@@ -208,7 +221,8 @@ export async function renderSamuelCampaignVideo(
   const context = canvas.getContext("2d");
   if (!context) throw new Error("O renderizador visual não iniciou.");
 
-  const referenceImages = await loadReferenceImages(options.referenceImages ?? []);
+  const requestedReferences = options.referenceImages?.length ? options.referenceImages : storedReferenceUrls();
+  const referenceImages = await loadReferenceImages(requestedReferences);
   const audioUrl = URL.createObjectURL(audio);
   const audioElement = new Audio(audioUrl);
   await new Promise<void>((resolve, reject) => {
