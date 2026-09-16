@@ -1,6 +1,7 @@
 import { createConfiguredResponsesProvider } from "@/apps/web/src/core/orchestrator/openai-responses.provider";
 import { authorizeCompanyRequest } from "@/features/auth/server/authorization";
 import { elevenVideoReadiness } from "@/features/samuel-ai/content-studio/elevenlabs-video.server";
+import { runwayVideoReadiness } from "@/features/samuel-ai/content-studio/runway-video.server";
 import {
   generateContentProject,
   validateContentRequest,
@@ -19,7 +20,8 @@ function grantedScopes(value: string | null | undefined) {
 
 async function readiness(companyId: string): Promise<ContentReadiness> {
   const tts = ttsProviderReadiness();
-  const aiVideo = elevenVideoReadiness();
+  const elevenVideo = elevenVideoReadiness();
+  const runwayVideo = runwayVideoReadiness();
   const [meta, metaConnection] = await Promise.all([
     resolveMetaClientConfigForCompany(companyId),
     findMetaOAuthConnection(companyId).catch(() => null),
@@ -62,6 +64,15 @@ async function readiness(companyId: string): Promise<ContentReadiness> {
       detail: "Exige acesso de administrador e permissões de publicação da organização.",
     },
   };
+  const externalVideoReady = runwayVideo.configured || elevenVideo.configured;
+  const externalProvider = runwayVideo.configured
+    ? `${runwayVideo.provider} · ${runwayVideo.model}`
+    : `${elevenVideo.provider} · ${elevenVideo.model}`;
+  const externalDetail = runwayVideo.configured
+    ? `${runwayVideo.detail} Imagens de referência usam Runway automaticamente quando disponíveis.`
+    : elevenVideo.configured
+      ? `${elevenVideo.detail} Se a conta ElevenLabs não tiver Image & Video/Flows, use o renderizador Samuel ou configure Runway.`
+      : "Nenhum provedor externo está configurado. O renderizador Samuel continua disponível e cria vídeo real com narração e imagens de referência.";
   return {
     generation: {
       ready: Boolean(createConfiguredResponsesProvider()),
@@ -75,14 +86,14 @@ async function readiness(companyId: string): Promise<ContentReadiness> {
         : "Configure ELEVENLABS_API_KEY para narração ElevenLabs.",
     },
     aiVideo: {
-      ready: aiVideo.configured,
-      provider: aiVideo.provider,
-      model: aiVideo.model,
-      detail: aiVideo.detail,
+      ready: externalVideoReady,
+      provider: externalVideoReady ? externalProvider : "Renderizador Samuel",
+      model: runwayVideo.configured ? runwayVideo.model : elevenVideo.model,
+      detail: externalDetail,
     },
     browserRenderer: {
       ready: true,
-      detail: "Monta campanha completa no navegador; prefere MP4/H.264 quando o navegador suporta e mantém WebM somente como fallback de prévia.",
+      detail: "Cria vídeo real no navegador com narração, imagens de referência, movimento cinematográfico e exportação local; não depende do plano de vídeo da ElevenLabs.",
     },
     publishing,
   };
