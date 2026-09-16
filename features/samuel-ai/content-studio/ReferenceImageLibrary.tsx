@@ -64,10 +64,12 @@ export function ReferenceImageLibrary({ companyId, onReferencesChange, compact =
 
   useEffect(() => {
     const active = items.filter((item) => selected.includes(item.assetPath));
+    const urls = active.map((item) => item.previewUrl);
     onReferencesChange?.(active);
     try {
       sessionStorage.setItem(selectionKey(companyId), JSON.stringify(selected));
-      sessionStorage.setItem(`${selectionKey(companyId)}:urls`, JSON.stringify(active.map((item) => item.previewUrl)));
+      sessionStorage.setItem(`${selectionKey(companyId)}:urls`, JSON.stringify(urls));
+      sessionStorage.setItem("sf-growth-ai:studio:active-reference-urls", JSON.stringify(urls));
     } catch {
       // Session storage is only an optimization for cross-tab continuity.
     }
