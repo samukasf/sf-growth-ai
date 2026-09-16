@@ -13,6 +13,10 @@ import {
   PlayCircle,
   Send,
   Sparkles,
+  PencilLine,
+  RotateCcw,
+  SlidersHorizontal,
+  Eye,
 } from "lucide-react";
 
 import { cn } from "@/utils/cn";
@@ -27,6 +31,7 @@ import { SOCIAL_PLATFORMS } from "./samuel-content.types";
 import {
   isPublishableVideoBlob,
   renderSamuelCampaignVideo,
+  type SamuelVideoQuality,
 } from "./samuel-video-renderer.client";
 
 type Props = { companyId: string };
@@ -47,6 +52,7 @@ type PublishState = {
   permalink?: string | null;
   error?: string | null;
 };
+type AspectRatio = SamuelContentProject["aspectRatio"];
 
 const LABELS: Record<SocialPlatform, string> = {
   facebook: "Facebook",
@@ -90,6 +96,9 @@ function permalinkFromJob(job: PublishJob | undefined) {
 
 export function SamuelContentStudio({ companyId }: Props) {
   const [format, setFormat] = useState<ContentFormat>("video");
+  const [aspectRatio, setAspectRatio] = useState<AspectRatio>("9:16");
+  const [quality, setQuality] = useState<SamuelVideoQuality>("1080p");
+  const [fps, setFps] = useState<24 | 30 | 60>(30);
   const [brief, setBrief] = useState("");
   const [platforms, setPlatforms] = useState<SocialPlatform[]>([...SOCIAL_PLATFORMS]);
   const [project, setProject] = useState<SamuelContentProject | null>(null);
@@ -108,6 +117,8 @@ export function SamuelContentStudio({ companyId }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [autoProduce, setAutoProduce] = useState(false);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [previewApproved, setPreviewApproved] = useState(false);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -119,6 +130,7 @@ export function SamuelContentStudio({ companyId }: Props) {
         setProject(next);
         setBrief(next.objective);
         setFormat(next.format);
+        setAspectRatio(next.aspectRatio);
         setPlatforms(next.platforms);
         setAutoProduce(true);
         sessionStorage.removeItem("sf-growth-ai:samuel-content:incoming");
@@ -178,13 +190,18 @@ export function SamuelContentStudio({ companyId }: Props) {
     setAudioUrl(null);
     setAiVideoStatus(null);
     setPublishState({});
+    setPreviewApproved(false);
+  }
+
+  function updateProject(next: SamuelContentProject) {
+    setProject(next);
+    clearProducedMedia();
+    setWarning("O roteiro foi alterado. Gere novamente a prévia antes de publicar.");
   }
 
   async function createCampaign() {
     if (brief.trim().length < 10 || platforms.length === 0) {
-      setError(platforms.length
-        ? "Descreva melhor o produto e o objetivo da campanha."
-        : "Escolha ao menos uma rede social.");
+      setError(platforms.length ? "Descreva melhor o produto e o objetivo da campanha." : "Escolha ao menos uma rede social.");
       return;
     }
     setGenerating(true);
@@ -196,13 +213,7 @@ export function SamuelContentStudio({ companyId }: Props) {
       const response = await fetch("/api/samuel-ai/content-studio", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          companyId,
-          brief,
-          format,
-          platforms,
-          aspectRatio: format === "video" ? "9:16" : "1:1",
-        }),
+        body: JSON.stringify({ companyId, brief, format, platforms, aspectRatio: format === "video" ? aspectRatio : "1:1" }),
       });
       const payload = await response.json() as {
         project?: SamuelContentProject;
@@ -210,12 +221,11 @@ export function SamuelContentStudio({ companyId }: Props) {
         warning?: string;
         error?: string;
       };
-      if (!response.ok || !payload.project) {
-        throw new Error(payload.error || "Não foi possível criar a campanha.");
-      }
-      setProject(payload.project);
+      if (!response.ok || !payload.project) throw new Error(payload.error || "Não foi possível criar a campanha.");
+      setProject({ ...payload.project, aspectRatio: format === "video" ? aspectRatio : "1:1" });
       if (payload.readiness) setReadiness(payload.readiness);
       setWarning(payload.warning ?? null);
+      setEditorOpen(true);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Falha ao criar campanha.");
     } finally {
@@ -232,11 +242,7 @@ export function SamuelContentStudio({ companyId }: Props) {
     form.set("projectId", activeProject.id);
     form.set("file", new File([blob], `${activeProject.id}.mp4`, { type: "video/mp4" }));
     const response = await fetch("/api/samuel-ai/content-studio/media", { method: "POST", body: form });
-    const payload = await response.json().catch(() => ({})) as {
-      assetPath?: string;
-      previewUrl?: string;
-      error?: string;
-    };
+    const payload = await response.json().catch(() => ({})) as { assetPath?: string; previewUrl?: string; error?: string };
     if (!response.ok || !payload.assetPath) throw new Error(payload.error || "Falha ao guardar vídeo MP4.");
     return payload;
   }, [companyId]);
@@ -247,6 +253,7 @@ export function SamuelContentStudio({ companyId }: Props) {
     setRenderProgress(0);
     setError(null);
     setWarning(null);
+    setPreviewApproved(false);
     try {
       const response = await fetch("/api/samuel-ai/voice/tts", {
         method: "POST",
@@ -262,11 +269,10 @@ export function SamuelContentStudio({ companyId }: Props) {
       const nextAudioUrl = URL.createObjectURL(audio);
       setAudioUrl(nextAudioUrl);
       if (project.format === "video") {
-        const video = await renderSamuelCampaignVideo(project, audio, setRenderProgress);
+        const video = await renderSamuelCampaignVideo(project, audio, setRenderProgress, { quality, fps });
         if (videoUrl?.startsWith("blob:")) URL.revokeObjectURL(videoUrl);
-        const nextVideoUrl = URL.createObjectURL(video);
         setVideoBlob(video);
-        setVideoUrl(nextVideoUrl);
+        setVideoUrl(URL.createObjectURL(video));
         setVideoAssetPath(null);
         setVideoSource("browser");
         if (isPublishableVideoBlob(video)) {
@@ -277,7 +283,7 @@ export function SamuelContentStudio({ companyId }: Props) {
             setWarning(uploadError instanceof Error ? uploadError.message : "O vídeo foi criado, mas não pôde ser preparado para publicação.");
           }
         } else {
-          setWarning("O vídeo foi criado em WebM para prévia. Gere o vídeo IA MP4 ou use um navegador com MediaRecorder MP4 para publicar automaticamente.");
+          setWarning("A prévia foi criada em WebM. Para publicar automaticamente, gere MP4 pela IA ou use um navegador com MediaRecorder MP4.");
         }
       }
     } catch (cause) {
@@ -285,7 +291,7 @@ export function SamuelContentStudio({ companyId }: Props) {
     } finally {
       setRendering(false);
     }
-  }, [audioUrl, companyId, project, rendering, uploadBrowserMp4, videoUrl]);
+  }, [audioUrl, companyId, fps, project, quality, rendering, uploadBrowserMp4, videoUrl]);
 
   async function generateAiVideo() {
     if (!project || project.format !== "video" || aiVideoBusy) return;
@@ -296,9 +302,10 @@ export function SamuelContentStudio({ companyId }: Props) {
     setAiVideoBusy(true);
     setError(null);
     setWarning(null);
+    setPreviewApproved(false);
     setAiVideoStatus("Iniciando geração cinematográfica…");
     const visualBrief = [
-      `Crie um vídeo publicitário ${project.aspectRatio === "9:16" ? "vertical" : "cinematográfico"} premium para ${project.name}.`,
+      `Crie um vídeo publicitário ${project.aspectRatio === "9:16" ? "vertical" : project.aspectRatio === "1:1" ? "quadrado" : "horizontal"} premium para ${project.name}.`,
       `Objetivo: ${project.objective}. Público: ${project.audience}. Gancho: ${project.hook}.`,
       ...project.scenes.map((scene, index) => `Cena ${index + 1}: ${scene.visualDirection}. Ideia: ${scene.headline}.`),
       "Movimento de câmera natural, iluminação publicitária, aparência realista, transições elegantes. Não invente logotipos e evite texto embutido na imagem.",
@@ -307,45 +314,28 @@ export function SamuelContentStudio({ companyId }: Props) {
       const response = await fetch("/api/samuel-ai/content-studio/ai-video", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          companyId,
-          projectId: project.id,
-          title: project.name,
-          aspectRatio: project.aspectRatio,
-          prompt: visualBrief,
-        }),
+        body: JSON.stringify({ companyId, projectId: project.id, title: project.name, aspectRatio: project.aspectRatio, prompt: visualBrief }),
       });
-      const started = await response.json().catch(() => ({})) as {
-        generationId?: string;
-        status?: string;
-        error?: string;
-      };
+      const started = await response.json().catch(() => ({})) as { generationId?: string; status?: string; error?: string };
       if (!response.ok || !started.generationId) throw new Error(started.error || "A geração IA não iniciou.");
       const generationId = started.generationId;
       for (let attempt = 0; attempt < 60; attempt += 1) {
         if (attempt > 0) await sleep(10_000);
         setAiVideoStatus(`Gerando vídeo IA… ${Math.min(95, 8 + attempt * 2)}%`);
         const check = await fetch(`/api/samuel-ai/content-studio/ai-video?companyId=${encodeURIComponent(companyId)}&generationId=${encodeURIComponent(generationId)}`, { cache: "no-store" });
-        const payload = await check.json().catch(() => ({})) as {
-          status?: string;
-          previewUrl?: string;
-          assetPath?: string;
-          error?: string;
-        };
+        const payload = await check.json().catch(() => ({})) as { status?: string; previewUrl?: string; assetPath?: string; error?: string };
         if (payload.status === "completed" && payload.previewUrl && payload.assetPath) {
           if (videoUrl?.startsWith("blob:")) URL.revokeObjectURL(videoUrl);
           setVideoUrl(payload.previewUrl);
           setVideoBlob(null);
           setVideoAssetPath(payload.assetPath);
           setVideoSource("ai");
-          setAiVideoStatus("Vídeo IA MP4 pronto e guardado com segurança.");
+          setAiVideoStatus("Vídeo IA MP4 pronto. Revise a prévia antes de publicar.");
           return;
         }
-        if (payload.status === "failed" || (!check.ok && check.status !== 202)) {
-          throw new Error(payload.error || "A geração IA falhou.");
-        }
+        if (payload.status === "failed" || (!check.ok && check.status !== 202)) throw new Error(payload.error || "A geração IA falhou.");
       }
-      throw new Error("A geração IA demorou além do esperado. O trabalho ficou guardado e pode ser consultado novamente.");
+      throw new Error("A geração IA demorou além do esperado. O trabalho ficou guardado para consulta.");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Falha ao gerar vídeo IA.");
       setAiVideoStatus(null);
@@ -364,6 +354,7 @@ export function SamuelContentStudio({ companyId }: Props) {
   }, [autoProduce, generateNarrationAndVideo, project, rendering]);
 
   async function ensurePublishAsset() {
+    if (!previewApproved) throw new Error("Revise a prévia e clique em “Aprovar para publicação” antes de publicar.");
     if (videoAssetPath) return videoAssetPath;
     if (!project || !videoBlob) throw new Error("Gere o vídeo antes de publicar.");
     const uploaded = await uploadBrowserMp4(videoBlob, project);
@@ -383,17 +374,7 @@ export function SamuelContentStudio({ companyId }: Props) {
         continue;
       }
       const permalink = permalinkFromJob(job);
-      setPublishState((current) => ({
-        ...current,
-        [platform]: {
-          busy: job.status === "processing" || job.status === "queued",
-          status: job.status,
-          jobId: job.id,
-          postId: job.providerPostId ?? null,
-          permalink,
-          error: job.error ?? null,
-        },
-      }));
+      setPublishState((current) => ({ ...current, [platform]: { busy: job.status === "processing" || job.status === "queued", status: job.status, jobId: job.id, postId: job.providerPostId ?? null, permalink, error: job.error ?? null } }));
       if (job.status === "published") return job;
       if (job.status === "failed") throw new Error(job.error || "A Meta recusou a publicação.");
     }
@@ -403,12 +384,15 @@ export function SamuelContentStudio({ companyId }: Props) {
   async function publishMetaVideo(platform: MetaPublishPlatform, caption: string) {
     if (platform !== "facebook" && platform !== "instagram") return;
     if (!project || publishState[platform]?.busy) return;
+    if (!previewApproved) {
+      setError("Antes de publicar, assista ao vídeo e clique em “Aprovar para publicação”.");
+      return;
+    }
     if (!readiness?.publishing[platform].ready) {
       setError(readiness?.publishing[platform].detail || `Conecte ${LABELS[platform]} antes de publicar.`);
       return;
     }
-    const confirmed = window.confirm(`Publicar este vídeo agora em ${LABELS[platform]}? A ação será enviada à conta conectada desta empresa.`);
-    if (!confirmed) return;
+    if (!window.confirm(`Publicar o vídeo aprovado agora em ${LABELS[platform]}?`)) return;
 
     setError(null);
     setPublishState((current) => ({ ...current, [platform]: { busy: true, status: "queued" } }));
@@ -417,71 +401,48 @@ export function SamuelContentStudio({ companyId }: Props) {
       const response = await fetch("/api/samuel-ai/content-studio/publish", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          companyId,
-          projectId: project.id,
-          platform,
-          assetPath,
-          caption,
-          confirm: true,
-        }),
+        body: JSON.stringify({ companyId, projectId: project.id, platform, assetPath, caption, confirm: true }),
       });
       const payload = await response.json().catch(() => ({})) as { job?: PublishJob; error?: string };
       if (!payload.job) throw new Error(payload.error || "A publicação não iniciou.");
       if (payload.job.status === "published") {
-        setPublishState((current) => ({
-          ...current,
-          [platform]: {
-            busy: false,
-            status: "published",
-            jobId: payload.job!.id,
-            postId: payload.job!.providerPostId ?? null,
-            permalink: permalinkFromJob(payload.job),
-          },
-        }));
+        setPublishState((current) => ({ ...current, [platform]: { busy: false, status: "published", jobId: payload.job!.id, postId: payload.job!.providerPostId ?? null, permalink: permalinkFromJob(payload.job) } }));
         return;
       }
       await pollPublication(platform, payload.job.id);
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : "Falha ao publicar vídeo.";
       setError(message);
-      setPublishState((current) => ({
-        ...current,
-        [platform]: { ...current[platform], busy: false, status: "failed", error: message },
-      }));
+      setPublishState((current) => ({ ...current, [platform]: { ...current[platform], busy: false, status: "failed", error: message } }));
     }
   }
 
   return (
-    <section className="samuel-content-studio">
+    <section className="samuel-content-studio space-y-5">
       <div className="samuel-content-studio__header">
         <div>
           <span><Sparkles /> SOCIAL CONTENT ENGINE</span>
-          <h2>Vídeos e posts, do pedido à publicação verificada.</h2>
-          <p>O Samuel cria estratégia, roteiro, voz, vídeo e adapta a campanha por rede. Facebook e Instagram só aparecem como publicados depois de confirmação da API oficial.</p>
+          <h2>Criação, edição, prévia e publicação em um único fluxo.</h2>
+          <p>Nenhum vídeo é publicado sem passar pela prévia e pela aprovação explícita. Edite roteiro, cenas, formato e qualidade antes da publicação.</p>
         </div>
         <div className="samuel-content-status"><strong>{connectedCount}/5</strong><span>redes com credencial de publicação</span></div>
       </div>
 
+      <div className="grid gap-3 lg:grid-cols-4">
+        {["1. Criar", "2. Editar", "3. Pré-visualizar", "4. Aprovar e publicar"].map((label, index) => (
+          <div key={label} className={cn("rounded-2xl border px-4 py-3 text-sm", index === 0 || project ? "border-cyan-400/20 bg-cyan-400/[.05] text-cyan-50" : "border-white/10 bg-white/[.02] text-white/35")}>{label}</div>
+        ))}
+      </div>
+
       <section className="samuel-content-connections" aria-label="Conexões das redes sociais">
-        <div className="samuel-content-connections__heading">
-          <div><span>CONTAS DE PUBLICAÇÃO</span><h3>Conecte cada empresa aos próprios ativos.</h3></div>
-          <strong>{connectedCount === 5 ? "Todas conectadas" : `${connectedCount} de 5 conectadas`}</strong>
-        </div>
+        <div className="samuel-content-connections__heading"><div><span>CONTAS DE PUBLICAÇÃO</span><h3>Contas conectadas por empresa</h3></div><strong>{connectedCount === 5 ? "Todas conectadas" : `${connectedCount} de 5 conectadas`}</strong></div>
         <div className="samuel-content-connections__grid">
           {SOCIAL_PLATFORMS.map((platform) => {
             const Icon = ICONS[platform];
             const item = readiness?.publishing[platform];
-            return (
-              <article key={platform} className={cn(item?.ready && "is-ready")}>
-                <Icon />
-                <div><strong>{LABELS[platform]}</strong><small>{item?.ready ? "Conta pronta" : item?.detail ?? "Verificando conexão…"}</small></div>
-                <button type="button" onClick={() => openPlatformSetup(platform)}>{item?.ready ? "Gerenciar" : "Conectar"}</button>
-              </article>
-            );
+            return <article key={platform} className={cn(item?.ready && "is-ready")}><Icon /><div><strong>{LABELS[platform]}</strong><small>{item?.ready ? "Conta pronta" : item?.detail ?? "Verificando conexão…"}</small></div><button type="button" onClick={() => openPlatformSetup(platform)}>{item?.ready ? "Gerenciar" : "Conectar"}</button></article>;
           })}
         </div>
-        <p>Facebook/Instagram exigem confirmação final e retorno verificado da Meta. YouTube, TikTok e LinkedIn continuam bloqueados até seus publicadores oficiais estarem validados.</p>
       </section>
 
       <div className="samuel-content-grid">
@@ -490,56 +451,66 @@ export function SamuelContentStudio({ companyId }: Props) {
             <button type="button" className={cn(format === "video" && "is-active")} onClick={() => setFormat("video")}><Film /> Vídeo</button>
             <button type="button" className={cn(format === "post" && "is-active")} onClick={() => setFormat("post")}><Send /> Postagem</button>
           </div>
+
+          {format === "video" && <div className="mt-4 rounded-2xl border border-cyan-300/10 bg-[#06121f] p-4">
+            <div className="mb-3 flex items-center gap-2 text-xs font-semibold text-white"><SlidersHorizontal className="size-4 text-cyan-300" />Configuração do vídeo</div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <label className="text-xs text-white/60">Formato<select value={aspectRatio} onChange={(event) => setAspectRatio(event.target.value as AspectRatio)} className="mt-2 min-h-11 w-full rounded-xl border border-white/10 bg-[#020914] px-3 text-white"><option value="9:16">Vertical 9:16 · Reels/Shorts</option><option value="1:1">Quadrado 1:1 · Feed</option><option value="16:9">Horizontal 16:9 · YouTube</option></select></label>
+              <label className="text-xs text-white/60">Qualidade<select value={quality} onChange={(event) => setQuality(event.target.value as SamuelVideoQuality)} className="mt-2 min-h-11 w-full rounded-xl border border-white/10 bg-[#020914] px-3 text-white"><option value="720p">HD 720p</option><option value="1080p">Full HD 1080p</option><option value="1440p">2K 1440p</option></select></label>
+              <label className="text-xs text-white/60">Movimento<select value={fps} onChange={(event) => setFps(Number(event.target.value) as 24 | 30 | 60)} className="mt-2 min-h-11 w-full rounded-xl border border-white/10 bg-[#020914] px-3 text-white"><option value={24}>24 fps · Cinematográfico</option><option value={30}>30 fps · Padrão</option><option value={60}>60 fps · Fluido</option></select></label>
+            </div>
+          </div>}
+
           <label htmlFor="campaign-brief">O que o Samuel deve criar?</label>
           <textarea id="campaign-brief" value={brief} onChange={(event) => setBrief(event.target.value)} placeholder="Ex.: Faça um vídeo sobre o produto X, explique o benefício principal e publique no Instagram e Facebook…" />
           <div className="samuel-content-examples">{EXAMPLES.map((example) => <button key={example} type="button" onClick={() => setBrief(example)}><Sparkles /> {example}</button>)}</div>
           <label>Onde deseja publicar?</label>
-          <div className="samuel-platform-picker">
-            {SOCIAL_PLATFORMS.map((platform) => {
-              const Icon = ICONS[platform];
-              const ready = readiness?.publishing[platform].ready;
-              return <button type="button" key={platform} onClick={() => togglePlatform(platform)} className={cn(platforms.includes(platform) && "is-selected")}><Icon /><span>{LABELS[platform]}</span><i className={cn(ready && "is-ready")} title={readiness?.publishing[platform].detail}>{ready ? <Check /> : null}</i></button>;
-            })}
-          </div>
-          <button type="button" className="samuel-content-create" onClick={() => void createCampaign()} disabled={generating}>
-            {generating ? <LoaderCircle className="animate-spin" /> : <Sparkles />} {generating ? "Criando campanha…" : "Criar campanha completa"}
-          </button>
+          <div className="samuel-platform-picker">{SOCIAL_PLATFORMS.map((platform) => { const Icon = ICONS[platform]; const ready = readiness?.publishing[platform].ready; return <button type="button" key={platform} onClick={() => togglePlatform(platform)} className={cn(platforms.includes(platform) && "is-selected")}><Icon /><span>{LABELS[platform]}</span><i className={cn(ready && "is-ready")}>{ready ? <Check /> : null}</i></button>; })}</div>
+          <button type="button" className="samuel-content-create" onClick={() => void createCampaign()} disabled={generating}>{generating ? <LoaderCircle className="animate-spin" /> : <Sparkles />} {generating ? "Criando campanha…" : "Criar campanha completa"}</button>
           {error && <p className="samuel-content-feedback is-error">{error}</p>}
           {warning && <p className="samuel-content-feedback is-warning">{warning}</p>}
         </div>
 
         <aside className="samuel-content-pipeline">
-          <span>PIPELINE REAL DE PRODUÇÃO</span>
-          {[
-            ["01", "Estratégia e roteiro", readiness?.generation.ready, "AI Gateway"],
-            ["02", "Narração natural", readiness?.narration.ready, readiness?.narration.provider ?? "ElevenLabs"],
-            ["03", "Vídeo IA MP4", readiness?.aiVideo.ready, readiness?.aiVideo.model ?? "ElevenLabs Video"],
-            ["04", "Armazenamento seguro", true, "Supabase · tenant scoped"],
-            ["05", "Publicação verificada", Boolean(readiness?.publishing.facebook.ready || readiness?.publishing.instagram.ready), "Meta Graph API"],
-          ].map(([number, title, ready, detail]) => <div key={String(number)}><b>{number}</b><p><strong>{title}</strong><small>{detail}</small></p><i className={cn(Boolean(ready) && "is-ready")} /></div>)}
+          <span>FLUXO DE PRODUÇÃO</span>
+          {[["01", "Roteiro editável", Boolean(project), "Revise antes de renderizar"], ["02", "Narração natural", readiness?.narration.ready, readiness?.narration.provider ?? "ElevenLabs"], ["03", "Prévia de vídeo", Boolean(videoUrl), `${aspectRatio} · ${quality} · ${fps}fps`], ["04", "Aprovação manual", previewApproved, previewApproved ? "Aprovado" : "Obrigatória antes de publicar"], ["05", "Publicação verificada", Boolean(readiness?.publishing.facebook.ready || readiness?.publishing.instagram.ready), "Meta Graph API"]].map(([number, title, ready, detail]) => <div key={String(number)}><b>{number}</b><p><strong>{title}</strong><small>{detail}</small></p><i className={cn(Boolean(ready) && "is-ready")} /></div>)}
         </aside>
       </div>
 
       {project && <div className="samuel-content-result">
-        <div className="samuel-content-result__summary"><span>CAMPANHA CRIADA</span><h3>{project.name}</h3><p>{project.objective}</p><div><b>Público</b>{project.audience}</div><div><b>Gancho</b>{project.hook}</div></div>
+        <div className="samuel-content-result__summary"><span>CAMPANHA CRIADA</span><h3>{project.name}</h3><p>{project.objective}</p><div><b>Público</b>{project.audience}</div><div><b>Gancho</b>{project.hook}</div><button type="button" onClick={() => setEditorOpen((current) => !current)} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl border border-cyan-400/20 bg-cyan-400/[.07] px-4 text-xs text-cyan-50"><PencilLine className="size-4" />{editorOpen ? "Fechar editor" : "Editar antes de gerar"}</button></div>
+
+        {editorOpen && <section className="col-span-full rounded-[22px] border border-cyan-400/15 bg-[#04101c] p-4 sm:p-5">
+          <div className="mb-4 flex items-center justify-between gap-3"><div><span className="text-[9px] uppercase tracking-[.2em] text-cyan-300/60">EDITOR</span><h3 className="mt-1 font-semibold text-white">Revise o conteúdo antes do vídeo</h3></div><RotateCcw className="size-5 text-cyan-300/50" /></div>
+          <div className="grid gap-3 lg:grid-cols-2">
+            <label className="text-xs text-white/55">Gancho<input value={project.hook} onChange={(event) => updateProject({ ...project, hook: event.target.value })} className="mt-2 min-h-11 w-full rounded-xl border border-white/10 bg-[#020914] px-3 text-white" /></label>
+            <label className="text-xs text-white/55">Chamada para ação<input value={project.callToAction} onChange={(event) => updateProject({ ...project, callToAction: event.target.value })} className="mt-2 min-h-11 w-full rounded-xl border border-white/10 bg-[#020914] px-3 text-white" /></label>
+          </div>
+          <label className="mt-3 block text-xs text-white/55">Roteiro<textarea value={project.script} onChange={(event) => updateProject({ ...project, script: event.target.value })} className="mt-2 min-h-32 w-full rounded-xl border border-white/10 bg-[#020914] p-3 text-sm text-white" /></label>
+          <div className="mt-4 space-y-3">{project.scenes.map((scene, index) => <div key={index} className="rounded-2xl border border-white/[.07] bg-white/[.02] p-3"><div className="mb-2 text-[10px] font-semibold uppercase tracking-[.18em] text-cyan-300/55">Cena {index + 1}</div><input value={scene.headline} onChange={(event) => { const scenes = project.scenes.map((item, i) => i === index ? { ...item, headline: event.target.value } : item); updateProject({ ...project, scenes }); }} className="min-h-10 w-full rounded-lg border border-white/10 bg-[#020914] px-3 text-sm text-white" /><textarea value={scene.supportingText} onChange={(event) => { const scenes = project.scenes.map((item, i) => i === index ? { ...item, supportingText: event.target.value } : item); updateProject({ ...project, scenes }); }} className="mt-2 min-h-20 w-full rounded-lg border border-white/10 bg-[#020914] p-3 text-sm text-white" /><textarea value={scene.visualDirection} onChange={(event) => { const scenes = project.scenes.map((item, i) => i === index ? { ...item, visualDirection: event.target.value } : item); updateProject({ ...project, scenes }); }} className="mt-2 min-h-16 w-full rounded-lg border border-white/10 bg-[#020914] p-3 text-xs text-white/75" /></div>)}</div>
+        </section>}
+
         <div className="samuel-content-scenes"><span>ROTEIRO E CENAS</span>{project.scenes.map((scene, index) => <article key={`${scene.headline}-${index}`}><b>{String(index + 1).padStart(2, "0")}</b><div><strong>{scene.headline}</strong><p>{scene.supportingText}</p><small>{scene.durationSeconds}s · {scene.visualDirection}</small></div></article>)}</div>
+
         <div className="samuel-content-preview">
-          <span>PRODUÇÃO</span>
-          <div className="samuel-content-phone">{videoUrl ? <video src={videoUrl} controls playsInline /> : <div><Film /><strong>Prévia do vídeo</strong><p>Escolha montagem completa com voz ou vídeo visual IA MP4.</p></div>}</div>
+          <span>PRÉVIA OBRIGATÓRIA</span>
+          <div className="samuel-content-phone">{videoUrl ? <video src={videoUrl} controls playsInline preload="metadata" /> : <div><Eye /><strong>Veja antes de publicar</strong><p>Gere o vídeo, assista, edite se necessário e só então aprove.</p></div>}</div>
           {audioUrl && <audio src={audioUrl} controls />}
-          <button type="button" onClick={() => void generateNarrationAndVideo()} disabled={rendering || aiVideoBusy}>{rendering ? <LoaderCircle className="animate-spin" /> : <Mic2 />}{rendering ? `Montando vídeo · ${renderProgress}%` : project.format === "video" ? "Gerar campanha com voz" : "Gerar narração"}</button>
+          <button type="button" onClick={() => void generateNarrationAndVideo()} disabled={rendering || aiVideoBusy}>{rendering ? <LoaderCircle className="animate-spin" /> : <Mic2 />}{rendering ? `Montando vídeo · ${renderProgress}%` : project.format === "video" ? `Gerar prévia ${quality} · ${fps}fps` : "Gerar narração"}</button>
           {project.format === "video" && <button type="button" className="is-secondary" onClick={() => void generateAiVideo()} disabled={aiVideoBusy || rendering || !readiness?.aiVideo.ready}>{aiVideoBusy ? <LoaderCircle className="animate-spin" /> : <Sparkles />}{aiVideoBusy ? aiVideoStatus ?? "Gerando vídeo IA…" : "Gerar vídeo visual IA MP4"}</button>}
           {aiVideoStatus && !aiVideoBusy && <p className="samuel-content-feedback">{aiVideoStatus}</p>}
-          {videoSource && <small>{videoSource === "ai" ? "Fonte: vídeo IA persistido em MP4" : `Fonte: renderizador completo · ${videoBlob?.type || "vídeo"}`}{videoAssetPath ? " · pronto para publicação" : ""}</small>}
+          {videoSource && <small>{videoSource === "ai" ? "Fonte: vídeo IA MP4" : `Fonte: renderizador ${quality} · ${fps}fps · ${videoBlob?.type || "vídeo"}`}{videoAssetPath ? " · guardado para publicação" : ""}</small>}
+          {videoUrl && <button type="button" className={cn("is-secondary", previewApproved && "!border-emerald-400/40 !bg-emerald-400/10")} onClick={() => setPreviewApproved((current) => !current)}><Check />{previewApproved ? "Aprovado para publicação" : "Aprovar para publicação"}</button>}
           {videoBlob && <button type="button" className="is-secondary" onClick={() => downloadBlob(videoBlob, `${project.name.replace(/\W+/g, "-").toLowerCase()}.${isPublishableVideoBlob(videoBlob) ? "mp4" : "webm"}`)}><Download /> Baixar vídeo</button>}
         </div>
+
         <div className="samuel-content-copies"><span>TEXTOS E PUBLICAÇÃO POR REDE</span>{project.socialCopies.map((copy) => {
           const Icon = ICONS[copy.platform];
           const ready = readiness?.publishing[copy.platform].ready;
           const isMeta = copy.platform === "facebook" || copy.platform === "instagram";
           const metaState = isMeta ? publishState[copy.platform] : undefined;
           const caption = `${copy.caption}\n\n${copy.hashtags.map((tag) => `#${tag}`).join(" ")}`.trim();
-          return <article key={copy.platform}><div><Icon /><strong>{LABELS[copy.platform]}</strong><i className={cn(ready && "is-ready")} /></div><p>{copy.caption}</p><small>{copy.hashtags.map((tag) => `#${tag}`).join(" ")}</small>{isMeta && ready && project.format === "video" ? <button type="button" onClick={() => void publishMetaVideo(copy.platform, caption)} disabled={metaState?.busy || !videoUrl}><Send />{metaState?.busy ? "Publicando e verificando…" : metaState?.status === "published" ? "Publicado e verificado" : "Publicar vídeo agora"}</button> : <button type="button" onClick={() => openPlatformSetup(copy.platform)} title={readiness?.publishing[copy.platform].detail}><Send />{ready ? "Publicador oficial pendente" : "Conectar conta"}</button>}{metaState?.status === "published" && <small>Confirmado pela Meta{metaState.postId ? ` · ID ${metaState.postId}` : ""}{metaState.permalink ? <> · <a href={metaState.permalink} target="_blank" rel="noreferrer">abrir publicação</a></> : null}</small>}{metaState?.error && <small>{metaState.error}</small>}</article>;
+          return <article key={copy.platform}><div><Icon /><strong>{LABELS[copy.platform]}</strong><i className={cn(ready && "is-ready")} /></div><p>{copy.caption}</p><small>{copy.hashtags.map((tag) => `#${tag}`).join(" ")}</small>{isMeta && ready && project.format === "video" ? <button type="button" onClick={() => void publishMetaVideo(copy.platform, caption)} disabled={metaState?.busy || !videoUrl || !previewApproved}><Send />{metaState?.busy ? "Publicando e verificando…" : metaState?.status === "published" ? "Publicado e verificado" : previewApproved ? "Publicar vídeo aprovado" : "Aprove a prévia primeiro"}</button> : <button type="button" onClick={() => openPlatformSetup(copy.platform)} title={readiness?.publishing[copy.platform].detail}><Send />{ready ? "Publicador oficial pendente" : "Conectar conta"}</button>}{metaState?.status === "published" && <small>Confirmado pela Meta{metaState.postId ? ` · ID ${metaState.postId}` : ""}{metaState.permalink ? <> · <a href={metaState.permalink} target="_blank" rel="noreferrer">abrir publicação</a></> : null}</small>}{metaState?.error && <small>{metaState.error}</small>}</article>;
         })}</div>
       </div>}
     </section>
