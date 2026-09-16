@@ -5,9 +5,17 @@ import {
   startElevenVideoGeneration,
 } from "@/features/samuel-ai/content-studio/elevenlabs-video.server";
 import {
+  falVideoReadiness,
+  getFalVideoGeneration,
+  startFalVideoGeneration,
+  type FalVideoMode,
+} from "@/features/samuel-ai/content-studio/fal-video.server";
+import {
   getRunwayVideoGeneration,
   runwayVideoReadiness,
+  startRunwayMultiShotGeneration,
   startRunwayVideoGeneration,
+  type RunwayShot,
 } from "@/features/samuel-ai/content-studio/runway-video.server";
 import { getSupabaseServiceClient } from "@/lib/supabase/service-client";
 
@@ -15,8 +23,9 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const BUCKET = "samuel-creative";
-const MAX_VIDEO_BYTES = 96 * 1024 * 1024;
-type VideoProvider = "elevenlabs" | "runway";
+const MAX_VIDEO_BYTES = 192 * 1024 * 1024;
+type VideoProvider = "elevenlabs" | "runway" | "fal";
+type GenerationMode = "single-shot" | "multi-shot" | "motion-control";
 
 function clean(value: unknown, max: number) {
   return typeof value === "string" ? value.replace(/\s+/g, " ").trim().slice(0, max) : "";
@@ -34,7 +43,18 @@ function parseReferenceImages(value: unknown) {
   if (!Array.isArray(value)) return [];
   return value
     .filter((item): item is string => typeof item === "string" && /^https:\/\//i.test(item))
-    .slice(0, 10);
+    .slice(0, 12);
+}
+
+function parseShots(value: unknown): RunwayShot[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return null;
+    const row = item as Record<string, unknown>;
+    const prompt = clean(row.prompt, 512);
+    const duration = Math.max(1, Math.min(8, Number(row.duration) || 3));
+    return prompt ? { prompt, duration } : null;
+  }).filter((item): item is RunwayShot => Boolean(item)).slice(0, 5);
 }
 
 async function signedPreview(assetPath: string) {
@@ -43,21 +63,32 @@ async function signedPreview(assetPath: string) {
   return data.signedUrl;
 }
 
-function chooseProvider(requested: string, hasReferences: boolean): VideoProvider {
+function chooseProvider(requested: string, mode: GenerationMode, hasReferences: boolean): VideoProvider {
   const eleven = elevenVideoReadiness();
   const runway = runwayVideoReadiness();
+  const fal = falVideoReadiness();
+
   if (requested === "runway") {
     if (!runway.configured) throw new Error(runway.detail);
     return "runway";
+  }
+  if (requested === "fal") {
+    if (!fal.configured) throw new Error(fal.detail);
+    return "fal";
   }
   if (requested === "elevenlabs") {
     if (!eleven.configured) throw new Error(eleven.detail);
     return "elevenlabs";
   }
+
+  if (mode === "multi-shot" && runway.configured) return "runway";
+  if (mode === "motion-control" && fal.configured) return "fal";
+  if (hasReferences && fal.configured) return "fal";
   if (hasReferences && runway.configured) return "runway";
-  if (eleven.configured) return "elevenlabs";
   if (runway.configured) return "runway";
-  throw new Error("Nenhum provedor de vídeo IA está habilitado. O renderizador Samuel com imagens de referência continua disponível sem API de vídeo externa.");
+  if (fal.configured) return "fal";
+  if (eleven.configured) return "elevenlabs";
+  throw new Error("Nenhum provedor generativo de vídeo está habilitado. Configure Runway ou FAL_KEY para gerar cenas reais; o renderizador Samuel continuará disponível apenas como fallback local.");
 }
 
 export async function POST(request: Request) {
@@ -66,37 +97,76 @@ export async function POST(request: Request) {
   const auth = await authorizeCompanyRequest(companyId);
   if (!auth.ok) return auth.response;
 
-  const prompt = clean(body?.prompt, 3_500);
+  const prompt = clean(body?.prompt, 8_000);
   const title = clean(body?.title, 120) || "Vídeo Samuel IA";
   const projectId = clean(body?.projectId, 120);
   const aspectRatio = body?.aspectRatio === "16:9" || body?.aspectRatio === "1:1" ? body.aspectRatio : "9:16";
   const resolution = body?.resolution === "720p" ? "720p" : "1080p";
   const referenceImages = parseReferenceImages(body?.referenceImages);
+  const referenceVideoUrl = clean(body?.referenceVideoUrl, 2_000);
+  const shots = parseShots(body?.shots);
+  const requestedMode = clean(body?.mode, 30);
+  const mode: GenerationMode = requestedMode === "motion-control"
+    ? "motion-control"
+    : requestedMode === "single-shot"
+      ? "single-shot"
+      : "multi-shot";
+  const generateAudio = body?.generateAudio !== false;
   if (prompt.length < 20) return Response.json({ error: "Descreva o vídeo com mais detalhe." }, { status: 400 });
 
   try {
-    const provider = chooseProvider(clean(body?.provider, 20), referenceImages.length > 0);
-    const generation = provider === "runway"
-      ? await startRunwayVideoGeneration({ prompt, aspectRatio, referenceImageUrl: referenceImages[0] ?? null })
-      : await startElevenVideoGeneration({ prompt, aspectRatio, resolution });
+    const provider = chooseProvider(clean(body?.provider, 20), mode, referenceImages.length > 0);
+    if (provider === "fal" && referenceImages.length === 0) {
+      throw new Error("Para gerar a partir da sua imagem com fal.ai, selecione ao menos uma foto de referência.");
+    }
 
-    const output = {
+    const generation = provider === "runway"
+      ? mode === "multi-shot"
+        ? await startRunwayMultiShotGeneration({
+            prompt,
+            aspectRatio,
+            referenceImageUrl: referenceImages[0] ?? null,
+            shots,
+            resolution,
+            generateAudio,
+          })
+        : await startRunwayVideoGeneration({ prompt, aspectRatio, referenceImageUrl: referenceImages[0] ?? null })
+      : provider === "fal"
+        ? await startFalVideoGeneration({
+            prompt,
+            aspectRatio,
+            referenceImageUrl: referenceImages[0],
+            referenceVideoUrl: referenceVideoUrl || null,
+            mode: mode === "motion-control" ? "motion-control" satisfies FalVideoMode : "image-to-video",
+            generateAudio,
+          })
+        : await startElevenVideoGeneration({ prompt, aspectRatio, resolution });
+
+    const output: Record<string, unknown> = {
       provider,
       generation_id: generation.id,
       model: generation.model,
       duration_seconds: generation.durationSeconds,
+      generation_mode: mode,
       project_id: projectId || null,
       aspect_ratio: aspectRatio,
-      resolution: provider === "elevenlabs" ? resolution : "provider-default",
+      resolution: provider === "runway" && mode === "multi-shot" ? resolution : provider === "elevenlabs" ? resolution : "provider-default",
       reference_count: referenceImages.length,
+      shots: shots.length,
+      generate_audio: generateAudio,
     };
+    if (provider === "fal") {
+      output.status_url = generation.statusUrl;
+      output.response_url = generation.responseUrl;
+    }
+
     const { data, error } = await getSupabaseServiceClient()
       .from("samuel_creative_jobs")
       .insert({
         user_id: auth.user.id,
         company_id: companyId,
         request_key: jobKey(provider, generation.id),
-        kind: "video",
+        kind: mode === "multi-shot" ? "video-multishot" : mode === "motion-control" ? "video-motion" : "video",
         format: formatFromAspectRatio(aspectRatio),
         prompt,
         title,
@@ -110,6 +180,7 @@ export async function POST(request: Request) {
       jobId: data.id,
       generationId: generation.id,
       provider,
+      mode,
       status: data.status,
       model: generation.model,
       durationSeconds: generation.durationSeconds,
@@ -134,14 +205,14 @@ export async function GET(request: Request) {
     .select("id,status,output,error_message,request_key")
     .eq("user_id", auth.user.id)
     .eq("company_id", companyId)
-    .in("request_key", [jobKey("elevenlabs", generationId), jobKey("runway", generationId)])
+    .in("request_key", [jobKey("elevenlabs", generationId), jobKey("runway", generationId), jobKey("fal", generationId)])
     .limit(1);
   if (jobError) return Response.json({ error: jobError.message }, { status: 500 });
   const job = jobs?.[0];
   if (!job) return Response.json({ error: "Geração não encontrada para esta empresa." }, { status: 404 });
 
   const existingOutput = (job.output ?? {}) as Record<string, unknown>;
-  const provider: VideoProvider = existingOutput.provider === "runway" ? "runway" : "elevenlabs";
+  const provider: VideoProvider = existingOutput.provider === "runway" ? "runway" : existingOutput.provider === "fal" ? "fal" : "elevenlabs";
   const existingAssetPath = typeof existingOutput.asset_path === "string" ? existingOutput.asset_path : null;
   if (job.status === "ready" && existingAssetPath) {
     return Response.json({
@@ -173,6 +244,16 @@ export async function GET(request: Request) {
       } else if (generation.status === "SUCCEEDED") {
         remoteUrl = generation.output?.[0] ?? null;
       }
+    } else if (provider === "fal") {
+      const statusUrl = typeof existingOutput.status_url === "string" ? existingOutput.status_url : "";
+      const responseUrl = typeof existingOutput.response_url === "string" ? existingOutput.response_url : "";
+      const generation = await getFalVideoGeneration(statusUrl, responseUrl);
+      status = generation.status;
+      if (generation.status === "failed") failure = generation.error;
+      if (generation.status === "completed") {
+        remoteUrl = generation.url;
+        mimeType = generation.mimeType;
+      }
     } else {
       const generation = await getElevenVideoGeneration(generationId);
       status = generation.status;
@@ -194,9 +275,9 @@ export async function GET(request: Request) {
     const remote = await fetch(remoteUrl, { cache: "no-store" });
     if (!remote.ok) throw new Error(`Falha ao baixar vídeo final de ${provider} (HTTP ${remote.status}).`);
     const declaredLength = Number(remote.headers.get("content-length") ?? 0);
-    if (declaredLength > MAX_VIDEO_BYTES) throw new Error("O vídeo final excede o limite de 96 MB do workspace criativo.");
+    if (declaredLength > MAX_VIDEO_BYTES) throw new Error("O vídeo final excede o limite de 192 MB do workspace criativo.");
     const bytes = new Uint8Array(await remote.arrayBuffer());
-    if (bytes.byteLength > MAX_VIDEO_BYTES) throw new Error("O vídeo final excede o limite de 96 MB do workspace criativo.");
+    if (bytes.byteLength > MAX_VIDEO_BYTES) throw new Error("O vídeo final excede o limite de 192 MB do workspace criativo.");
 
     const projectId = typeof existingOutput.project_id === "string" && existingOutput.project_id ? existingOutput.project_id : "generated";
     const safeProject = projectId.replace(/[^A-Za-z0-9_-]/g, "-").slice(0, 80) || "generated";
