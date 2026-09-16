@@ -1,14 +1,37 @@
 import type { SamuelContentProject } from "./samuel-content.types";
 
-function supportedMimeType() {
-  const candidates = [
+export type SamuelVideoQuality = "720p" | "1080p";
+export type SamuelVideoFileFormat = "auto" | "mp4" | "webm";
+
+export type SamuelVideoRenderOptions = {
+  quality?: SamuelVideoQuality;
+  aspectRatio?: "9:16" | "1:1" | "16:9";
+  fileFormat?: SamuelVideoFileFormat;
+};
+
+function supportedMimeType(fileFormat: SamuelVideoFileFormat) {
+  const mp4 = [
     "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
     "video/mp4",
+  ];
+  const webm = [
     "video/webm;codecs=vp9,opus",
     "video/webm;codecs=vp8,opus",
     "video/webm",
   ];
+  const candidates = fileFormat === "mp4" ? mp4 : fileFormat === "webm" ? webm : [...mp4, ...webm];
   return candidates.find((type) => MediaRecorder.isTypeSupported(type)) ?? "";
+}
+
+function canvasSize(quality: SamuelVideoQuality, aspectRatio: "9:16" | "1:1" | "16:9") {
+  if (quality === "1080p") {
+    if (aspectRatio === "16:9") return [1920, 1080] as const;
+    if (aspectRatio === "1:1") return [1080, 1080] as const;
+    return [1080, 1920] as const;
+  }
+  if (aspectRatio === "16:9") return [1280, 720] as const;
+  if (aspectRatio === "1:1") return [720, 720] as const;
+  return [720, 1280] as const;
 }
 
 export function isPublishableVideoBlob(blob: Blob | null | undefined) {
@@ -36,11 +59,21 @@ export async function renderSamuelCampaignVideo(
   project: SamuelContentProject,
   audio: Blob,
   onProgress?: (progress: number) => void,
+  options: SamuelVideoRenderOptions = {},
 ) {
   if (typeof MediaRecorder === "undefined" || !HTMLCanvasElement.prototype.captureStream) {
     throw new Error("Este navegador não consegue montar vídeo. Use Chrome ou Edge atualizado no computador.");
   }
-  const [width, height] = project.aspectRatio === "16:9" ? [1280, 720] : project.aspectRatio === "1:1" ? [900, 900] : [720, 1280];
+
+  const quality = options.quality ?? "720p";
+  const aspectRatio = options.aspectRatio ?? project.aspectRatio;
+  const fileFormat = options.fileFormat ?? "auto";
+  const mimeType = supportedMimeType(fileFormat);
+  if (!mimeType && fileFormat !== "auto") {
+    throw new Error(`Este navegador não suporta gravação ${fileFormat.toUpperCase()} neste modo. Escolha Automático ou outro formato.`);
+  }
+
+  const [width, height] = canvasSize(quality, aspectRatio);
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
@@ -61,10 +94,10 @@ export async function renderSamuelCampaignVideo(
   source.connect(audioContext.destination);
   const canvasStream = canvas.captureStream(30);
   const stream = new MediaStream([...canvasStream.getVideoTracks(), ...destination.stream.getAudioTracks()]);
-  const mimeType = supportedMimeType();
+  const videoBitsPerSecond = quality === "1080p" ? 8_500_000 : 4_500_000;
   const recorder = new MediaRecorder(
     stream,
-    mimeType ? { mimeType, videoBitsPerSecond: 4_000_000 } : undefined,
+    mimeType ? { mimeType, videoBitsPerSecond } : { videoBitsPerSecond },
   );
   const chunks: BlobPart[] = [];
   recorder.ondataavailable = (event) => {
@@ -89,20 +122,27 @@ export async function renderSamuelCampaignVideo(
       cursor += item.durationSeconds;
       return sceneTime <= cursor;
     }) ?? project.scenes.at(-1)!;
-    const glow = 0.5 + Math.sin(elapsed * 1.8) * 0.12;
+    const pulse = 0.5 + Math.sin(elapsed * 1.8) * 0.12;
     const gradient = context.createRadialGradient(width * .5, height * .38, 20, width * .5, height * .45, height * .72);
-    gradient.addColorStop(0, `rgba(20,150,255,${glow})`);
+    gradient.addColorStop(0, `rgba(20,150,255,${pulse})`);
     gradient.addColorStop(.38, "#071c43");
     gradient.addColorStop(1, "#020711");
     context.fillStyle = gradient;
     context.fillRect(0, 0, width, height);
-    context.strokeStyle = "rgba(61,218,255,.24)";
-    context.lineWidth = 2;
-    for (let i = 0; i < 4; i += 1) {
+
+    const driftX = Math.sin(elapsed * .7) * width * .012;
+    const driftY = Math.cos(elapsed * .55) * height * .008;
+    context.save();
+    context.translate(driftX, driftY);
+    context.strokeStyle = "rgba(61,218,255,.26)";
+    context.lineWidth = Math.max(2, width * .0015);
+    for (let i = 0; i < 5; i += 1) {
       context.beginPath();
-      context.arc(width / 2, height * .36, width * (.17 + i * .065 + Math.sin(elapsed + i) * .008), 0, Math.PI * 2);
+      context.arc(width / 2, height * .36, width * (.15 + i * .055 + Math.sin(elapsed + i) * .009), 0, Math.PI * 2);
       context.stroke();
     }
+    context.restore();
+
     context.fillStyle = "#54e5ff";
     context.font = `700 ${Math.round(width * .027)}px system-ui`;
     context.textAlign = "center";
