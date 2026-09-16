@@ -1,5 +1,11 @@
 import type { SamuelContentProject } from "./samuel-content.types";
 
+export type SamuelVideoQuality = "720p" | "1080p" | "1440p";
+export type SamuelVideoRenderOptions = {
+  quality?: SamuelVideoQuality;
+  fps?: 24 | 30 | 60;
+};
+
 function supportedMimeType() {
   const candidates = [
     "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
@@ -13,6 +19,21 @@ function supportedMimeType() {
 
 export function isPublishableVideoBlob(blob: Blob | null | undefined) {
   return Boolean(blob && blob.type.toLowerCase().startsWith("video/mp4"));
+}
+
+function dimensionsFor(project: SamuelContentProject, quality: SamuelVideoQuality) {
+  const longEdge = quality === "1440p" ? 2560 : quality === "1080p" ? 1920 : 1280;
+  if (project.aspectRatio === "16:9") return [longEdge, Math.round(longEdge * 9 / 16)] as const;
+  if (project.aspectRatio === "1:1") {
+    const side = quality === "1440p" ? 1440 : quality === "1080p" ? 1080 : 720;
+    return [side, side] as const;
+  }
+  return [Math.round(longEdge * 9 / 16), longEdge] as const;
+}
+
+function bitrateFor(quality: SamuelVideoQuality, fps: 24 | 30 | 60) {
+  const base = quality === "1440p" ? 14_000_000 : quality === "1080p" ? 8_000_000 : 4_000_000;
+  return fps === 60 ? Math.round(base * 1.45) : base;
 }
 
 function wrapText(context: CanvasRenderingContext2D, text: string, maxWidth: number) {
@@ -36,11 +57,15 @@ export async function renderSamuelCampaignVideo(
   project: SamuelContentProject,
   audio: Blob,
   onProgress?: (progress: number) => void,
+  options: SamuelVideoRenderOptions = {},
 ) {
   if (typeof MediaRecorder === "undefined" || !HTMLCanvasElement.prototype.captureStream) {
     throw new Error("Este navegador não consegue montar vídeo. Use Chrome ou Edge atualizado no computador.");
   }
-  const [width, height] = project.aspectRatio === "16:9" ? [1280, 720] : project.aspectRatio === "1:1" ? [900, 900] : [720, 1280];
+
+  const quality = options.quality ?? "1080p";
+  const fps = options.fps ?? 30;
+  const [width, height] = dimensionsFor(project, quality);
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
@@ -59,12 +84,12 @@ export async function renderSamuelCampaignVideo(
   const destination = audioContext.createMediaStreamDestination();
   source.connect(destination);
   source.connect(audioContext.destination);
-  const canvasStream = canvas.captureStream(30);
+  const canvasStream = canvas.captureStream(fps);
   const stream = new MediaStream([...canvasStream.getVideoTracks(), ...destination.stream.getAudioTracks()]);
   const mimeType = supportedMimeType();
   const recorder = new MediaRecorder(
     stream,
-    mimeType ? { mimeType, videoBitsPerSecond: 4_000_000 } : undefined,
+    mimeType ? { mimeType, videoBitsPerSecond: bitrateFor(quality, fps) } : undefined,
   );
   const chunks: BlobPart[] = [];
   recorder.ondataavailable = (event) => {
@@ -72,10 +97,7 @@ export async function renderSamuelCampaignVideo(
   };
   const completed = new Promise<Blob>((resolve, reject) => {
     recorder.onerror = () => reject(new Error("Falha ao montar o vídeo."));
-    recorder.onstop = () => {
-      const outputType = recorder.mimeType || mimeType || "video/webm";
-      resolve(new Blob(chunks, { type: outputType }));
-    };
+    recorder.onstop = () => resolve(new Blob(chunks, { type: recorder.mimeType || mimeType || "video/webm" }));
   });
 
   const totalSceneDuration = project.scenes.reduce((sum, scene) => sum + scene.durationSeconds, 0);
@@ -89,6 +111,7 @@ export async function renderSamuelCampaignVideo(
       cursor += item.durationSeconds;
       return sceneTime <= cursor;
     }) ?? project.scenes.at(-1)!;
+
     const glow = 0.5 + Math.sin(elapsed * 1.8) * 0.12;
     const gradient = context.createRadialGradient(width * .5, height * .38, 20, width * .5, height * .45, height * .72);
     gradient.addColorStop(0, `rgba(20,150,255,${glow})`);
@@ -96,21 +119,32 @@ export async function renderSamuelCampaignVideo(
     gradient.addColorStop(1, "#020711");
     context.fillStyle = gradient;
     context.fillRect(0, 0, width, height);
+
     context.strokeStyle = "rgba(61,218,255,.24)";
-    context.lineWidth = 2;
-    for (let i = 0; i < 4; i += 1) {
+    context.lineWidth = Math.max(2, width / 700);
+    for (let i = 0; i < 5; i += 1) {
       context.beginPath();
-      context.arc(width / 2, height * .36, width * (.17 + i * .065 + Math.sin(elapsed + i) * .008), 0, Math.PI * 2);
+      context.arc(width / 2, height * .36, width * (.15 + i * .055 + Math.sin(elapsed + i) * .008), 0, Math.PI * 2);
       context.stroke();
     }
+
+    context.save();
+    context.translate(width / 2, height * .36);
+    context.rotate(elapsed * .09);
+    context.strokeStyle = "rgba(139,92,246,.34)";
+    context.lineWidth = Math.max(2, width / 820);
+    context.beginPath();
+    context.ellipse(0, 0, width * .28, width * .09, .55, 0, Math.PI * 2);
+    context.stroke();
+    context.restore();
+
     context.fillStyle = "#54e5ff";
     context.font = `700 ${Math.round(width * .027)}px system-ui`;
     context.textAlign = "center";
     context.fillText("SAMUEL IA  •  SF GROWTH AI", width / 2, height * .08);
     context.fillStyle = "white";
     context.font = `800 ${Math.round(width * .075)}px system-ui`;
-    const headline = wrapText(context, scene.headline, width * .82).slice(0, 3);
-    headline.forEach((line, index) => context.fillText(line, width / 2, height * .60 + index * width * .085));
+    wrapText(context, scene.headline, width * .82).slice(0, 3).forEach((line, index) => context.fillText(line, width / 2, height * .60 + index * width * .085));
     context.fillStyle = "rgba(222,241,255,.86)";
     context.font = `500 ${Math.round(width * .035)}px system-ui`;
     wrapText(context, scene.supportingText, width * .78).slice(0, 4).forEach((line, index) => context.fillText(line, width / 2, height * .79 + index * width * .047));
