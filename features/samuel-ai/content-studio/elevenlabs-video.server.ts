@@ -18,7 +18,7 @@ export function elevenVideoReadiness() {
     provider: "ElevenLabs Image & Video API",
     model: process.env.ELEVENLABS_VIDEO_MODEL?.trim() || "veo-3.1-fast-generate-001",
     detail: configured
-      ? "Vídeo IA MP4 disponível; a conta ElevenLabs precisa de plano Pro+ e permissão Image & Video/Flows."
+      ? "Vídeo IA MP4 disponível; qualidade depende do modelo e da conta ElevenLabs configurada."
       : "Configure ELEVENLABS_API_KEY para gerar vídeo IA MP4 no servidor.",
   };
 }
@@ -54,7 +54,7 @@ async function elevenFetch(path: string, init?: RequestInit) {
         ? record.detail
         : text || `HTTP ${response.status}`;
     if (response.status === 402) {
-      throw new Error("A API de vídeo da ElevenLabs exige plano Pro ou superior e permissão Image & Video/Flows na chave API.");
+      throw new Error("A API de vídeo da ElevenLabs exige plano e acesso ao recurso Image & Video/Flows na chave API.");
     }
     throw new Error(`ElevenLabs Video API: ${detail}`);
   }
@@ -64,10 +64,11 @@ async function elevenFetch(path: string, init?: RequestInit) {
 export async function startElevenVideoGeneration(input: {
   prompt: string;
   aspectRatio: "9:16" | "16:9" | "1:1";
+  resolution?: "720p" | "1080p";
 }) {
   const modelId = process.env.ELEVENLABS_VIDEO_MODEL?.trim() || "veo-3.1-fast-generate-001";
   const duration = Math.max(4, Math.min(8, Number(process.env.ELEVENLABS_VIDEO_DURATION_SECONDS) || 8));
-  const resolution = process.env.ELEVENLABS_VIDEO_RESOLUTION?.trim() || "1080p";
+  const resolution = input.resolution ?? (process.env.ELEVENLABS_VIDEO_RESOLUTION?.trim() === "720p" ? "720p" : "1080p");
   const payload = await elevenFetch("/flows/video", {
     method: "POST",
     body: JSON.stringify({
@@ -86,6 +87,7 @@ export async function startElevenVideoGeneration(input: {
     status: payload.status ?? "pending",
     model: modelId,
     durationSeconds: duration,
+    resolution,
   };
 }
 
