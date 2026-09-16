@@ -1,6 +1,7 @@
 import { createConfiguredResponsesProvider } from "@/apps/web/src/core/orchestrator/openai-responses.provider";
 import { authorizeCompanyRequest } from "@/features/auth/server/authorization";
 import { elevenVideoReadiness } from "@/features/samuel-ai/content-studio/elevenlabs-video.server";
+import { falVideoReadiness } from "@/features/samuel-ai/content-studio/fal-video.server";
 import { runwayVideoReadiness } from "@/features/samuel-ai/content-studio/runway-video.server";
 import {
   generateContentProject,
@@ -22,21 +23,15 @@ async function readiness(companyId: string): Promise<ContentReadiness> {
   const tts = ttsProviderReadiness();
   const elevenVideo = elevenVideoReadiness();
   const runwayVideo = runwayVideoReadiness();
+  const falVideo = falVideoReadiness();
   const [meta, metaConnection] = await Promise.all([
     resolveMetaClientConfigForCompany(companyId),
     findMetaOAuthConnection(companyId).catch(() => null),
   ]);
   const scopes = grantedScopes(metaConnection?.scopes);
   const metaSelected = Boolean(metaConnection?.selectedExplicitly);
-  const facebookReady = Boolean(
-    metaSelected && meta?.accessToken && meta.pageId && scopes.has("pages_manage_posts"),
-  );
-  const instagramReady = Boolean(
-    metaSelected &&
-    meta?.accessToken &&
-    meta.instagramBusinessId &&
-    scopes.has("instagram_content_publish"),
-  );
+  const facebookReady = Boolean(metaSelected && meta?.accessToken && meta.pageId && scopes.has("pages_manage_posts"));
+  const instagramReady = Boolean(metaSelected && meta?.accessToken && meta.instagramBusinessId && scopes.has("instagram_content_publish"));
   const linkedInOrgId = process.env.LINKEDIN_ORGANIZATION_ID || process.env.LINKEDIN_ORG_ID;
   const publishing = {
     facebook: {
@@ -64,15 +59,21 @@ async function readiness(companyId: string): Promise<ContentReadiness> {
       detail: "Exige acesso de administrador e permissões de publicação da organização.",
     },
   };
-  const externalVideoReady = runwayVideo.configured || elevenVideo.configured;
-  const externalProvider = runwayVideo.configured
-    ? `${runwayVideo.provider} · ${runwayVideo.model}`
-    : `${elevenVideo.provider} · ${elevenVideo.model}`;
+
+  const externalVideoReady = runwayVideo.configured || falVideo.configured || elevenVideo.configured;
+  const preferred = runwayVideo.configured
+    ? runwayVideo
+    : falVideo.configured
+      ? falVideo
+      : elevenVideo;
   const externalDetail = runwayVideo.configured
-    ? `${runwayVideo.detail} Imagens de referência usam Runway automaticamente quando disponíveis.`
-    : elevenVideo.configured
-      ? `${elevenVideo.detail} Se a conta ElevenLabs não tiver Image & Video/Flows, use o renderizador Samuel ou configure Runway.`
-      : "Nenhum provedor externo está configurado. O renderizador Samuel continua disponível e cria vídeo real com narração e imagens de referência.";
+    ? `${runwayVideo.detail} O modo profissional usa múltiplos takes, áudio nativo quando disponível e uma imagem inicial como âncora.`
+    : falVideo.configured
+      ? `${falVideo.detail} Fotos podem gerar movimento real; com vídeo de referência o pipeline também suporta transferência de movimento.`
+      : elevenVideo.configured
+        ? `${elevenVideo.detail} Para cenas completas e múltiplos takes, configure Runway ou FAL_KEY.`
+        : "Nenhum provedor generativo está configurado. O renderizador Samuel local continua disponível, mas apenas monta fotos, textos e narração; ele não substitui um modelo generativo de vídeo.";
+
   return {
     generation: {
       ready: Boolean(createConfiguredResponsesProvider()),
@@ -87,13 +88,13 @@ async function readiness(companyId: string): Promise<ContentReadiness> {
     },
     aiVideo: {
       ready: externalVideoReady,
-      provider: externalVideoReady ? externalProvider : "Renderizador Samuel",
-      model: runwayVideo.configured ? runwayVideo.model : elevenVideo.model,
+      provider: externalVideoReady ? `${preferred.provider} · ${preferred.model}` : "Renderizador Samuel",
+      model: preferred.model,
       detail: externalDetail,
     },
     browserRenderer: {
       ready: true,
-      detail: "Cria vídeo real no navegador com narração, imagens de referência, movimento cinematográfico e exportação local; não depende do plano de vídeo da ElevenLabs.",
+      detail: "Fallback local: monta narração e referências com pan/zoom e composição. Para movimento corporal, troca real de cenário/roupa e novos takes, use o modo Vídeo IA Profissional.",
     },
     publishing,
   };
@@ -116,9 +117,6 @@ export async function POST(request: Request) {
     const generated = await generateContentProject(input);
     return Response.json({ ...generated, readiness: await readiness(companyId) });
   } catch (error) {
-    return Response.json(
-      { error: error instanceof Error ? error.message : "Não foi possível criar a campanha." },
-      { status: 400 },
-    );
+    return Response.json({ error: error instanceof Error ? error.message : "Não foi possível criar a campanha." }, { status: 400 });
   }
 }
