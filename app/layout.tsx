@@ -5,6 +5,7 @@ import { APP_DESCRIPTION, APP_NAME } from "@/constants";
 import "@/styles/globals.css";
 import "@/styles/samuel-hologram-v3.css";
 import "@/styles/samuel-chat-clean.css";
+import "@/styles/samuel-v5-motion.css";
 
 export const metadata: Metadata = {
   title: APP_NAME,
@@ -33,16 +34,10 @@ export const viewport: Viewport = {
   themeColor: "#02070c",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="pt-BR" className="h-full antialiased">
-      <body className="min-h-full bg-background font-sans text-foreground antialiased">
-        {children}
-      </body>
+      <body className="min-h-full bg-background font-sans text-foreground antialiased">{children}</body>
     </html>
   );
 }

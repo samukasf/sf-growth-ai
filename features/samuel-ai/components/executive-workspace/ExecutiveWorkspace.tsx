@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Bell,
   BarChart3,
+  Bell,
   BrainCircuit,
   BriefcaseBusiness,
   Film,
+  Home,
   Inbox,
   Menu,
   MessageSquareText,
@@ -20,11 +21,18 @@ import { syncInboxActionToExecutiveMemory } from "@/features/executive-memory-en
 import type { ExecutiveInboxActionRecord, ExecutiveInboxItem, InboxActionType } from "@/features/executive-inbox/executive-inbox.types";
 import { ExecutiveSidebar } from "./ExecutiveSidebar";
 import { ExecutiveWorkspaceCenter } from "./ExecutiveWorkspaceCenter";
-import { ExecutiveWorkspaceRightPanel } from "./ExecutiveWorkspaceRightPanel";
 import type { ExecutiveWorkspaceData, ExecutiveWorkspaceHandlers } from "./executive-workspace.types";
 import { getWorkspaceSectionLabel, type WorkspaceSection } from "./workspace-navigation";
 
 export type ExecutiveWorkspaceProps = ExecutiveWorkspaceData & ExecutiveWorkspaceHandlers;
+
+const TOP_NAV: Array<{ id: WorkspaceSection; label: string; icon: typeof Home }> = [
+  { id: "samuel-ai", label: "Início", icon: Home },
+  { id: "studio", label: "Vídeos e Redes", icon: Film },
+  { id: "executive-inbox", label: "Trabalho", icon: Inbox },
+  { id: "dashboard", label: "Relatórios", icon: BarChart3 },
+  { id: "crm", label: "Clientes", icon: BriefcaseBusiness },
+];
 
 export function ExecutiveWorkspace({ onSendMessage, onFirstMessage, isProcessing, ...data }: ExecutiveWorkspaceProps) {
   const [activeSection, setActiveSection] = useState<WorkspaceSection>("samuel-ai");
@@ -59,11 +67,19 @@ export function ExecutiveWorkspace({ onSendMessage, onFirstMessage, isProcessing
     executiveCeo: data.executiveCeo ? applyInboxActionsToCeo(data.executiveCeo, inboxActions) : data.executiveCeo,
   }), [data, inboxActions]);
 
-  const handlers: ExecutiveWorkspaceHandlers = { onSendMessage, onFirstMessage, isProcessing, inboxActions, onInboxAction: handleInboxAction };
-  const hasNotifications = (workspaceData.executiveMonitoring?.alerts.length ?? 0) > 0 || (workspaceData.watcherExecutive?.summary.criticalAlerts ?? 0) > 0;
-  const samuelMode = activeSection === "samuel-ai";
+  const handlers: ExecutiveWorkspaceHandlers = {
+    onSendMessage,
+    onFirstMessage,
+    isProcessing,
+    inboxActions,
+    onInboxAction: handleInboxAction,
+  };
 
-  if (samuelMode) {
+  const alertCount =
+    (workspaceData.executiveMonitoring?.alerts.length ?? 0) +
+    (workspaceData.watcherExecutive?.summary.criticalAlerts ?? 0);
+
+  if (activeSection === "samuel-ai") {
     return (
       <div className="h-dvh w-full overflow-hidden bg-[#030507]">
         <ExecutiveWorkspaceCenter activeSection={activeSection} onSectionChange={setActiveSection} {...workspaceData} {...handlers} />
@@ -72,39 +88,61 @@ export function ExecutiveWorkspace({ onSendMessage, onFirstMessage, isProcessing
   }
 
   return (
-    <div className="samuel-shell relative flex min-h-dvh flex-col overflow-x-hidden bg-[#080b11] text-white xl:h-dvh xl:overflow-hidden">
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_75%_42%_at_50%_-8%,rgba(42,119,255,.10),transparent_62%),radial-gradient(circle_at_86%_18%,rgba(34,211,238,.04),transparent_26%),linear-gradient(180deg,#0a0e15_0%,#07090e_100%)]" />
-      <header className="relative z-30 shrink-0 border-b border-white/[.055] bg-[#080b11]/82 backdrop-blur-2xl">
-        <div className="flex min-h-[70px] items-center justify-between gap-4 px-4 py-3 sm:px-6">
+    <div className="relative flex min-h-dvh flex-col overflow-hidden bg-[#02070c] text-white">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_70%_0%,rgba(0,128,255,.11),transparent_35%),linear-gradient(180deg,#07101a_0%,#02070c_100%)]" />
+
+      <header className="relative z-30 shrink-0 border-b border-cyan-300/10 bg-[#030b13]/92 backdrop-blur-2xl">
+        <div className="flex min-h-[72px] items-center gap-3 px-4 sm:px-6">
+          <button type="button" aria-label="Abrir menu" onClick={() => setMobileMenuOpen(true)} className="flex size-11 items-center justify-center rounded-xl border border-white/10 bg-white/[.03] lg:hidden"><Menu className="size-5" /></button>
           <div className="flex items-center gap-3">
-            <button type="button" aria-label="Abrir menu" className="rounded-xl border border-white/[.07] bg-white/[.035] p-2.5 text-white/65 lg:hidden" onClick={() => setMobileMenuOpen(true)}><Menu className="size-5" /></button>
-            <div className="hidden size-9 items-center justify-center rounded-xl border border-cyan-200/10 bg-cyan-300/[.045] text-cyan-100/75 sm:flex"><BrainCircuit className="size-4" /></div>
+            <div className="flex size-10 items-center justify-center rounded-xl border border-cyan-300/15 bg-cyan-300/[.05]"><BrainCircuit className="size-5 text-cyan-200" /></div>
             <div>
-              <div className="flex items-center gap-2"><h1 className="text-[12px] font-semibold tracking-[0.2em] text-white/84">SF GROWTH AI</h1><span className="size-1.5 rounded-full bg-emerald-300" /></div>
-              <p className="mt-0.5 text-[8px] uppercase tracking-[0.18em] text-white/25">{getWorkspaceSectionLabel(activeSection)}</p>
+              <div className="text-xs font-semibold tracking-[.18em]">SF GROWTH AI</div>
+              <div className="mt-1 text-[9px] uppercase tracking-[.18em] text-white/40">{getWorkspaceSectionLabel(activeSection)}</div>
             </div>
           </div>
 
-          <div className="hidden rounded-full border border-white/[.06] bg-white/[.028] px-4 py-2 lg:block">
-            <p className="text-[9px] font-medium tracking-[.08em] text-white/38">{workspaceData.executiveContext?.company.name ?? "A sua empresa"}</p>
-          </div>
+          <nav className="ml-5 hidden flex-1 items-center justify-center gap-1 xl:flex" aria-label="Navegação rápida">
+            {TOP_NAV.map((item) => (
+              <button key={item.id} type="button" onClick={() => setActiveSection(item.id)} className={cn("flex min-h-10 items-center gap-2 rounded-xl px-3 text-[11px] transition", activeSection === item.id ? "bg-cyan-400/10 text-cyan-100" : "text-white/45 hover:bg-white/[.04] hover:text-white")}>
+                <item.icon className="size-4" />{item.label}
+              </button>
+            ))}
+          </nav>
 
-          <div className="flex items-center gap-2">
-            <button type="button" aria-label="Abrir Work" onClick={() => setActiveSection("executive-inbox")} className="relative flex size-10 items-center justify-center rounded-xl border border-white/[.07] bg-white/[.03] text-white/48 transition hover:bg-white/[.06] hover:text-white"><Bell className="size-[17px]" />{hasNotifications && <span className="absolute right-2 top-2 size-1.5 rounded-full bg-amber-300" />}</button>
-            <button type="button" onClick={() => setActiveSection("samuel-ai")} className="hidden items-center gap-2 rounded-xl border border-cyan-200/10 bg-cyan-300/[.05] px-3.5 py-2.5 text-[10px] font-medium text-cyan-50/72 transition hover:bg-cyan-300/[.09] sm:flex"><MessageSquareText className="size-4" />Falar com Samuel</button>
+          <div className="ml-auto flex items-center gap-2">
+            <button type="button" onClick={() => setActiveSection("studio")} className="hidden min-h-10 items-center gap-2 rounded-xl border border-cyan-400/25 bg-cyan-400/10 px-3 text-[11px] font-semibold text-cyan-50 sm:flex"><Film className="size-4" />Vídeos</button>
+            <button type="button" aria-label="Abrir notificações" onClick={() => setActiveSection("executive-alerts")} className={cn("relative flex size-11 items-center justify-center rounded-xl border transition", activeSection === "executive-alerts" ? "border-cyan-400/35 bg-cyan-400/10 text-cyan-100" : "border-white/10 bg-white/[.03] text-white/60 hover:text-white")}>
+              <Bell className="size-[18px]" />
+              {alertCount > 0 && <span className="absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">{Math.min(alertCount, 9)}</span>}
+            </button>
+            <button type="button" onClick={() => setActiveSection("samuel-ai")} className="hidden min-h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/[.03] px-3 text-[11px] text-white/70 sm:flex"><MessageSquareText className="size-4" />Samuel</button>
           </div>
         </div>
       </header>
 
-      <div className="relative z-10 flex min-h-0 flex-1 flex-col lg:flex-row xl:overflow-hidden">
+      <div className="relative z-10 flex min-h-0 flex-1">
         <ExecutiveSidebar activeSection={activeSection} onSectionChange={setActiveSection} mobileOpen={mobileMenuOpen} onMobileClose={() => setMobileMenuOpen(false)} />
-        <main className={cn("flex min-h-0 flex-1 flex-col gap-4 overflow-hidden p-3 pb-24 sm:p-5 lg:p-5 lg:pb-5", "xl:flex-row")}>
-          <div className="min-w-0 flex-1 rounded-[26px] border border-white/[.055] bg-white/[.025] p-3 shadow-[0_20px_70px_rgba(0,0,0,.20)] sm:p-4">
-            <ExecutiveWorkspaceCenter activeSection={activeSection} onSectionChange={setActiveSection} {...workspaceData} {...handlers} />
+        <main className="min-w-0 flex-1 overflow-y-auto p-3 pb-24 sm:p-5 lg:pb-5">
+          <div className="mx-auto w-full max-w-[1500px]">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-cyan-300/10 bg-[#07111c]/78 px-4 py-3 backdrop-blur-xl">
+              <div>
+                <p className="text-[9px] uppercase tracking-[.22em] text-cyan-200/55">Central de trabalho</p>
+                <h2 className="mt-1 text-lg font-semibold text-white">{getWorkspaceSectionLabel(activeSection)}</h2>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={() => setActiveSection("studio")} className="min-h-10 rounded-xl border border-cyan-400/20 bg-cyan-400/[.08] px-3 text-[11px] text-cyan-100">Criar vídeo</button>
+                <button type="button" onClick={() => setActiveSection("executive-alerts")} className="min-h-10 rounded-xl border border-white/10 bg-white/[.025] px-3 text-[11px] text-white/65">Alertas {alertCount ? `(${alertCount})` : ""}</button>
+                <button type="button" onClick={() => setActiveSection("samuel-ai")} className="min-h-10 rounded-xl border border-white/10 bg-white/[.025] px-3 text-[11px] text-white/65">Voltar ao Samuel</button>
+              </div>
+            </div>
+            <section className="min-h-[calc(100dvh-190px)] overflow-hidden rounded-[24px] border border-cyan-300/10 bg-[#050d16]/88 p-3 shadow-[0_20px_80px_rgba(0,0,0,.28)] sm:p-4">
+              <ExecutiveWorkspaceCenter activeSection={activeSection} onSectionChange={setActiveSection} {...workspaceData} {...handlers} />
+            </section>
           </div>
-          {activeSection !== "dashboard" && activeSection !== "studio" && <div className="hidden shrink-0 xl:block xl:overflow-y-auto"><ExecutiveWorkspaceRightPanel {...workspaceData} /></div>}
         </main>
       </div>
+
       <MobileCommandBar activeSection={activeSection} onSectionChange={setActiveSection} />
     </div>
   );
@@ -112,11 +150,24 @@ export function ExecutiveWorkspace({ onSendMessage, onFirstMessage, isProcessing
 
 function MobileCommandBar({ activeSection, onSectionChange }: { activeSection: WorkspaceSection; onSectionChange: (section: WorkspaceSection) => void }) {
   const items = [
-    { section: "dashboard" as WorkspaceSection, label: "Growth", icon: BarChart3 },
-    { section: "executive-inbox" as WorkspaceSection, label: "Work", icon: Inbox },
+    { section: "dashboard" as WorkspaceSection, label: "Relatórios", icon: BarChart3 },
+    { section: "executive-alerts" as WorkspaceSection, label: "Alertas", icon: Bell },
     { section: "samuel-ai" as WorkspaceSection, label: "Samuel", icon: MessageSquareText, primary: true },
     { section: "studio" as WorkspaceSection, label: "Vídeos", icon: Film },
-    { section: "crm" as WorkspaceSection, label: "Clients", icon: BriefcaseBusiness },
+    { section: "crm" as WorkspaceSection, label: "Clientes", icon: BriefcaseBusiness },
   ];
-  return <nav className="fixed inset-x-3 bottom-3 z-40 grid grid-cols-5 rounded-[22px] border border-white/[.08] bg-[#0a0d13]/92 px-2 py-2 shadow-2xl backdrop-blur-2xl lg:hidden">{items.map((item) => { const active = activeSection === item.section; return <button key={item.section} type="button" onClick={() => onSectionChange(item.section)} className={cn("relative flex min-h-12 flex-col items-center justify-center gap-1 rounded-2xl text-[8px] font-medium transition", active ? "text-cyan-100" : "text-white/30", item.primary && "mx-auto -mt-7 size-[62px] min-h-0 rounded-full border border-cyan-200/15 bg-[radial-gradient(circle_at_38%_30%,#164e63,#0f172a_58%,#05070b)] text-cyan-50 shadow-[0_0_30px_rgba(34,211,238,.20)]")}><item.icon className={item.primary ? "size-6" : "size-[18px]"} />{!item.primary && <span>{item.label}</span>}</button>; })}</nav>;
+
+  return (
+    <nav className="fixed inset-x-3 bottom-[max(.75rem,env(safe-area-inset-bottom))] z-40 grid grid-cols-5 rounded-[22px] border border-white/10 bg-[#07111c]/96 p-2 shadow-2xl backdrop-blur-2xl lg:hidden">
+      {items.map((item) => {
+        const active = activeSection === item.section;
+        return (
+          <button key={item.section} type="button" onClick={() => onSectionChange(item.section)} className={cn("relative flex min-h-12 flex-col items-center justify-center gap-1 rounded-xl text-[8px] transition", active ? "text-cyan-100" : "text-white/40", item.primary && "mx-auto -mt-6 size-[58px] min-h-0 rounded-full border border-cyan-300/20 bg-[radial-gradient(circle,#155e75,#0f2744_58%,#05070b)] text-cyan-100 shadow-[0_0_26px_rgba(34,211,238,.20)]")}>
+            <item.icon className={item.primary ? "size-5" : "size-4"} />
+            {!item.primary && <span>{item.label}</span>}
+          </button>
+        );
+      })}
+    </nav>
+  );
 }
