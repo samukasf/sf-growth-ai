@@ -39,10 +39,11 @@ export async function POST(request: Request) {
   const title = clean(body?.title, 120) || "Vídeo Samuel IA";
   const projectId = clean(body?.projectId, 120);
   const aspectRatio = body?.aspectRatio === "16:9" || body?.aspectRatio === "1:1" ? body.aspectRatio : "9:16";
+  const resolution = body?.resolution === "720p" ? "720p" : "1080p";
   if (prompt.length < 20) return Response.json({ error: "Descreva o vídeo com mais detalhe." }, { status: 400 });
 
   try {
-    const generation = await startElevenVideoGeneration({ prompt, aspectRatio });
+    const generation = await startElevenVideoGeneration({ prompt, aspectRatio, resolution });
     const { data, error } = await getSupabaseServiceClient()
       .from("samuel_creative_jobs")
       .insert({
@@ -61,6 +62,7 @@ export async function POST(request: Request) {
           duration_seconds: generation.durationSeconds,
           project_id: projectId || null,
           aspect_ratio: aspectRatio,
+          resolution: generation.resolution,
         },
       })
       .select("id,status,output")
@@ -72,6 +74,7 @@ export async function POST(request: Request) {
       status: data.status,
       model: generation.model,
       durationSeconds: generation.durationSeconds,
+      resolution: generation.resolution,
     }, { status: 202, headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     return Response.json({ error: error instanceof Error ? error.message : "Falha ao iniciar vídeo IA." }, { status: 502 });
@@ -107,6 +110,7 @@ export async function GET(request: Request) {
       assetPath: existingAssetPath,
       previewUrl: await signedPreview(existingAssetPath),
       mimeType: "video/mp4",
+      resolution: existingOutput.resolution ?? null,
     }, { headers: { "Cache-Control": "private, no-store" } });
   }
   if (job.status === "failed") {
@@ -155,6 +159,7 @@ export async function GET(request: Request) {
       assetPath,
       previewUrl: await signedPreview(assetPath),
       mimeType: "video/mp4",
+      resolution: existingOutput.resolution ?? null,
     }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Falha ao concluir vídeo IA.";
