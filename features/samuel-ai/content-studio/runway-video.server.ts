@@ -11,6 +11,8 @@ export type RunwayVideoGeneration = {
   failureCode?: string;
 };
 
+export type RunwayShot = { prompt: string; duration: number };
+
 function apiSecret() {
   const value = process.env.RUNWAYML_API_SECRET?.trim() || process.env.RUNWAY_API_KEY?.trim();
   if (!value) throw new Error("Runway não está configurado no servidor.");
@@ -24,15 +26,15 @@ export function runwayVideoReadiness() {
     provider: "Runway",
     model: process.env.RUNWAY_VIDEO_MODEL?.trim() || "gen4.5",
     detail: configured
-      ? "Runway conectado para vídeo IA com texto ou imagem de referência."
-      : "Adicione RUNWAYML_API_SECRET para habilitar vídeo IA premium com referências.",
+      ? "Runway conectado para vídeo generativo, referências e sequências multi-shot."
+      : "Adicione RUNWAYML_API_SECRET para habilitar vídeo IA premium com referências e multi-shot.",
   };
 }
 
-function ratioFor(aspectRatio: "9:16" | "1:1" | "16:9") {
-  if (aspectRatio === "9:16") return "720:1280";
-  if (aspectRatio === "1:1") return "960:960";
-  return "1280:720";
+function ratioFor(aspectRatio: "9:16" | "1:1" | "16:9", hd = false) {
+  if (aspectRatio === "9:16") return hd ? "1080:1920" : "720:1280";
+  if (aspectRatio === "1:1") return hd ? "1440:1440" : "960:960";
+  return hd ? "1920:1080" : "1280:720";
 }
 
 async function runwayFetch(path: string, init?: RequestInit) {
@@ -71,7 +73,7 @@ export async function startRunwayVideoGeneration(input: {
 }) {
   const model = process.env.RUNWAY_VIDEO_MODEL?.trim() || "gen4.5";
   if (input.aspectRatio === "1:1" && !input.referenceImageUrl && model === "gen4.5") {
-    throw new Error("Para vídeo IA quadrado com Gen-4.5, envie uma imagem de referência. O renderizador Samuel continua disponível sem essa restrição.");
+    throw new Error("Para vídeo IA quadrado com Gen-4.5, envie uma imagem de referência.");
   }
   const duration = Math.max(5, Math.min(10, Number(process.env.RUNWAY_VIDEO_DURATION_SECONDS) || 10));
   const body: Record<string, unknown> = {
@@ -88,7 +90,62 @@ export async function startRunwayVideoGeneration(input: {
   });
   const id = typeof payload.id === "string" ? payload.id : "";
   if (!id) throw new Error("A Runway não devolveu o identificador da geração.");
-  return { id, model, durationSeconds: duration };
+  return { id, model, durationSeconds: duration, generationMode: "single-shot" as const };
+}
+
+export async function startRunwayMultiShotGeneration(input: {
+  prompt: string;
+  aspectRatio: "9:16" | "1:1" | "16:9";
+  referenceImageUrl?: string | null;
+  shots?: RunwayShot[];
+  resolution?: "720p" | "1080p";
+  generateAudio?: boolean;
+}) {
+  const requestedDuration = input.shots?.reduce((sum, shot) => sum + shot.duration, 0) || 15;
+  const duration = requestedDuration <= 5 ? 5 : requestedDuration <= 10 ? 10 : 15;
+  const validShots = (input.shots ?? [])
+    .map((shot) => ({ prompt: shot.prompt.trim().slice(0, 512), duration: Math.max(1, Math.round(shot.duration)) }))
+    .filter((shot) => shot.prompt)
+    .slice(0, 5);
+
+  let body: Record<string, unknown>;
+  if (validShots.length >= 3) {
+    const rawTotal = validShots.reduce((sum, shot) => sum + shot.duration, 0);
+    const scaled = validShots.map((shot, index) => ({
+      prompt: shot.prompt,
+      duration: index === validShots.length - 1
+        ? 0
+        : Math.max(1, Math.round((shot.duration / rawTotal) * duration)),
+    }));
+    const allocated = scaled.slice(0, -1).reduce((sum, shot) => sum + shot.duration, 0);
+    scaled[scaled.length - 1].duration = Math.max(1, duration - allocated);
+    body = {
+      version: "2026-06",
+      mode: "custom",
+      duration,
+      ratio: ratioFor(input.aspectRatio, input.resolution === "1080p"),
+      shots: scaled,
+      audio: input.generateAudio ?? true,
+    };
+  } else {
+    body = {
+      version: "2026-06",
+      mode: "auto",
+      prompt: input.prompt.slice(0, 2_500),
+      duration,
+      ratio: ratioFor(input.aspectRatio, input.resolution === "1080p"),
+      audio: input.generateAudio ?? true,
+    };
+  }
+  if (input.referenceImageUrl) body.firstFrame = { uri: input.referenceImageUrl };
+
+  const payload = await runwayFetch("/recipes/multi_shot_video", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+  const id = typeof payload.id === "string" ? payload.id : "";
+  if (!id) throw new Error("A Runway não devolveu o identificador do vídeo multi-shot.");
+  return { id, model: "multi-shot-video", durationSeconds: duration, generationMode: "multi-shot" as const };
 }
 
 export async function getRunwayVideoGeneration(taskId: string): Promise<RunwayVideoGeneration> {
