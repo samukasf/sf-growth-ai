@@ -1,1 +1,1 @@
-export { SocialStudioPro as SamuelContentStudio } from "./SocialStudioPro";
+export { SocialStudioProV2 as SamuelContentStudio } from "./SocialStudioProV2";
