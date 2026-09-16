@@ -20,6 +20,10 @@ type Props = {
   compact?: boolean;
 };
 
+function selectionKey(companyId: string) {
+  return `sf-growth-ai:studio:references:${companyId}`;
+}
+
 export function ReferenceImageLibrary({ companyId, onReferencesChange, compact = false }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [items, setItems] = useState<StudioReferenceImage[]>([]);
@@ -27,6 +31,19 @@ export function ReferenceImageLibrary({ companyId, onReferencesChange, compact =
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem(selectionKey(companyId));
+      if (!stored) return;
+      const parsed = JSON.parse(stored) as unknown;
+      if (Array.isArray(parsed)) {
+        setSelected(parsed.filter((item): item is string => typeof item === "string").slice(0, 12));
+      }
+    } catch {
+      // Ignore malformed browser selection state.
+    }
+  }, [companyId]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -48,7 +65,14 @@ export function ReferenceImageLibrary({ companyId, onReferencesChange, compact =
   useEffect(() => {
     const active = items.filter((item) => selected.includes(item.assetPath));
     onReferencesChange?.(active);
-  }, [items, onReferencesChange, selected]);
+    try {
+      sessionStorage.setItem(selectionKey(companyId), JSON.stringify(selected));
+      sessionStorage.setItem(`${selectionKey(companyId)}:urls`, JSON.stringify(active.map((item) => item.previewUrl)));
+    } catch {
+      // Session storage is only an optimization for cross-tab continuity.
+    }
+    window.dispatchEvent(new CustomEvent("samuel:studio-reference-change", { detail: { companyId, references: active } }));
+  }, [companyId, items, onReferencesChange, selected]);
 
   function toggle(item: StudioReferenceImage) {
     setSelected((current) => current.includes(item.assetPath)
@@ -103,7 +127,7 @@ export function ReferenceImageLibrary({ companyId, onReferencesChange, compact =
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold text-white"><ImagePlus className="size-4 text-cyan-300" />Imagens de referência</div>
-          <p className="mt-1 text-[11px] leading-5 text-white/42">Envie produto, equipa, ambiente, marca ou fotos próprias. As selecionadas entram na montagem do vídeo.</p>
+          <p className="mt-1 text-[11px] leading-5 text-white/42">Envie produto, equipa, ambiente, marca ou fotos próprias. As selecionadas ficam ativas em todo o Studio e entram na montagem do vídeo.</p>
         </div>
         <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-300/[.07] px-3 text-[11px] font-semibold text-cyan-50 hover:bg-cyan-300/[.11] disabled:opacity-50">
           {uploading ? <LoaderCircle className="size-4 animate-spin" /> : <ImagePlus className="size-4" />}
