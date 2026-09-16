@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-label="Samuel IA">
+  <defs>
+    <linearGradient id="g1" x1="24" y1="18" x2="138" y2="142" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#79f5ff"/>
+      <stop offset=".28" stop-color="#18a9ff"/>
+      <stop offset=".66" stop-color="#1660ff"/>
+      <stop offset="1" stop-color="#7b57ff"/>
+    </linearGradient>
+    <linearGradient id="g2" x1="132" y1="20" x2="28" y2="142" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#32d7ff"/>
+      <stop offset=".5" stop-color="#096aff"/>
+      <stop offset="1" stop-color="#00d9e9"/>
+    </linearGradient>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="6" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)">
+    <path d="M123 35c-10-13-27-19-45-17C55 20 39 34 37 53c-2 17 10 29 31 34l24 6c13 3 19 8 18 16-1 9-10 15-24 17-19 2-38-5-49-18" stroke="url(#g1)" stroke-width="18"/>
+    <path d="M38 124c10 13 27 19 45 17 23-2 39-16 41-35 2-17-10-29-31-34l-24-6c-13-3-19-8-18-16 1-9 10-15 24-17 19-2 38 5 49 18" stroke="url(#g2)" stroke-width="9" opacity=".88"/>
+  </g>
+  <circle cx="37" cy="52" r="5" fill="#92f9ff"/>
+  <circle cx="122" cy="107" r="5" fill="#b293ff"/>
+</svg>
