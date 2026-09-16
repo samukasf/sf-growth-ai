@@ -12,14 +12,18 @@ export type ElevenVideoGeneration = {
 };
 
 export function elevenVideoReadiness() {
-  const configured = Boolean(process.env.ELEVENLABS_API_KEY?.trim());
+  const hasApiKey = Boolean(process.env.ELEVENLABS_API_KEY?.trim());
+  const videoExplicitlyEnabled = process.env.ELEVENLABS_VIDEO_ENABLED?.trim().toLowerCase() === "true";
+  const configured = hasApiKey && videoExplicitlyEnabled;
   return {
     configured,
     provider: "ElevenLabs Image & Video API",
     model: process.env.ELEVENLABS_VIDEO_MODEL?.trim() || "veo-3.1-fast-generate-001",
     detail: configured
-      ? "Vídeo IA MP4 disponível; qualidade depende do modelo e da conta ElevenLabs configurada."
-      : "Configure ELEVENLABS_API_KEY para gerar vídeo IA MP4 no servidor.",
+      ? "Vídeo IA externo ElevenLabs habilitado explicitamente no servidor."
+      : hasApiKey
+        ? "A narração ElevenLabs está configurada, mas o vídeo externo foi desativado porque a chave ainda não teve acesso Image & Video/Flows confirmado. O renderizador Samuel continua gerando vídeo normalmente."
+        : "ElevenLabs não está configurada para vídeo externo. O renderizador Samuel continua disponível sem esta API.",
   };
 }
 
@@ -54,7 +58,7 @@ async function elevenFetch(path: string, init?: RequestInit) {
         ? record.detail
         : text || `HTTP ${response.status}`;
     if (response.status === 402) {
-      throw new Error("A API de vídeo da ElevenLabs exige plano e acesso ao recurso Image & Video/Flows na chave API.");
+      throw new Error("A chave ElevenLabs atual não tem acesso confirmado ao recurso Image & Video/Flows. Use o renderizador Samuel ou configure Runway para vídeo IA externo.");
     }
     throw new Error(`ElevenLabs Video API: ${detail}`);
   }
@@ -66,6 +70,9 @@ export async function startElevenVideoGeneration(input: {
   aspectRatio: "9:16" | "16:9" | "1:1";
   resolution?: "720p" | "1080p";
 }) {
+  if (!elevenVideoReadiness().configured) {
+    throw new Error("Vídeo externo ElevenLabs não está habilitado. Defina ELEVENLABS_VIDEO_ENABLED=true somente depois de confirmar acesso Image & Video/Flows na chave API.");
+  }
   const modelId = process.env.ELEVENLABS_VIDEO_MODEL?.trim() || "veo-3.1-fast-generate-001";
   const duration = Math.max(4, Math.min(8, Number(process.env.ELEVENLABS_VIDEO_DURATION_SECONDS) || 8));
   const resolution = input.resolution ?? (process.env.ELEVENLABS_VIDEO_RESOLUTION?.trim() === "720p" ? "720p" : "1080p");
