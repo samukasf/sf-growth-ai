@@ -16,6 +16,7 @@ import {
   Save,
   ShieldCheck,
   Smartphone,
+  UploadCloud,
 } from "lucide-react";
 
 import { cn } from "@/utils/cn";
@@ -46,6 +47,7 @@ type SiteProject = {
 };
 
 type ScopeResponse = { ok?: boolean; scope?: string; error?: string };
+type PublishResponse = { ok?: boolean; url?: string; domain?: string | null; error?: string; code?: string };
 
 const STORAGE_PREFIX = "sf-growth-ai:site-builder-projects:v2";
 
@@ -79,6 +81,10 @@ function createDraft(companyName: string, companySegment: string, companyLocatio
     cta: "Pedir orçamento",
     whatsapp: "",
     mapsQuery: companyLocation,
+    heroImageUrl: "",
+    ctaUrl: "",
+    extraPages: "Sobre, Galeria",
+    embedUrl: "",
     tone: "executive",
   };
 }
@@ -141,6 +147,10 @@ export function SamuelSiteBuilderV2({
   const [hydrated, setHydrated] = useState(false);
   const [storageKey, setStorageKey] = useState<string | null>(null);
   const [saveNotice, setSaveNotice] = useState<string | null>(null);
+  const [publishDomain, setPublishDomain] = useState("");
+  const [publishing, setPublishing] = useState(false);
+  const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
+  const [publishError, setPublishError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -161,8 +171,9 @@ export function SamuelSiteBuilderV2({
         const raw = window.localStorage.getItem(scopedKey);
         const parsed = raw ? (JSON.parse(raw) as SiteProject[]) : [];
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setProjects(parsed);
-          const first = parsed.find((project) => !project.archived) ?? parsed[0];
+          const migrated = parsed.map((project) => ({ ...project, draft: { ...createDraft(companyName, companySegment, companyLocation), ...project.draft } }));
+          setProjects(migrated);
+          const first = migrated.find((project) => !project.archived) ?? migrated[0];
           if (first) {
             setCurrentId(first.id);
             setDraft(first.draft);
@@ -195,7 +206,7 @@ export function SamuelSiteBuilderV2({
     return () => {
       cancelled = true;
     };
-  }, [baseDraft, companyId, companyName]);
+  }, [baseDraft, companyId, companyLocation, companyName, companySegment]);
 
   const persist = (nextProjects: SiteProject[]) => {
     setProjects(nextProjects);
@@ -267,9 +278,36 @@ export function SamuelSiteBuilderV2({
     }
   };
 
-  const html = useMemo(() => buildSiteBuilderHtml(draft), [draft]);
-  const filename = useMemo(() => buildSiteBuilderFilename(draft), [draft]);
-  const srcDoc = useMemo(() => makeSrcDoc(html, previewPage), [html, previewPage]);
+  const publishCurrent = async () => {
+    setPublishing(true);
+    setPublishError(null);
+    try {
+      const response = await fetch("/api/samuel-ai/site-builder/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          companyId,
+          projectId: currentId,
+          projectName,
+          businessName: draft.businessName,
+          domain: publishDomain,
+          html,
+        }),
+      });
+      const payload = (await response.json()) as PublishResponse;
+      if (!response.ok || !payload.url) throw new Error(payload.error || "Não foi possível publicar o site.");
+      setPublishedUrl(payload.domain ? `https://${payload.domain}` : payload.url);
+      saveCurrent();
+    } catch (error) {
+      setPublishError(error instanceof Error ? error.message : "Falha ao publicar o site.");
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const html = buildSiteBuilderHtml(draft);
+  const filename = buildSiteBuilderFilename(draft);
+  const srcDoc = makeSrcDoc(html, previewPage);
   const previewPages = useMemo(
     () => PREVIEW_PAGES.filter((page) => draft.mode === "app" || page.id !== "app"),
     [draft.mode],
@@ -302,9 +340,15 @@ export function SamuelSiteBuilderV2({
         <section className="border-b border-white/[.06] p-4 xl:border-b-0 xl:border-r xl:p-5">
           <label className="block text-[10px] font-semibold uppercase tracking-[.14em] text-white/28">Nome do projeto<input value={projectName} onChange={(event) => setProjectName(event.target.value)} className={`${fieldClass()} mt-2`} /></label>
           <div className="mt-4 grid grid-cols-2 gap-2">{MODE_OPTIONS.map((option) => <button key={option.value} type="button" onClick={() => { updateDraft("mode", option.value); setPreviewPage(option.value === "app" ? "app" : "home"); }} className={cn("rounded-2xl border p-3 text-left transition", draft.mode === option.value ? "border-cyan-300/25 bg-cyan-300/[.07]" : "border-white/[.07] bg-white/[.02]")}><span className="flex items-center gap-2 text-xs font-semibold">{option.value === "app" ? <Smartphone className="size-4" /> : <Globe2 className="size-4" />}{option.label}</span><span className="mt-1 block text-[10px] leading-relaxed text-white/30">{option.description}</span></button>)}</div>
-          <div className="mt-4 grid gap-3"><Field label="Empresa" value={draft.businessName} onChange={(value) => updateDraft("businessName", value)} /><Field label="Segmento" value={draft.segment} onChange={(value) => updateDraft("segment", value)} /><Field label="Oferta principal" value={draft.offer} onChange={(value) => updateDraft("offer", value)} /><Field label="Objetivo comercial" value={draft.goal} onChange={(value) => updateDraft("goal", value)} /><div className="grid grid-cols-2 gap-2"><Field label="Local" value={draft.location} onChange={(value) => updateDraft("location", value)} /><Field label="Botão" value={draft.cta} onChange={(value) => updateDraft("cta", value)} /></div><div className="grid grid-cols-2 gap-2"><Field label="WhatsApp" value={draft.whatsapp} placeholder="+351..." onChange={(value) => updateDraft("whatsapp", value)} /><Field label="Google Maps" value={draft.mapsQuery} onChange={(value) => updateDraft("mapsQuery", value)} /></div></div>
+          <div className="mt-4 grid gap-3"><Field label="Empresa" value={draft.businessName} onChange={(value) => updateDraft("businessName", value)} /><Field label="Segmento" value={draft.segment} onChange={(value) => updateDraft("segment", value)} /><Field label="Oferta principal" value={draft.offer} onChange={(value) => updateDraft("offer", value)} /><Field label="Objetivo comercial" value={draft.goal} onChange={(value) => updateDraft("goal", value)} /><Field label="Imagem principal (URL)" value={draft.heroImageUrl} placeholder="https://.../imagem.jpg" onChange={(value) => updateDraft("heroImageUrl", value)} /><div className="grid grid-cols-2 gap-2"><Field label="Local" value={draft.location} onChange={(value) => updateDraft("location", value)} /><Field label="Texto do botão" value={draft.cta} onChange={(value) => updateDraft("cta", value)} /></div><Field label="Link do botão" value={draft.ctaUrl} placeholder="https://... ou WhatsApp" onChange={(value) => updateDraft("ctaUrl", value)} /><Field label="Páginas adicionais" value={draft.extraPages} placeholder="Sobre, Galeria, Equipa" onChange={(value) => updateDraft("extraPages", value)} /><Field label="Plugin / formulário incorporado (URL)" value={draft.embedUrl} placeholder="https://..." onChange={(value) => updateDraft("embedUrl", value)} /><div className="grid grid-cols-2 gap-2"><Field label="WhatsApp" value={draft.whatsapp} placeholder="+351..." onChange={(value) => updateDraft("whatsapp", value)} /><Field label="Google Maps" value={draft.mapsQuery} onChange={(value) => updateDraft("mapsQuery", value)} /></div></div>
           <div className="mt-4 flex flex-wrap gap-2">{TONE_OPTIONS.map((option) => <button key={option.value} type="button" onClick={() => updateDraft("tone", option.value)} className={cn("rounded-full border px-3 py-2 text-[10px] font-semibold", draft.tone === option.value ? "border-blue-400 bg-blue-500/20 text-white" : "border-white/[.07] text-white/35")}>{option.label}</button>)}</div>
-          <div className="mt-5 grid grid-cols-2 gap-2"><button type="button" onClick={() => openHtmlPreview(html)} className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/[.08] bg-white/[.025] text-xs font-semibold text-white/60 hover:bg-white/[.05]"><ExternalLink className="size-4" /> Abrir preview</button><button type="button" onClick={() => downloadHtml(html, filename)} className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-xs font-semibold text-white"><Download className="size-4" /> Exportar HTML</button></div>
+          <div className="mt-5 rounded-2xl border border-cyan-300/15 bg-cyan-300/[.035] p-3">
+            <label className="flex flex-col gap-1.5 text-[9px] font-semibold uppercase tracking-[.12em] text-cyan-100/45">Domínio próprio opcional<input className={fieldClass()} value={publishDomain} placeholder="ex.: minhaempresa.pt" onChange={(event) => setPublishDomain(event.target.value)} /></label>
+            <button type="button" onClick={() => void publishCurrent()} disabled={publishing} className="mt-2 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-xs font-semibold text-white disabled:opacity-50"><UploadCloud className="size-4" /> {publishing ? "Publicando…" : "Publicar site"}</button>
+            {publishedUrl && <a href={publishedUrl} target="_blank" rel="noreferrer" className="mt-2 flex items-center gap-2 rounded-xl border border-emerald-300/20 bg-emerald-300/[.06] px-3 py-2 text-[10px] text-emerald-100"><ExternalLink className="size-3.5" /> {publishedUrl}</a>}
+            {publishError && <p className="mt-2 text-[10px] leading-relaxed text-rose-300">{publishError}</p>}
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2"><button type="button" onClick={() => openHtmlPreview(html)} className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/[.08] bg-white/[.025] text-xs font-semibold text-white/60 hover:bg-white/[.05]"><ExternalLink className="size-4" /> Abrir preview</button><button type="button" onClick={() => downloadHtml(html, filename)} className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/[.08] bg-white/[.025] text-xs font-semibold text-white/60"><Download className="size-4" /> Exportar HTML</button></div>
           <div className="mt-5 grid gap-2 text-[10px] text-white/35">{[{ icon: LayoutTemplate, label: "Preview", value: draft.mode === "app" ? "Site + mini-app" : "Site responsivo" },{ icon: FileCode2, label: "Arquivo", value: filename },{ icon: MessageCircle, label: "WhatsApp", value: draft.whatsapp ? "Configurado no projeto" : "Pendente" },{ icon: MapPinned, label: "Maps", value: draft.mapsQuery ? "Configurado" : "Pendente" },{ icon: ShieldCheck, label: "Persistência", value: storageKey ? "Isolada por conta + empresa" : "Somente nesta sessão" }].map((item) => <div key={item.label} className="flex items-center gap-3 rounded-xl border border-white/[.05] bg-white/[.018] p-3"><item.icon className="size-4 shrink-0 text-cyan-200/45" /><div className="min-w-0"><strong className="block text-white/55">{item.label}</strong><span className="block truncate">{item.value}</span></div></div>)}</div>
         </section>
 

@@ -226,6 +226,7 @@ export function SamuelContentStudio({ companyId }: Props) {
       if (payload.readiness) setReadiness(payload.readiness);
       setWarning(payload.warning ?? null);
       setEditorOpen(true);
+      if (payload.project.format === "video") setAutoProduce(true);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Falha ao criar campanha.");
     } finally {
@@ -465,8 +466,12 @@ export function SamuelContentStudio({ companyId }: Props) {
           <textarea id="campaign-brief" value={brief} onChange={(event) => setBrief(event.target.value)} placeholder="Ex.: Faça um vídeo sobre o produto X, explique o benefício principal e publique no Instagram e Facebook…" />
           <div className="samuel-content-examples">{EXAMPLES.map((example) => <button key={example} type="button" onClick={() => setBrief(example)}><Sparkles /> {example}</button>)}</div>
           <label>Onde deseja publicar?</label>
-          <div className="samuel-platform-picker">{SOCIAL_PLATFORMS.map((platform) => { const Icon = ICONS[platform]; const ready = readiness?.publishing[platform].ready; return <button type="button" key={platform} onClick={() => togglePlatform(platform)} className={cn(platforms.includes(platform) && "is-selected")}><Icon /><span>{LABELS[platform]}</span><i className={cn(ready && "is-ready")}>{ready ? <Check /> : null}</i></button>; })}</div>
-          <button type="button" className="samuel-content-create" onClick={() => void createCampaign()} disabled={generating}>{generating ? <LoaderCircle className="animate-spin" /> : <Sparkles />} {generating ? "Criando campanha…" : "Criar campanha completa"}</button>
+          <div className="samuel-platform-picker">
+            {SOCIAL_PLATFORMS.map((platform) => { const Icon = ICONS[platform]; const ready = readiness?.publishing[platform].ready; return <button type="button" key={platform} onClick={() => togglePlatform(platform)} className={cn(platforms.includes(platform) && "is-selected")}><Icon /><span>{LABELS[platform]}</span><i className={cn(ready && "is-ready")} title={readiness?.publishing[platform].detail}>{ready ? <Check /> : null}</i></button>; })}
+          </div>
+          <button type="button" className="samuel-content-create" onClick={() => void createCampaign()} disabled={generating}>
+            {generating ? <LoaderCircle className="animate-spin" /> : <Sparkles />} {generating ? "Criando campanha…" : format === "video" ? "Criar e gerar vídeo" : "Criar campanha completa"}
+          </button>
           {error && <p className="samuel-content-feedback is-error">{error}</p>}
           {warning && <p className="samuel-content-feedback is-warning">{warning}</p>}
         </div>

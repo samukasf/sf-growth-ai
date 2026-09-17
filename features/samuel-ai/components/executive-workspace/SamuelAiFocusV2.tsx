@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import Link from "next/link";
 import {
   Activity,
@@ -134,6 +134,7 @@ export function SamuelAiFocusV2({ data, handlers, onNavigate }: Props) {
   const alertCount =
     (data.watcherExecutive?.summary.criticalAlerts ?? 0) +
     (data.executiveMonitoring?.alerts.length ?? 0);
+  const visualPhase: VoicePhase = handlers.isProcessing && voicePhase === "idle" ? "processing" : voicePhase;
 
   useEffect(() => {
     const openConversation = () => setConversationOpen(true);
@@ -179,7 +180,7 @@ export function SamuelAiFocusV2({ data, handlers, onNavigate }: Props) {
   };
 
   return (
-    <section className="samuel-focus-cockpit relative h-dvh w-full overflow-hidden bg-[#02070c] text-[#dcecff]">
+    <section className="samuel-focus-cockpit relative h-dvh w-full overflow-hidden bg-[#02070c] text-[#dcecff]" data-phase={visualPhase}>
       <span hidden data-samuel-company-id={companyId} />
       <SamuelVoiceReliabilityBridge />
 
@@ -194,6 +195,7 @@ export function SamuelAiFocusV2({ data, handlers, onNavigate }: Props) {
         <DesktopSidebar onNavigate={onNavigate} onOpenConversation={() => setConversationOpen(true)} />
 
         <main className="samuel-reference-stage flex min-h-0 flex-col overflow-hidden border-r border-cyan-300/10">
+          <div className="samuel-tunnel" aria-hidden="true"><i /><i /><i /></div>
           <header className="samuel-reference-heading shrink-0 px-6 pb-2 pt-5 text-center">
             <p className="text-[10px] tracking-[.42em] text-[#9fc6e7]">MAIS IDEIAS. MAIS AÇÕES. MAIS RESULTADOS.</p>
             <h1 className="mt-3 text-[clamp(42px,4.2vw,68px)] font-semibold tracking-[.08em] text-[#deedff]">SAMUEL IA</h1>
@@ -201,13 +203,13 @@ export function SamuelAiFocusV2({ data, handlers, onNavigate }: Props) {
           </header>
 
           <div className="samuel-reference-core-stage relative min-h-0 flex-1">
-            <StatusPoint className="left-[8%] top-[14%]" icon={Activity} title="OUVINDO" text={<>Captando<br />e entendendo...</>} color="#35d9ff" />
-            <StatusPoint className="right-[6%] top-[14%]" icon={BrainCircuit} title="PENSANDO" text={<>Analisando e<br />conectando ideias...</>} color="#bd73ff" />
-            <StatusPoint className="bottom-[15%] left-[8%]" icon={Settings} title="EXECUTANDO" text={<>Colocando em<br />prática...</>} color="#66ffd5" />
-            <StatusPoint className="bottom-[15%] right-[6%]" icon={MessageSquareText} title="FALANDO" text={<>Respondendo<br />para você...</>} color="#ffc89d" />
+            <StatusPoint active={visualPhase === "listening"} className="left-[8%] top-[14%]" icon={Activity} title="OUVINDO" text={<>Captando<br />e entendendo...</>} color="#35d9ff" />
+            <StatusPoint active={visualPhase === "processing"} className="right-[6%] top-[14%]" icon={BrainCircuit} title="PENSANDO" text={<>Analisando e<br />conectando ideias...</>} color="#bd73ff" />
+            <StatusPoint active={handlers.isProcessing} className="bottom-[15%] left-[8%]" icon={Settings} title="EXECUTANDO" text={<>Colocando em<br />prática...</>} color="#66ffd5" />
+            <StatusPoint active={visualPhase === "speaking"} className="bottom-[15%] right-[6%]" icon={MessageSquareText} title="FALANDO" text={<>Respondendo<br />para você...</>} color="#ffc89d" />
 
             <div className="samuel-reference-core absolute left-1/2 top-1/2 size-[min(45vh,450px)] -translate-x-1/2 -translate-y-1/2">
-              <SamuelCore active={voiceActive || handlers.isProcessing} />
+              <SamuelCore active={voiceActive || handlers.isProcessing} phase={visualPhase} />
             </div>
           </div>
 
@@ -271,9 +273,9 @@ function ConversationLayer({ open, onClose, companyId, handlers }: { open: boole
     <div className={open ? "samuel-conversation-layer absolute inset-0 z-[150] flex items-center justify-center bg-black/78 p-0 backdrop-blur-md sm:p-3" : "absolute left-[-10000px] top-0 h-px w-px overflow-hidden opacity-0 pointer-events-none"} aria-hidden={!open}>
       <div className={open ? "samuel-conversation-dialog flex h-full w-full max-w-5xl flex-col overflow-hidden border border-[#0d78c5] bg-[#03101b] shadow-[0_0_70px_rgba(0,127,255,.28)] sm:h-[min(88dvh,860px)] sm:rounded-3xl" : "h-full w-full"}>
         {open && (
-          <div className="flex shrink-0 items-center justify-between border-b border-[#164f78] px-4 pb-3 pt-[max(.75rem,env(safe-area-inset-top))] sm:px-5 sm:py-4">
-            <div><strong className="block text-lg text-white sm:text-base">Conversar com Samuel</strong><span className="mt-1 block text-xs text-[#86abc9]">Voz, texto e respostas no mesmo lugar.</span></div>
-            <button type="button" onClick={onClose} className="min-h-11 rounded-xl border border-[#164f78] px-4 text-sm text-[#b9d9f1] hover:border-[#0d9dff]">Fechar</button>
+          <div className="samuel-conversation-header flex shrink-0 items-center justify-between border-b border-[#164f78] px-4 pb-3 pt-[max(.75rem,env(safe-area-inset-top))] sm:px-5 sm:py-4">
+            <div><strong className="block text-lg text-white sm:text-base">Samuel</strong><span className="mt-1 block text-xs text-[#86abc9]">Conversa por voz ou texto</span></div>
+            <button type="button" onClick={onClose} className="samuel-conversation-close min-h-11 rounded-xl border border-[#164f78] px-4 text-sm text-[#b9d9f1] hover:border-[#0d9dff]">Fechar</button>
           </div>
         )}
         <div className={open ? "min-h-0 flex-1 overflow-hidden" : "h-full w-full"}>
@@ -322,28 +324,30 @@ function MobilePanel({ voiceActive, voicePhase, processing, onOpenConversation, 
   return (
     <div className="samuel-reference-mobile flex h-full flex-col overflow-y-auto bg-[radial-gradient(circle_at_50%_18%,rgba(0,111,255,.2),transparent_32%),linear-gradient(180deg,#03101c,#02070c)] lg:hidden">
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-white/[.06] bg-[#020a12]/85 px-4 pb-3 pt-[max(.75rem,env(safe-area-inset-top))] backdrop-blur-xl"><div className="flex items-center gap-2"><div className="samuel-reference-logo flex size-10 items-center justify-center rounded-xl border border-cyan-300/30 text-xl font-black italic">S</div><div><strong className="block text-sm tracking-[.1em]">SAMUEL IA</strong><span className="text-[9px] tracking-[.18em] text-white/45">SF GROWTH AI</span></div></div><button type="button" aria-label="Abrir alertas" onClick={() => onNavigate("executive-alerts")} className="flex size-11 items-center justify-center rounded-full border border-white/10"><Bell className="size-5 text-white/70" /></button></header>
-      <main className="flex-1 px-4 pb-28 pt-5">
-        <div className="text-center"><p className="text-[9px] tracking-[.3em] text-[#9fc6e7]">MAIS IDEIAS. MAIS RESULTADOS.</p><h1 className="mt-2 text-[2rem] font-semibold tracking-[.08em]">SAMUEL IA</h1><p className="mt-1 text-[10px] tracking-[.25em] text-[#90b7d5]">SEU ASSISTENTE INTELIGENTE</p></div>
-        <div className="relative mx-auto mt-4 size-[min(72vw,300px)]"><SamuelCore active={voiceActive || processing} /></div>
-        <div className="mx-auto mt-4 grid max-w-md grid-cols-2 gap-2">
+      <main className="samuel-mobile-main flex-1 px-4 pb-28 pt-4">
+        <div className="samuel-mobile-heading text-center"><p className="text-[9px] tracking-[.3em] text-[#9fc6e7]">MAIS IDEIAS. MAIS RESULTADOS.</p><h1 className="mt-1.5 text-[1.85rem] font-semibold tracking-[.08em]">SAMUEL IA</h1><p className="mt-0.5 text-[9px] tracking-[.25em] text-[#90b7d5]">SEU ASSISTENTE INTELIGENTE</p></div>
+        <div className="samuel-mobile-core relative mx-auto mt-3 size-[min(82vw,340px)]"><SamuelCore active={voiceActive || processing} phase={voicePhase} /></div>
+        <div className="samuel-mobile-states mx-auto mt-2 grid max-w-md grid-cols-4 gap-1.5">
           <MobileState icon={Activity} label="Ouvindo" color="#35d9ff" active={voicePhase === "listening"} />
           <MobileState icon={BrainCircuit} label="Pensando" color="#bd73ff" active={voicePhase === "processing" || processing} />
           <MobileState icon={Settings} label="Executando" color="#66ffd5" active={processing} />
           <MobileState icon={MessageSquareText} label="Falando" color="#ffc89d" active={voicePhase === "speaking"} />
         </div>
-        <div className="mx-auto mt-3 max-w-sm rounded-2xl border border-[#0878e9] bg-[#031326] px-4 py-3 text-center"><strong className="text-sm">{phaseCopy.title}</strong><p className="mt-1 text-xs text-white/55">{phaseCopy.subtitle}</p></div>
-        <div className="mt-5 flex items-start justify-center gap-8"><RoundControl icon={Keyboard} label="Digitar" onClick={onOpenConversation} compact /><button type="button" className="samuel-reference-mic flex flex-col items-center gap-2 text-xs font-semibold"><span className="relative flex size-20 items-center justify-center rounded-full border border-[#0b71e6] bg-[radial-gradient(circle,#083671,#020b16)] shadow-[0_0_28px_rgba(0,152,255,.5)]"><span className={`absolute inset-[-8px] rounded-full border border-cyan-300/15 ${voiceActive ? "animate-ping" : "animate-pulse"}`} /><Mic className="size-8" /></span>{voicePhase === "processing" ? "Pensando" : voicePhase === "speaking" ? "Falando" : voiceActive ? "Ouvindo" : "Falar"}</button><RoundControl icon={Square} label="Parar" onClick={onStop} compact /></div>
-        <div className="mt-6 grid grid-cols-2 gap-2">{RIGHT_ACTIONS.map((action) => <button key={action.label} type="button" onClick={() => onAction(action)} className="flex min-h-[78px] items-center gap-3 rounded-2xl border border-[#0a426e] bg-[#051321] p-3 text-left text-xs"><action.icon className="size-6 shrink-0 text-[#1cb4ff]" /><span>{action.label}</span></button>)}</div>
+        <div className="samuel-mobile-listening mx-auto mt-3 max-w-sm rounded-2xl border border-[#0878e9] bg-[#031326] px-4 py-3 text-center"><strong className="text-sm">{phaseCopy.title}</strong><p className="mt-1 text-xs text-white/55">{phaseCopy.subtitle}</p></div>
+        <div className="samuel-mobile-controls mt-4 flex items-start justify-center gap-8"><RoundControl icon={Keyboard} label="Digitar" onClick={onOpenConversation} compact /><button type="button" className="samuel-reference-mic flex flex-col items-center gap-2 text-xs font-semibold"><span className="relative flex size-20 items-center justify-center rounded-full border border-[#0b71e6] bg-[radial-gradient(circle,#083671,#020b16)] shadow-[0_0_28px_rgba(0,152,255,.5)]"><span className={`absolute inset-[-8px] rounded-full border border-cyan-300/15 ${voiceActive ? "animate-ping" : "animate-pulse"}`} /><Mic className="size-8" /></span>{voicePhase === "processing" ? "Pensando" : voicePhase === "speaking" ? "Falando" : voiceActive ? "Ouvindo" : "Falar"}</button><RoundControl icon={Square} label="Parar" onClick={onStop} compact /></div>
+        <div className="samuel-mobile-actions mt-6 grid grid-cols-2 gap-2">{RIGHT_ACTIONS.map((action) => <button key={action.label} type="button" onClick={() => onAction(action)} className="flex min-h-[72px] items-center gap-3 rounded-2xl border border-[#0a426e] bg-[#051321] p-3 text-left text-xs"><action.icon className="size-6 shrink-0 text-[#1cb4ff]" /><span>{action.label}</span></button>)}</div>
       </main>
       <nav className="fixed inset-x-3 bottom-3 z-40 grid grid-cols-5 rounded-2xl border border-white/[.08] bg-[#07111c]/95 p-2 shadow-2xl backdrop-blur-xl"><MobileNav icon={Home} label="Início" onClick={() => onNavigate("samuel-ai")} /><MobileNav icon={Film} label="Vídeos" onClick={() => onNavigate("studio")} /><MobileNav icon={Mic} label="Samuel" onClick={onOpenConversation} primary /><MobileNav icon={MonitorUp} label="Computador" onClick={() => window.location.assign("/samuel-ai/desktop")} /><MobileNav icon={UsersRound} label="CRM" onClick={() => onNavigate("crm")} /></nav>
     </div>
   );
 }
 
-function SamuelCore({ active }: { active: boolean }) {
+function SamuelCore({ active, phase = "idle" }: { active: boolean; phase?: VoicePhase }) {
   return (
-    <div className={`samuel-orb relative h-full w-full rounded-full ${active ? "samuel-orb--active scale-[1.02]" : ""} transition-transform duration-500`}>
+    <div data-phase={phase} className={`samuel-orb relative h-full w-full rounded-full ${active ? "samuel-orb--active scale-[1.02]" : ""} transition-transform duration-500`}>
       <div className="samuel-orb__halo absolute inset-[-8%] rounded-full" />
+      <div className="samuel-orb__energy-lines" aria-hidden="true" />
+      <div className="samuel-orb__particles" aria-hidden="true">{Array.from({ length: 28 }, (_, index) => <i key={index} style={{ "--particle": index } as CSSProperties} />)}</div>
       <div className="absolute inset-0 animate-[spin_24s_linear_infinite] rounded-full border border-cyan-200/20 [background:repeating-conic-gradient(from_0deg,rgba(0,174,255,.65)_0deg_1.4deg,transparent_1.4deg_10deg)] [mask-image:radial-gradient(circle,transparent_63%,black_64%)]" />
       <div className="absolute inset-[5%] animate-[spin_15s_linear_infinite_reverse] rounded-full border border-blue-300/25 [background:repeating-conic-gradient(from_25deg,rgba(77,132,255,.55)_0deg_2deg,transparent_2deg_15deg)] [mask-image:radial-gradient(circle,transparent_70%,black_71%)]" />
       <div className="absolute inset-[10%] rounded-full bg-[conic-gradient(from_210deg,#07c8ff,#0a65ff_20%,#7648ff_37%,#ffbb8c_52%,#18d6e7_72%,#0088ff_88%,#07c8ff)] p-[4px] shadow-[0_0_60px_rgba(0,150,255,.6),0_0_100px_rgba(83,74,255,.2)]">
@@ -363,8 +367,8 @@ function SamuelCore({ active }: { active: boolean }) {
   );
 }
 
-function StatusPoint({ className, icon: Icon, title, text, color }: { className: string; icon: LucideIcon; title: string; text: ReactNode; color: string }) {
-  return <div className={`absolute ${className} w-[160px]`}><Icon className="mb-2 size-8" style={{ color, filter: `drop-shadow(0 0 10px ${color})` }} /><strong className="block text-sm text-[#e1efff]">{title}</strong><p className="mt-2 text-xs leading-5 text-[#9fc4e2]">{text}</p></div>;
+function StatusPoint({ active, className, icon: Icon, title, text, color }: { active?: boolean; className: string; icon: LucideIcon; title: string; text: ReactNode; color: string }) {
+  return <div className={`samuel-status-point absolute ${active ? "is-active" : ""} ${className} w-[160px]`} style={{ "--status-color": color } as CSSProperties}><Icon className="mb-2 size-8" style={{ color, filter: `drop-shadow(0 0 10px ${color})` }} /><strong className="block text-sm text-[#e1efff]">{title}</strong><p className="mt-2 text-xs leading-5 text-[#9fc4e2]">{text}</p></div>;
 }
 
 function RoundControl({ icon: Icon, label, onClick, compact = false }: { icon: LucideIcon; label: string; onClick: () => void; compact?: boolean }) {
@@ -376,7 +380,7 @@ function LiveStatus({ label, active = false }: { label: string; active?: boolean
 }
 
 function MobileState({ icon: Icon, label, color, active }: { icon: LucideIcon; label: string; color: string; active: boolean }) {
-  return <div className={`flex min-h-12 items-center gap-3 rounded-xl border px-3 ${active ? "border-cyan-300/50 bg-cyan-300/10" : "border-white/[.07] bg-white/[.025]"}`}><Icon className="size-5 shrink-0" style={{ color, filter: `drop-shadow(0 0 8px ${color})` }} /><span className="text-xs font-semibold text-[#dcecff]">{label}</span>{active && <span className="ml-auto size-2 animate-pulse rounded-full bg-emerald-400" />}</div>;
+  return <div className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl border px-1.5 ${active ? "border-cyan-300/50 bg-cyan-300/10 shadow-[0_0_18px_rgba(34,211,238,.12)]" : "border-white/[.07] bg-white/[.025]"}`}><Icon className="size-4 shrink-0" style={{ color, filter: `drop-shadow(0 0 8px ${color})` }} /><span className="text-[9px] font-semibold text-[#dcecff]">{label}</span></div>;
 }
 
 function MobileNav({ icon: Icon, label, onClick, primary = false }: { icon: LucideIcon; label: string; onClick: () => void; primary?: boolean }) {

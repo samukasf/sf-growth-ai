@@ -103,6 +103,10 @@ export function SamuelSiteBuilder({
     cta: "Pedir orçamento",
     whatsapp: "",
     mapsQuery: companyLocation,
+    heroImageUrl: "",
+    ctaUrl: "",
+    extraPages: "Sobre, Galeria",
+    embedUrl: "",
     tone: "executive",
   });
   const [previewPage, setPreviewPage] = useState<PreviewPage>("home");

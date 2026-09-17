@@ -69,14 +69,22 @@ export function resolveElevenLabsModel(env: NodeJS.ProcessEnv = process.env) {
 }
 
 export function resolveElevenLabsVoiceId(env: NodeJS.ProcessEnv = process.env) {
-  return env.ELEVENLABS_FEMALE_VOICE_ID?.trim() || DEFAULT_ELEVENLABS_VOICE_ID;
+  return (
+    env.ELEVENLABS_FEMALE_VOICE_ID?.trim() ||
+    env.ELEVENLABS_VOICE_ID?.trim() ||
+    DEFAULT_ELEVENLABS_VOICE_ID
+  );
 }
 
 export function resolveElevenLabsVoiceName(env: NodeJS.ProcessEnv = process.env) {
   if (resolveElevenLabsVoiceId(env) === DEFAULT_ELEVENLABS_VOICE_ID) {
     return DEFAULT_ELEVENLABS_VOICE_NAME;
   }
-  return env.ELEVENLABS_FEMALE_VOICE_NAME?.trim() || "Camilla";
+  return (
+    env.ELEVENLABS_FEMALE_VOICE_NAME?.trim() ||
+    env.ELEVENLABS_VOICE_NAME?.trim() ||
+    "Camilla"
+  );
 }
 
 export function resolveElevenLabsOutputFormat(env: NodeJS.ProcessEnv = process.env) {
@@ -133,7 +141,9 @@ export function ttsProviderReadiness(env: NodeJS.ProcessEnv = process.env) {
       configured: configured.elevenlabs,
       model: resolveElevenLabsModel(env),
       voiceName: resolveElevenLabsVoiceName(env),
-      customVoice: Boolean(env.ELEVENLABS_FEMALE_VOICE_ID?.trim()),
+      customVoice: Boolean(
+        env.ELEVENLABS_FEMALE_VOICE_ID?.trim() || env.ELEVENLABS_VOICE_ID?.trim(),
+      ),
       outputFormat: resolveElevenLabsOutputFormat(env),
       missingKey: configured.elevenlabs ? null : "ELEVENLABS_API_KEY",
     },

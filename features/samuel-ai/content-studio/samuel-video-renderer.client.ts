@@ -306,5 +306,8 @@ export async function renderSamuelCampaignVideo(
   referenceImages.forEach((image) => image.close());
   await audioContext.close();
   URL.revokeObjectURL(audioUrl);
+  if (result.size < 32_000) {
+    throw new Error("O navegador encerrou a renderização antes de gerar um vídeo válido. Use Chrome ou Edge atualizado.");
+  }
   return result;
 }
