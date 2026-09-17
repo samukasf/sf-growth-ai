@@ -11,6 +11,10 @@ export type SiteBuilderDraft = {
   cta: string;
   whatsapp: string;
   mapsQuery: string;
+  heroImageUrl: string;
+  ctaUrl: string;
+  extraPages: string;
+  embedUrl: string;
   tone: SiteBuilderTone;
 };
 
@@ -24,6 +28,10 @@ const DEFAULT_DRAFT: SiteBuilderDraft = {
   cta: "Pedir orçamento",
   whatsapp: "",
   mapsQuery: "",
+  heroImageUrl: "",
+  ctaUrl: "",
+  extraPages: "Sobre, Galeria",
+  embedUrl: "",
   tone: "executive",
 };
 
@@ -44,6 +52,17 @@ function cleanOptionalText(value: string | undefined, maxLength = 120): string {
 
 function cleanPhone(value: string | undefined): string {
   return (value ?? "").replace(/[^\d+]/g, "").slice(0, 24);
+}
+
+function cleanUrl(value: string | undefined): string {
+  const raw = (value ?? "").trim().slice(0, 1_000);
+  if (!raw) return "";
+  try {
+    const parsed = new URL(raw);
+    return parsed.protocol === "https:" || parsed.protocol === "http:" ? parsed.toString() : "";
+  } catch {
+    return "";
+  }
 }
 
 function buildWhatsAppUrl(phone: string) {
@@ -80,6 +99,10 @@ export function normalizeSiteBuilderDraft(input: Partial<SiteBuilderDraft>): Sit
     cta: cleanText(input.cta, DEFAULT_DRAFT.cta, 42),
     whatsapp: cleanPhone(input.whatsapp),
     mapsQuery: cleanOptionalText(input.mapsQuery, 140),
+    heroImageUrl: cleanUrl(input.heroImageUrl),
+    ctaUrl: cleanUrl(input.ctaUrl),
+    extraPages: cleanOptionalText(input.extraPages, 240),
+    embedUrl: cleanUrl(input.embedUrl),
     tone,
   };
 }
@@ -108,6 +131,16 @@ export function buildSiteBuilderHtml(input: Partial<SiteBuilderDraft>): string {
   const cta = escapeHtml(draft.cta);
   const whatsappUrl = buildWhatsAppUrl(draft.whatsapp);
   const mapsUrl = buildMapsUrl(draft.mapsQuery || `${draft.businessName} ${draft.location}`);
+  const heroImageUrl = escapeHtml(draft.heroImageUrl);
+  const primaryUrl = escapeHtml(draft.ctaUrl || "#contact");
+  const embedUrl = escapeHtml(draft.embedUrl);
+  const extraPages = draft.extraPages.split(",").map((item) => item.trim()).filter(Boolean).slice(0, 6);
+  const extraPageMarkup = extraPages.map((page, index) => {
+    const id = `page-${index + 1}`;
+    const label = escapeHtml(page);
+    return `<section id="${id}" class="content"><div class="section-inner"><h2 class="section-title">${label}</h2><div class="card"><b>${label}</b><p>Edite o conteúdo desta página no construtor antes da publicação final.</p></div></div></section>`;
+  }).join("");
+  const extraNavMarkup = extraPages.map((page, index) => `<a href="#page-${index + 1}">${escapeHtml(page)}</a>`).join("");
   const showAppSection = draft.mode === "app";
 
   return `<!doctype html>
@@ -210,6 +243,7 @@ export function buildSiteBuilderHtml(input: Partial<SiteBuilderDraft>): string {
       align-content: end;
       position: relative;
       overflow: hidden;
+      ${heroImageUrl ? `background-image:linear-gradient(180deg,rgba(3,12,28,.18),rgba(3,12,28,.92)),url("${heroImageUrl}");background-size:cover;background-position:center;` : ""}
     }
     .visual::before {
       content: "";
@@ -279,6 +313,7 @@ export function buildSiteBuilderHtml(input: Partial<SiteBuilderDraft>): string {
         <a href="#services">Serviços</a>
         <a href="#proof">Resultados</a>
         ${showAppSection ? '<a href="#app">App</a>' : ""}
+        ${extraNavMarkup}
         <a href="#contact">Contato</a>
       </div>
     </nav>
@@ -289,7 +324,7 @@ export function buildSiteBuilderHtml(input: Partial<SiteBuilderDraft>): string {
           <h1>${offer}</h1>
           <p class="lead">${businessName} ajuda clientes a ${goal} com atendimento claro, execução profissional e uma experiência preparada para converter.</p>
           <div class="actions">
-            <a class="button primary" href="#contact">${cta}</a>
+            <a class="button primary" href="${primaryUrl}">${cta}</a>
             <a class="button secondary" href="#services">Ver serviços</a>
           </div>
         </div>
@@ -353,6 +388,8 @@ export function buildSiteBuilderHtml(input: Partial<SiteBuilderDraft>): string {
         </div>
       </div>
     </section>` : ""}
+    ${extraPageMarkup}
+    ${embedUrl ? `<section class="content"><div class="section-inner"><h2 class="section-title">Conteúdo integrado</h2><iframe src="${embedUrl}" title="Conteúdo integrado" loading="lazy" style="width:100%;min-height:620px;border:1px solid var(--line);border-radius:24px;background:white"></iframe></div></section>` : ""}
     <section id="contact" class="content">
       <div class="section-inner contact">
         <div>

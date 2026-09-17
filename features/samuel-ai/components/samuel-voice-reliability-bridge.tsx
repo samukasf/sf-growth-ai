@@ -18,6 +18,7 @@ type TranscriptionResponse = {
   provider?: string;
   model?: string;
   error?: string;
+  code?: string;
 };
 
 type OutputEventDetail = {
@@ -331,7 +332,20 @@ export function SamuelVoiceReliabilityBridge() {
         });
         const payload = (await response.json().catch(() => ({}))) as TranscriptionResponse;
         if (!response.ok || !payload.text?.trim()) {
-          throw new Error(payload.error || "Não foi possível entender sua fala.");
+          const message = payload.error || "Não foi possível entender sua fala.";
+          postTelemetry(companyId, "transcription_error", {
+            message,
+            code: payload.code ?? "VOICE_TRANSCRIPTION_FAILED",
+            status: response.status,
+          });
+
+          // Ruído, silêncio ou indisponibilidade momentânea de um provedor não
+          // devem desligar o microfone. O usuário pode simplesmente falar de novo.
+          if (response.status === 422 || response.status === 429 || response.status >= 500) {
+            setState("listening");
+            return;
+          }
+          throw new Error(message);
         }
 
         const text = payload.text.trim();
@@ -465,7 +479,6 @@ export function SamuelVoiceReliabilityBridge() {
 
       activeCockpit = cockpit;
       activeButton = button;
-      window.dispatchEvent(new CustomEvent("samuel:conversation-open"));
       sessionActive = true;
       setState("connecting");
       const companyId = companyIdFor(cockpit);
