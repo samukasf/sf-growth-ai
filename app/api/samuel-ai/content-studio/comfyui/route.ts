@@ -22,6 +22,22 @@ function hasCapability(value: unknown, capability: string) {
   return Array.isArray(value) && value.some((item) => item === capability);
 }
 
+function allowedReferenceUrl(value: unknown) {
+  if (typeof value !== "string") return null;
+  const supabaseBase =
+    process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || process.env.SUPABASE_URL?.trim();
+  if (!supabaseBase) return null;
+  try {
+    const source = new URL(value);
+    const allowed = new URL(supabaseBase);
+    return source.protocol === "https:" && source.origin === allowed.origin
+      ? source.toString()
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 async function findComfyDevice(userId: string, companyId: string) {
   const devices = await listDesktopDevices(userId);
   const candidates = devices
@@ -172,7 +188,8 @@ export async function POST(request: Request) {
   const durationSeconds = Math.max(3, Math.min(20, Number(body?.durationSeconds) || 8));
   const referenceImages = Array.isArray(body?.referenceImages)
     ? body.referenceImages
-        .filter((value): value is string => typeof value === "string" && /^https:\/\//i.test(value))
+        .map(allowedReferenceUrl)
+        .filter((value): value is string => Boolean(value))
         .slice(0, 1)
     : [];
   const voiceProvider = body?.voiceProvider === "openai" ? "openai" : "elevenlabs";
