@@ -13,6 +13,7 @@ const MAX_TEXT_LENGTH = 2_400;
 type TtsBody = {
   companyId?: string;
   text?: string;
+  provider?: "elevenlabs" | "openai";
   voice?: string;
   elevenLabsVoiceId?: string;
 };
@@ -50,6 +51,7 @@ export async function POST(request: Request) {
   try {
     generation = await generateSamuelSpeech({
       text,
+      requestedProvider: body.provider,
       requestedOpenAiVoice: body.voice,
       requestedElevenLabsVoiceId,
       signal: request.signal,
