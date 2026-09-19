@@ -1,6 +1,6 @@
 {
   "name": "samuel-desktop-agent",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Samuel Desktop Agent for SF Growth AI",
   "main": "dist/main.js",
