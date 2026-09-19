@@ -727,10 +727,17 @@ async function runComfyUiGeneration(command: DeviceCommand) {
   const seed = Math.floor(Date.now() % 2_147_483_647);
   const outputPrefix = "sf-growth-" + command.id.slice(0, 8);
 
+  const voice =
+    args.voice && typeof args.voice === "object" && !Array.isArray(args.voice)
+      ? (args.voice as Record<string, unknown>)
+      : null;
   const workflow = await loadComfyWorkflow({
     PROMPT: promptText,
     NEGATIVE_PROMPT:
       "texto ilegível, watermark, logo deformado, anatomia ruim, flicker, frames duplicados, baixa qualidade",
+    VOICE_PROVIDER: typeof voice?.provider === "string" ? voice.provider : "",
+    VOICE_ID: typeof voice?.id === "string" ? voice.id : "",
+    VOICE_NAME: typeof voice?.name === "string" ? voice.name : "",
     WIDTH: width,
     HEIGHT: height,
     FPS: fps,
