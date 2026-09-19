@@ -67,7 +67,7 @@ function voiceKey(voice: Pick<VoiceOption, "provider" | "id">) {
 export function ProfessionalVideoGenerator({ companyId }: Props) {
   const [readiness, setReadiness] = useState<ContentReadiness | null>(null);
   const [comfyReadiness, setComfyReadiness] =
-    useState<ComfyReadinessPayload["readiness"]>(null);
+    useState<ComfyReadinessPayload["readiness"] | null>(null);
   const [references, setReferences] = useState<StudioReferenceImage[]>([]);
   const [prompt, setPrompt] = useState("");
   const [mode, setMode] = useState<DirectorMode>("multishot");
@@ -290,7 +290,8 @@ export function ProfessionalVideoGenerator({ companyId }: Props) {
             : "Gerando movimento e ambiente…",
       );
 
-      for (let attempt = 0; attempt < 100; attempt += 1) {
+      const maxAttempts = localRun ? 540 : 75;
+      for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
         if (attempt > 0) await sleep(localRun ? 5_000 : 10_000);
         const check = await fetch(
           `${endpoint}?companyId=${encodeURIComponent(companyId)}&generationId=${encodeURIComponent(started.generationId)}`,
@@ -430,7 +431,7 @@ export function ProfessionalVideoGenerator({ companyId }: Props) {
               <Sparkles className="mb-2 size-4" />
               <strong className="block">Automático</strong>
               <span className="mt-1 block text-[9px] opacity-60">
-                Local primeiro; nuvem como fallback.
+                Usa o local quando disponível; senão, nuvem.
               </span>
             </button>
             <button
