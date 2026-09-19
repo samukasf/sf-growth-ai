@@ -11,12 +11,15 @@ type UiState = {
   currentCommand: string | null;
   lastActivity: string;
   allowedFolders: string[];
+  comfyWorkflowPath: string | null;
   baseUrl: string;
 };
 
 contextBridge.exposeInMainWorld("samuelDesktop", {
   getState: (): Promise<UiState> => ipcRenderer.invoke("samuel:get-state"),
   addFolder: (): Promise<UiState> => ipcRenderer.invoke("samuel:add-folder"),
+  selectComfyWorkflow: (): Promise<UiState> =>
+    ipcRenderer.invoke("samuel:select-comfy-workflow"),
   removeFolder: (folder: string): Promise<UiState> => ipcRenderer.invoke("samuel:remove-folder", folder),
   setPaused: (paused: boolean): Promise<UiState> => ipcRenderer.invoke("samuel:set-paused", paused),
   stop: (): Promise<UiState> => ipcRenderer.invoke("samuel:stop"),
