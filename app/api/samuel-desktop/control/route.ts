@@ -32,6 +32,7 @@ const MINIMUM_RISK: Partial<Record<DesktopAction, DesktopRisk>> = {
   "pointer.scroll": "mutate",
   "keyboard.type": "mutate",
   "keyboard.shortcut": "mutate",
+  "comfyui.generate": "mutate",
   "computer.task": "sensitive",
 };
 
