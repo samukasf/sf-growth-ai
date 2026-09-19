@@ -28,6 +28,7 @@ export const DESKTOP_ACTIONS = [
   "pointer.scroll",
   "keyboard.type",
   "keyboard.shortcut",
+  "comfyui.generate",
   "computer.task",
 ] as const;
 
@@ -251,7 +252,9 @@ export async function queueDesktopCommand(input: {
     companyId = input.companyId;
   }
 
-  const expiresAt = new Date(Date.now() + COMMAND_TTL_MS).toISOString();
+  const commandTtlMs =
+    input.action === "comfyui.generate" ? 50 * 60 * 1000 : COMMAND_TTL_MS;
+  const expiresAt = new Date(Date.now() + commandTtlMs).toISOString();
   const { data, error } = await client
     .from("samuel_desktop_commands")
     .insert({
