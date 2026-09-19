@@ -175,6 +175,7 @@ export function ProfessionalVideoGenerator({ companyId }: Props) {
           companyId,
           text:
             "Esta é uma prévia da voz selecionada para as suas produções no SF Growth AI.",
+          provider: selectedVoice.provider,
           voice: selectedVoice.provider === "openai" ? selectedVoice.id : undefined,
           elevenLabsVoiceId:
             selectedVoice.provider === "elevenlabs" ? selectedVoice.id : undefined,
@@ -566,6 +567,10 @@ export function ProfessionalVideoGenerator({ companyId }: Props) {
               )}
               Ouvir voz
             </button>
+            <p className="text-[10px] leading-4 text-white/35 sm:col-span-2">
+              No ComfyUI, o painel injeta VOICE_PROVIDER, VOICE_ID e VOICE_NAME no workflow.
+              Workflows com etapa TTS usam essa voz; motores de nuvem mantêm o áudio nativo do provedor.
+            </p>
             {voiceStatus ? (
               <p className="text-[10px] text-white/45 sm:col-span-2">{voiceStatus}</p>
             ) : null}
