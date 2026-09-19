@@ -116,6 +116,7 @@ let currentCommandId: string | null = null;
 let stopRequested = false;
 let status = "Inicializando";
 let lastActivity = "Aguardando inicialização";
+let capabilitiesSynced = false;
 
 function configPath() {
   return path.join(app.getPath("userData"), "samuel-desktop.json");
@@ -146,6 +147,22 @@ function setActivity(nextStatus: string, activity: string) {
   lastActivity = activity;
   audit("state", { status: nextStatus, activity });
   sendState();
+}
+
+function desktopCapabilities() {
+  return [
+    "windows.list",
+    "windows.focus",
+    "apps.open",
+    "screen.capture",
+    "pointer.click",
+    "pointer.scroll",
+    "keyboard.type",
+    "keyboard.shortcut",
+    "files.scoped_read_write",
+    "computer.visual_loop",
+    "comfyui.local_api",
+  ];
 }
 
 function defaultConfig(): AgentConfig {
@@ -192,6 +209,7 @@ async function resetPairingState(activity: string) {
   config.pairingCode = undefined;
   config.pairingExpiresAt = undefined;
   config.companyId = null;
+  capabilitiesSynced = false;
   await saveConfig();
   audit("pairing_reset", { activity });
   setActivity("Aguardando pareamento", activity);
@@ -264,18 +282,7 @@ async function registerDevice(force = false) {
       action: "register",
       deviceName: deviceName(),
       platform: "windows",
-      capabilities: [
-        "windows.list",
-        "windows.focus",
-        "apps.open",
-        "screen.capture",
-        "pointer.click",
-        "pointer.scroll",
-        "keyboard.type",
-        "keyboard.shortcut",
-        "files.scoped_read_write",
-        "computer.visual_loop",
-      ],
+      capabilities: desktopCapabilities(),
     },
     false,
   );
@@ -356,6 +363,13 @@ async function checkPairing() {
   }
 
   const linked = response.status === "paired" || response.status === "paused";
+  if (linked && !capabilitiesSynced) {
+    await postJson("/api/samuel-desktop/device", {
+      action: "capabilities",
+      capabilities: desktopCapabilities(),
+    });
+    capabilitiesSynced = true;
+  }
   if (linked && !config.paired) {
     config.paired = true;
     config.pairingCode = undefined;
@@ -506,6 +520,361 @@ async function verifyWithScreenshot(
     height: snapshot.height,
     capturedAt: nowIso(),
     ...details,
+  };
+}
+
+
+type ComfyOutputDescriptor = {
+  filename: string;
+  subfolder: string;
+  type: string;
+};
+
+function comfyUiBaseUrl() {
+  const raw = (process.env.SAMUEL_COMFYUI_URL || "http://127.0.0.1:8188").trim();
+  const url = new URL(raw);
+  const host = url.hostname.toLowerCase();
+  if (url.protocol !== "http:" || !["127.0.0.1", "localhost", "::1", "[::1]"].includes(host)) {
+    throw new Error("SAMUEL_COMFYUI_URL deve apontar para o ComfyUI local (localhost/127.0.0.1).");
+  }
+  return url.origin;
+}
+
+function comfyWorkflowCandidates() {
+  const configured = process.env.SAMUEL_COMFYUI_VIDEO_WORKFLOW?.trim();
+  return [
+    configured || null,
+    path.join(app.getPath("userData"), "comfyui-video-workflow.json"),
+  ].filter((item): item is string => Boolean(item));
+}
+
+function replaceComfyTokens(value: unknown, tokens: Record<string, string | number>): unknown {
+  if (Array.isArray(value)) return value.map((item) => replaceComfyTokens(item, tokens));
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, item]) => [
+        key,
+        replaceComfyTokens(item, tokens),
+      ]),
+    );
+  }
+  if (typeof value !== "string") return value;
+
+  for (const [token, replacement] of Object.entries(tokens)) {
+    const marker = "{{" + token + "}}";
+    if (value === marker) return replacement;
+  }
+
+  let output = value;
+  for (const [token, replacement] of Object.entries(tokens)) {
+    output = output.split("{{" + token + "}}").join(String(replacement));
+  }
+  return output;
+}
+
+async function loadComfyWorkflow(tokens: Record<string, string | number>) {
+  let lastError: Error | null = null;
+  for (const candidate of comfyWorkflowCandidates()) {
+    try {
+      const raw = await fs.readFile(candidate, "utf8");
+      const parsed = JSON.parse(raw) as unknown;
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        throw new Error("Workflow JSON inválido.");
+      }
+      const record = parsed as Record<string, unknown>;
+      const prompt =
+        record.prompt && typeof record.prompt === "object" && !Array.isArray(record.prompt)
+          ? record.prompt
+          : record;
+      return {
+        prompt: replaceComfyTokens(prompt, tokens) as Record<string, unknown>,
+        source: candidate,
+      };
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+    }
+  }
+
+  const expected = path.join(app.getPath("userData"), "comfyui-video-workflow.json");
+  throw new Error(
+    "Workflow ComfyUI não encontrado. Exporte o workflow em formato API para " +
+      expected +
+      " ou defina SAMUEL_COMFYUI_VIDEO_WORKFLOW. " +
+      (lastError ? "Detalhe: " + lastError.message : ""),
+  );
+}
+
+async function assertComfyUiOnline(baseUrl: string) {
+  const response = await fetch(baseUrl + "/system_stats", {
+    cache: "no-store",
+    signal: AbortSignal.timeout(8_000),
+  });
+  if (!response.ok) throw new Error("ComfyUI local não respondeu ao diagnóstico.");
+  return response.json().catch(() => ({}));
+}
+
+async function uploadComfyReference(baseUrl: string, sourceUrl: string) {
+  const remote = await fetch(sourceUrl, {
+    cache: "no-store",
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (!remote.ok) throw new Error("Não foi possível baixar a imagem de referência.");
+  const declaredLength = Number(remote.headers.get("content-length") || 0);
+  if (declaredLength > 20 * 1024 * 1024) {
+    throw new Error("Imagem de referência excede 20 MB.");
+  }
+  const bytes = new Uint8Array(await remote.arrayBuffer());
+  if (bytes.byteLength > 20 * 1024 * 1024) {
+    throw new Error("Imagem de referência excede 20 MB.");
+  }
+
+  const contentType = remote.headers.get("content-type") || "image/png";
+  const extension = contentType.includes("jpeg") ? "jpg" : contentType.includes("webp") ? "webp" : "png";
+  const filename = "samuel-reference-" + Date.now() + "." + extension;
+  const form = new FormData();
+  form.append("image", new Blob([bytes], { type: contentType }), filename);
+  form.append("type", "input");
+  form.append("overwrite", "true");
+
+  const response = await fetch(baseUrl + "/upload/image", {
+    method: "POST",
+    body: form,
+    signal: AbortSignal.timeout(45_000),
+  });
+  const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  if (!response.ok) {
+    throw new Error(
+      typeof payload.error === "string" ? payload.error : "ComfyUI recusou a imagem de referência.",
+    );
+  }
+  const name = typeof payload.name === "string" ? payload.name : filename;
+  return name;
+}
+
+function findComfyVideo(value: unknown): ComfyOutputDescriptor | null {
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = findComfyVideo(item);
+      if (found) return found;
+    }
+    return null;
+  }
+  if (!value || typeof value !== "object") return null;
+
+  const record = value as Record<string, unknown>;
+  if (typeof record.filename === "string" && /\.mp4$/i.test(record.filename)) {
+    return {
+      filename: record.filename,
+      subfolder: typeof record.subfolder === "string" ? record.subfolder : "",
+      type: typeof record.type === "string" ? record.type : "output",
+    };
+  }
+  for (const nested of Object.values(record)) {
+    const found = findComfyVideo(nested);
+    if (found) return found;
+  }
+  return null;
+}
+
+async function interruptComfyUi(baseUrl: string) {
+  try {
+    await fetch(baseUrl + "/interrupt", {
+      method: "POST",
+      signal: AbortSignal.timeout(5_000),
+    });
+  } catch {
+    // O STOP local continua prevalecendo mesmo se o ComfyUI não responder.
+  }
+}
+
+async function runComfyUiGeneration(command: DeviceCommand) {
+  if (command.risk !== "mutate" || !command.approvalReference) {
+    throw new Error("Geração ComfyUI exige aprovação explícita vinculada.");
+  }
+
+  const args = command.args ?? {};
+  const promptText = String(args.prompt ?? "").trim().slice(0, 8_000);
+  if (promptText.length < 20) throw new Error("Prompt de vídeo ComfyUI insuficiente.");
+
+  const upload =
+    args.upload && typeof args.upload === "object" && !Array.isArray(args.upload)
+      ? (args.upload as Record<string, unknown>)
+      : null;
+  const signedUrl = typeof upload?.signedUrl === "string" ? upload.signedUrl : "";
+  const assetPath = typeof upload?.assetPath === "string" ? upload.assetPath : "";
+  if (!signedUrl || !assetPath) throw new Error("Destino seguro de upload ausente.");
+
+  const uploadUrl = new URL(signedUrl);
+  if (uploadUrl.protocol !== "https:") throw new Error("URL de upload inválida.");
+
+  const baseUrl = comfyUiBaseUrl();
+  setActivity("Executando", "ComfyUI · verificando motor local");
+  await assertComfyUiOnline(baseUrl);
+
+  let referenceImage = "";
+  const referenceImageUrl =
+    typeof args.referenceImageUrl === "string" ? args.referenceImageUrl.trim() : "";
+  if (referenceImageUrl) {
+    setActivity("Executando", "ComfyUI · preparando imagem de referência");
+    referenceImage = await uploadComfyReference(baseUrl, referenceImageUrl);
+  }
+
+  const width = Math.max(256, Math.min(4096, Number(args.width) || 1080));
+  const height = Math.max(256, Math.min(4096, Number(args.height) || 1920));
+  const fps = Math.max(8, Math.min(60, Number(args.fps) || 24));
+  const durationSeconds = Math.max(2, Math.min(20, Number(args.durationSeconds) || 8));
+  const frames = Math.max(9, Math.round((durationSeconds * fps) / 8) * 8 + 1);
+  const seed = Math.floor(Date.now() % 2_147_483_647);
+  const outputPrefix = "sf-growth-" + command.id.slice(0, 8);
+
+  const workflow = await loadComfyWorkflow({
+    PROMPT: promptText,
+    NEGATIVE_PROMPT:
+      "texto ilegível, watermark, logo deformado, anatomia ruim, flicker, frames duplicados, baixa qualidade",
+    WIDTH: width,
+    HEIGHT: height,
+    FPS: fps,
+    FRAMES: frames,
+    DURATION_SECONDS: durationSeconds,
+    SEED: seed,
+    REFERENCE_IMAGE: referenceImage,
+    OUTPUT_PREFIX: outputPrefix,
+  });
+
+  setActivity("Executando", "ComfyUI · enviando workflow");
+  const submission = await fetch(baseUrl + "/prompt", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      prompt: workflow.prompt,
+      client_id: "samuel-desktop-" + (config.deviceId || command.id),
+    }),
+    signal: AbortSignal.timeout(30_000),
+  });
+  const queued = (await submission.json().catch(() => ({}))) as Record<string, unknown>;
+  if (!submission.ok || typeof queued.prompt_id !== "string") {
+    const detail =
+      typeof queued.error === "string"
+        ? queued.error
+        : queued.node_errors
+          ? JSON.stringify(queued.node_errors).slice(0, 1200)
+          : "Workflow recusado.";
+    throw new Error("ComfyUI: " + detail);
+  }
+
+  const promptId = queued.prompt_id;
+  const timeoutMs = Math.max(
+    60_000,
+    Math.min(55 * 60 * 1000, Number(process.env.SAMUEL_COMFYUI_TIMEOUT_MS) || 45 * 60 * 1000),
+  );
+  const startedAt = Date.now();
+  let descriptor: ComfyOutputDescriptor | null = null;
+
+  while (Date.now() - startedAt < timeoutMs) {
+    if (stopRequested) {
+      await interruptComfyUi(baseUrl);
+      throw new Error("Geração ComfyUI interrompida pelo botão STOP SAMUEL.");
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 2_500));
+    const historyResponse = await fetch(
+      baseUrl + "/history/" + encodeURIComponent(promptId),
+      { cache: "no-store", signal: AbortSignal.timeout(12_000) },
+    );
+    if (!historyResponse.ok) continue;
+    const history = (await historyResponse.json().catch(() => ({}))) as Record<string, unknown>;
+    const item =
+      history[promptId] && typeof history[promptId] === "object"
+        ? (history[promptId] as Record<string, unknown>)
+        : null;
+    if (!item) continue;
+
+    descriptor = findComfyVideo(item.outputs);
+    if (descriptor) break;
+
+    const statusRecord =
+      item.status && typeof item.status === "object" && !Array.isArray(item.status)
+        ? (item.status as Record<string, unknown>)
+        : null;
+    const statusText = typeof statusRecord?.status_str === "string" ? statusRecord.status_str : "";
+    const completed = statusRecord?.completed === true;
+    if (completed || statusText === "error") {
+      throw new Error(
+        statusText === "error"
+          ? "O workflow ComfyUI terminou com erro."
+          : "O workflow terminou sem gerar MP4. Configure o nó final para salvar vídeo .mp4.",
+      );
+    }
+
+    const elapsed = Math.max(1, Math.round((Date.now() - startedAt) / 1000));
+    setActivity("Executando", "ComfyUI · gerando vídeo local (" + elapsed + "s)");
+  }
+
+  if (!descriptor) {
+    await interruptComfyUi(baseUrl);
+    throw new Error("O ComfyUI excedeu o limite de processamento configurado.");
+  }
+
+  const viewUrl = new URL(baseUrl + "/view");
+  viewUrl.searchParams.set("filename", descriptor.filename);
+  viewUrl.searchParams.set("subfolder", descriptor.subfolder);
+  viewUrl.searchParams.set("type", descriptor.type);
+
+  setActivity("Executando", "ComfyUI · recolhendo vídeo final");
+  const videoResponse = await fetch(viewUrl, {
+    cache: "no-store",
+    signal: AbortSignal.timeout(90_000),
+  });
+  if (!videoResponse.ok) throw new Error("Não foi possível baixar o MP4 final do ComfyUI.");
+  const declaredLength = Number(videoResponse.headers.get("content-length") || 0);
+  if (declaredLength > 192 * 1024 * 1024) {
+    throw new Error("Vídeo ComfyUI excede o limite de 192 MB.");
+  }
+  const bytes = new Uint8Array(await videoResponse.arrayBuffer());
+  if (!bytes.byteLength || bytes.byteLength > 192 * 1024 * 1024) {
+    throw new Error("Vídeo ComfyUI vazio ou acima de 192 MB.");
+  }
+
+  setActivity("Executando", "ComfyUI · enviando resultado ao SF Growth AI");
+  const uploadResponse = await fetch(uploadUrl, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "video/mp4",
+      "Cache-Control": "max-age=3600",
+      "x-upsert": "true",
+    },
+    body: bytes,
+    signal: AbortSignal.timeout(120_000),
+  });
+  if (!uploadResponse.ok) {
+    const detail = (await uploadResponse.text().catch(() => "")).slice(0, 600);
+    throw new Error("Falha ao guardar o vídeo no workspace: " + (detail || uploadResponse.status));
+  }
+
+  const checksum = createHash("sha256").update(bytes).digest("hex");
+  return {
+    result: {
+      completed: true,
+      provider: "comfyui",
+      promptId,
+      assetPath,
+      filename: descriptor.filename,
+      bytes: bytes.byteLength,
+      mimeType: "video/mp4",
+      workflow: workflow.source,
+      voice:
+        args.voice && typeof args.voice === "object" && !Array.isArray(args.voice)
+          ? args.voice
+          : null,
+    },
+    evidence: {
+      type: "comfyui-output",
+      sha256: checksum,
+      bytes: bytes.byteLength,
+      filename: descriptor.filename,
+      promptId,
+      capturedAt: nowIso(),
+    },
   };
 }
 
@@ -738,6 +1107,8 @@ async function executeCommand(command: DeviceCommand): Promise<{ result: unknown
         evidence: await verifyWithScreenshot("keyboard-shortcut", { keys }),
       };
     }
+    case "comfyui.generate":
+      return runComfyUiGeneration(command);
     case "computer.task":
       return runComputerTask(command);
     default:
