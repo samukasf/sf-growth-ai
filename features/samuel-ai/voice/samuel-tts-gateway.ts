@@ -399,6 +399,7 @@ async function generateWithOpenAi(
 
 export async function generateSamuelSpeech(input: {
   text: string;
+  requestedProvider?: SamuelTtsProvider;
   requestedOpenAiVoice?: string;
   requestedElevenLabsVoiceId?: string;
   env?: NodeJS.ProcessEnv;
@@ -409,12 +410,15 @@ export async function generateSamuelSpeech(input: {
   const fetcher = input.fetcher ?? fetch;
   const readiness = ttsProviderReadiness(env);
   const attempts: SamuelTtsAttempt[] = [];
+  const providerOrder = input.requestedProvider
+    ? readiness.order.filter((provider) => provider === input.requestedProvider)
+    : [...readiness.order];
 
-  if (!readiness.order.length) {
+  if (!providerOrder.length) {
     return { ok: false, status: 503, code: "TTS_NOT_CONFIGURED", attempts };
   }
 
-  for (const provider of readiness.order) {
+  for (const provider of providerOrder) {
     const result = provider === "elevenlabs"
       ? await generateWithElevenLabs(
           input.text,
