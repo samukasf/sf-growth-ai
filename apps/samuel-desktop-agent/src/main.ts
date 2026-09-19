@@ -14,7 +14,7 @@ import {
   shell,
 } from "electron";
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
-import { appendFileSync } from "node:fs";
+import { appendFileSync, existsSync } from "node:fs";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -38,6 +38,7 @@ type AgentConfig = {
   pairingExpiresAt?: string;
   companyId?: string | null;
   allowedFolders: string[];
+  comfyWorkflowPath?: string;
   paused: boolean;
 };
 
@@ -70,6 +71,7 @@ type UiState = {
   currentCommand: string | null;
   lastActivity: string;
   allowedFolders: string[];
+  comfyWorkflowPath: string | null;
   baseUrl: string;
 };
 
@@ -150,7 +152,7 @@ function setActivity(nextStatus: string, activity: string) {
 }
 
 function desktopCapabilities() {
-  return [
+  const capabilities = [
     "windows.list",
     "windows.focus",
     "apps.open",
@@ -161,8 +163,16 @@ function desktopCapabilities() {
     "keyboard.shortcut",
     "files.scoped_read_write",
     "computer.visual_loop",
-    "comfyui.local_api",
   ];
+  const defaultWorkflow = path.join(app.getPath("userData"), "comfyui-video-workflow.json");
+  if (
+    process.env.SAMUEL_COMFYUI_VIDEO_WORKFLOW?.trim() ||
+    config?.comfyWorkflowPath ||
+    existsSync(defaultWorkflow)
+  ) {
+    capabilities.push("comfyui.local_api");
+  }
+  return capabilities;
 }
 
 function defaultConfig(): AgentConfig {
@@ -325,6 +335,7 @@ function uiState(): UiState {
     currentCommand: currentCommandId,
     lastActivity,
     allowedFolders: config.allowedFolders,
+    comfyWorkflowPath: config.comfyWorkflowPath ?? null,
     baseUrl: config.baseUrl,
   };
 }
@@ -544,6 +555,7 @@ function comfyWorkflowCandidates() {
   const configured = process.env.SAMUEL_COMFYUI_VIDEO_WORKFLOW?.trim();
   return [
     configured || null,
+    config.comfyWorkflowPath || null,
     path.join(app.getPath("userData"), "comfyui-video-workflow.json"),
   ].filter((item): item is string => Boolean(item));
 }
@@ -1304,6 +1316,29 @@ function registerIpc() {
     sendState();
     return uiState();
   });
+  ipcMain.handle("samuel:select-comfy-workflow", async () => {
+    const selection = await dialog.showOpenDialog({
+      title: "Selecionar workflow de vídeo ComfyUI (API JSON)",
+      properties: ["openFile"],
+      filters: [{ name: "Workflow ComfyUI", extensions: ["json"] }],
+    });
+    if (selection.canceled || !selection.filePaths[0]) return uiState();
+
+    const workflowPath = path.resolve(selection.filePaths[0]);
+    const raw = await fs.readFile(workflowPath, "utf8");
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new Error("O arquivo selecionado não é um workflow JSON válido.");
+    }
+
+    config.comfyWorkflowPath = workflowPath;
+    capabilitiesSynced = false;
+    await saveConfig();
+    audit("comfyui_workflow_selected", { workflowPath });
+    sendState();
+    return uiState();
+  });
+
   ipcMain.handle("samuel:set-paused", async (_event, paused: boolean) => {
     config.paused = paused === true;
     await saveConfig();
