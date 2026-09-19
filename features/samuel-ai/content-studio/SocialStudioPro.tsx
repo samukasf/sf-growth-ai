@@ -120,7 +120,10 @@ export function SocialStudioPro({ companyId }: Props) {
   }
 
   useEffect(() => {
-    void loadDashboard();
+    const timer = window.setTimeout(() => {
+      void loadDashboard();
+    }, 0);
+    return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [companyId]);
 

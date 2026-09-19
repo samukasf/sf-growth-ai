@@ -6,6 +6,7 @@ import {
   heartbeatDesktopDevice,
   pollDesktopCommand,
   registerDesktopDevice,
+  updateDesktopCapabilities,
 } from "@/features/samuel-desktop/server/desktop-agent.server";
 
 export const runtime = "nodejs";
@@ -94,6 +95,14 @@ export async function POST(request: Request) {
 
     if (action === "heartbeat") {
       return Response.json({ ok: true, status: device.status });
+    }
+
+    if (action === "capabilities") {
+      const capabilities = await updateDesktopCapabilities(device.id, body.capabilities);
+      return Response.json(
+        { ok: true, status: device.status, capabilities },
+        { headers: { "Cache-Control": "no-store" } },
+      );
     }
 
     if (action === "poll") {

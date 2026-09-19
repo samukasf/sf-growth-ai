@@ -36,6 +36,7 @@
     .empty { color: #607484; font-size: 11px; padding: 10px 0 2px; }
     .shortcut { color: #607484; font-size: 10px; text-align: center; margin: 15px 0 2px; }
     .device-id { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; color: #5f7687; font-size: 9px; word-break: break-all; }
+    .path { margin-top: 10px; color: #8eb4c8; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 10px; line-height: 1.45; word-break: break-all; }
   </style>
 </head>
 <body>
@@ -71,6 +72,17 @@
       <div id="folders"></div>
     </section>
 
+    <section class="card">
+      <div class="row">
+        <div>
+          <div class="label">ComfyUI · motor de vídeo local</div>
+          <p class="hint">Selecione uma vez o workflow exportado em formato API JSON. O ComfyUI permanece somente no seu computador.</p>
+        </div>
+        <button id="selectComfy">Workflow</button>
+      </div>
+      <div id="comfyPath" class="path">Nenhum workflow selecionado.</div>
+    </section>
+
     <p class="shortcut">Atalho global de emergência: <strong>Ctrl + Alt + Esc</strong></p>
   </main>
   <script>
@@ -88,6 +100,7 @@
       $("stop").disabled = !state.currentCommand;
       $("pairCard").style.display = state.paired ? "none" : "block";
       $("pairingCode").textContent = state.pairingCode || "--------";
+      $("comfyPath").textContent = state.comfyWorkflowPath || "Nenhum workflow selecionado.";
 
       const statusText = String(state.status || "").toLowerCase();
       $("dot").className = "dot" + (statusText.includes("offline") || statusText.includes("revog") ? " off" : statusText.includes("aguard") || statusText.includes("aten") || statusText.includes("paus") ? " warn" : "");
@@ -117,6 +130,7 @@
     $("pause").onclick = async () => render(await api.setPaused(!current.paused));
     $("stop").onclick = async () => render(await api.stop());
     $("addFolder").onclick = async () => render(await api.addFolder());
+    $("selectComfy").onclick = async () => render(await api.selectComfyWorkflow());
     $("newCode").onclick = async () => render(await api.newPairingCode());
     $("openPanel").onclick = () => api.openPanel();
 

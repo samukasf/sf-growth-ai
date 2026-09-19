@@ -28,6 +28,7 @@ export const DESKTOP_ACTIONS = [
   "pointer.scroll",
   "keyboard.type",
   "keyboard.shortcut",
+  "comfyui.generate",
   "computer.task",
 ] as const;
 
@@ -134,6 +135,18 @@ export async function authenticateDesktopDevice(request: Request) {
     paired_at: string | null;
     pairing_expires_at: string | null;
   };
+}
+
+export async function updateDesktopCapabilities(deviceId: string, value: unknown) {
+  const client = getSupabaseServiceClient();
+  const capabilities = cleanCapabilities(value);
+  const now = new Date().toISOString();
+  const { error } = await client
+    .from("samuel_desktop_devices")
+    .update({ capabilities, last_seen_at: now, updated_at: now })
+    .eq("id", deviceId);
+  if (error) throw new Error(error.message);
+  return capabilities;
 }
 
 export async function heartbeatDesktopDevice(deviceId: string) {
@@ -251,7 +264,9 @@ export async function queueDesktopCommand(input: {
     companyId = input.companyId;
   }
 
-  const expiresAt = new Date(Date.now() + COMMAND_TTL_MS).toISOString();
+  const commandTtlMs =
+    input.action === "comfyui.generate" ? 50 * 60 * 1000 : COMMAND_TTL_MS;
+  const expiresAt = new Date(Date.now() + commandTtlMs).toISOString();
   const { data, error } = await client
     .from("samuel_desktop_commands")
     .insert({

@@ -2,6 +2,12 @@ name: Samuel Desktop Windows
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - "apps/samuel-desktop-agent/**"
+      - "features/samuel-desktop/**"
+      - "app/api/samuel-desktop/**"
+      - ".github/workflows/samuel-desktop-windows.yml"
   push:
     branches:
       - main

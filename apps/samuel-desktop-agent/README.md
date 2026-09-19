@@ -20,6 +20,34 @@ Aplicativo Windows do SF Growth AI que permite ao Samuel executar tarefas reais 
 - Pause/Resume local, Pause/Resume remoto e remoção do dispositivo.
 - `STOP SAMUEL` no aplicativo/bandeja e atalho global `Ctrl + Alt + Esc`.
 - Log local JSONL de execução em `userData` do aplicativo.
+- Ponte local com ComfyUI para gerar vídeo sem expor a API local à internet.
+- Upload do MP4 final por URL assinada temporária; nenhuma chave Supabase é enviada ao desktop.
+- Seleção de workflow ComfyUI diretamente no Samuel Desktop.
+
+## ComfyUI · vídeo local
+
+O ComfyUI continua escutando somente no próprio computador. O SF Growth AI envia uma ordem assinada ao Samuel Desktop; o agente chama a API local do ComfyUI, acompanha o `prompt_id`, recolhe o MP4 e envia o arquivo final ao workspace por uma URL assinada temporária.
+
+Configuração inicial:
+
+1. Instale/abra o ComfyUI e confirme que a interface local responde em `http://127.0.0.1:8188`.
+2. Monte o workflow de vídeo com o modelo que deseja usar.
+3. Exporte o workflow em **formato API JSON**.
+4. No Samuel Desktop, clique em **Workflow** na seção **ComfyUI · motor de vídeo local** e selecione esse JSON.
+5. Mantenha o ComfyUI aberto quando escolher **ComfyUI local** no AI Video Director.
+
+O agente substitui estes placeholders no workflow antes de enviá-lo ao ComfyUI:
+
+- `{{PROMPT}}`
+- `{{NEGATIVE_PROMPT}}`
+- `{{WIDTH}}` / `{{HEIGHT}}`
+- `{{FPS}}` / `{{FRAMES}}` / `{{DURATION_SECONDS}}`
+- `{{SEED}}`
+- `{{REFERENCE_IMAGE}}` — nome da imagem enviada ao diretório de input do ComfyUI.
+- `{{OUTPUT_PREFIX}}`
+- `{{VOICE_PROVIDER}}` / `{{VOICE_ID}}` / `{{VOICE_NAME}}` — voz selecionada no painel para workflows que possuam etapa de locução/TTS.
+
+O nó final do workflow deve salvar um arquivo `.mp4`. Se o workflow terminar sem MP4, o agente devolve erro verificável em vez de marcar a tarefa como concluída.
 
 ## Voz
 
@@ -96,6 +124,9 @@ No cloud SF Growth AI:
 No agente local, opcionalmente:
 
 - `SAMUEL_DESKTOP_BASE_URL` — substitui o endpoint cloud; padrão `https://sf-growth-ai.vercel.app`.
+- `SAMUEL_COMFYUI_URL` — endpoint local; padrão `http://127.0.0.1:8188`. Por segurança, o agente aceita apenas loopback.
+- `SAMUEL_COMFYUI_VIDEO_WORKFLOW` — caminho alternativo para o workflow API JSON. O seletor do aplicativo é o método recomendado.
+- `SAMUEL_COMFYUI_TIMEOUT_MS` — limite da geração local; padrão 45 minutos, máximo 55 minutos.
 
 ## Arquitetura
 

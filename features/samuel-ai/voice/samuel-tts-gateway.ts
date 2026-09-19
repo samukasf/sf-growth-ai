@@ -76,6 +76,11 @@ export function resolveElevenLabsVoiceId(env: NodeJS.ProcessEnv = process.env) {
   );
 }
 
+export function normalizeElevenLabsVoiceId(value?: string | null) {
+  const voiceId = value?.trim() ?? "";
+  return /^[A-Za-z0-9_-]{8,128}$/.test(voiceId) ? voiceId : null;
+}
+
 export function resolveElevenLabsVoiceName(env: NodeJS.ProcessEnv = process.env) {
   if (resolveElevenLabsVoiceId(env) === DEFAULT_ELEVENLABS_VOICE_ID) {
     return DEFAULT_ELEVENLABS_VOICE_NAME;
@@ -197,6 +202,7 @@ function combinedSignal(signal?: AbortSignal) {
 
 async function generateWithElevenLabs(
   text: string,
+  requestedVoiceId: string | undefined,
   env: NodeJS.ProcessEnv,
   fetcher: typeof fetch,
   signal?: AbortSignal,
@@ -204,7 +210,7 @@ async function generateWithElevenLabs(
   const provider = "elevenlabs" as const;
   const apiKey = env.ELEVENLABS_API_KEY?.trim();
   const model = resolveElevenLabsModel(env);
-  const voice = resolveElevenLabsVoiceId(env);
+  const voice = normalizeElevenLabsVoiceId(requestedVoiceId) || resolveElevenLabsVoiceId(env);
   const outputFormat = resolveElevenLabsOutputFormat(env);
   const startedAt = Date.now();
 
@@ -393,7 +399,9 @@ async function generateWithOpenAi(
 
 export async function generateSamuelSpeech(input: {
   text: string;
+  requestedProvider?: SamuelTtsProvider;
   requestedOpenAiVoice?: string;
+  requestedElevenLabsVoiceId?: string;
   env?: NodeJS.ProcessEnv;
   fetcher?: typeof fetch;
   signal?: AbortSignal;
@@ -402,14 +410,23 @@ export async function generateSamuelSpeech(input: {
   const fetcher = input.fetcher ?? fetch;
   const readiness = ttsProviderReadiness(env);
   const attempts: SamuelTtsAttempt[] = [];
+  const providerOrder = input.requestedProvider
+    ? readiness.order.filter((provider) => provider === input.requestedProvider)
+    : [...readiness.order];
 
-  if (!readiness.order.length) {
+  if (!providerOrder.length) {
     return { ok: false, status: 503, code: "TTS_NOT_CONFIGURED", attempts };
   }
 
-  for (const provider of readiness.order) {
+  for (const provider of providerOrder) {
     const result = provider === "elevenlabs"
-      ? await generateWithElevenLabs(input.text, env, fetcher, input.signal)
+      ? await generateWithElevenLabs(
+          input.text,
+          input.requestedElevenLabsVoiceId,
+          env,
+          fetcher,
+          input.signal,
+        )
       : await generateWithOpenAi(
           input.text,
           input.requestedOpenAiVoice,
