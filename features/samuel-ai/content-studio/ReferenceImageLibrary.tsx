@@ -24,25 +24,34 @@ function selectionKey(companyId: string) {
   return `sf-growth-ai:studio:references:${companyId}`;
 }
 
+function readStoredSelection(companyId: string) {
+  try {
+    const stored = sessionStorage.getItem(selectionKey(companyId));
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as unknown;
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is string => typeof item === "string").slice(0, 12)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
 export function ReferenceImageLibrary({ companyId, onReferencesChange, compact = false }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [items, setItems] = useState<StudioReferenceImage[]>([]);
-  const [selected, setSelected] = useState<string[]>([]);
+  const [selected, setSelected] = useState<string[]>(() =>
+    typeof window === "undefined" ? [] : readStoredSelection(companyId),
+  );
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    try {
-      const stored = sessionStorage.getItem(selectionKey(companyId));
-      if (!stored) return;
-      const parsed = JSON.parse(stored) as unknown;
-      if (Array.isArray(parsed)) {
-        setSelected(parsed.filter((item): item is string => typeof item === "string").slice(0, 12));
-      }
-    } catch {
-      // Ignore malformed browser selection state.
-    }
+    const timer = window.setTimeout(() => {
+      setSelected(readStoredSelection(companyId));
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [companyId]);
 
   useEffect(() => {
