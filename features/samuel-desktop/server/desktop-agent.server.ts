@@ -137,6 +137,18 @@ export async function authenticateDesktopDevice(request: Request) {
   };
 }
 
+export async function updateDesktopCapabilities(deviceId: string, value: unknown) {
+  const client = getSupabaseServiceClient();
+  const capabilities = cleanCapabilities(value);
+  const now = new Date().toISOString();
+  const { error } = await client
+    .from("samuel_desktop_devices")
+    .update({ capabilities, last_seen_at: now, updated_at: now })
+    .eq("id", deviceId);
+  if (error) throw new Error(error.message);
+  return capabilities;
+}
+
 export async function heartbeatDesktopDevice(deviceId: string) {
   const client = getSupabaseServiceClient();
   await client
