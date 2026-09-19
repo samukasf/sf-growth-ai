@@ -2,6 +2,7 @@ import { authorizeCompanyRequest } from "@/features/auth/server/authorization";
 import {
   InvalidTtsProviderError,
   generateSamuelSpeech,
+  normalizeElevenLabsVoiceId,
 } from "@/features/samuel-ai/voice/samuel-tts-gateway";
 
 export const runtime = "nodejs";
@@ -13,6 +14,7 @@ type TtsBody = {
   companyId?: string;
   text?: string;
   voice?: string;
+  elevenLabsVoiceId?: string;
 };
 
 function cleanSpokenText(value: string) {
@@ -39,11 +41,17 @@ export async function POST(request: Request) {
   const text = cleanSpokenText(body.text ?? "");
   if (!text) return Response.json({ error: "Texto vazio." }, { status: 400 });
 
+  const requestedElevenLabsVoiceId = body.elevenLabsVoiceId?.trim();
+  if (requestedElevenLabsVoiceId && !normalizeElevenLabsVoiceId(requestedElevenLabsVoiceId)) {
+    return Response.json({ error: "Voice ID ElevenLabs inválido." }, { status: 400 });
+  }
+
   let generation: Awaited<ReturnType<typeof generateSamuelSpeech>>;
   try {
     generation = await generateSamuelSpeech({
       text,
       requestedOpenAiVoice: body.voice,
+      requestedElevenLabsVoiceId,
       signal: request.signal,
     });
   } catch (error) {
