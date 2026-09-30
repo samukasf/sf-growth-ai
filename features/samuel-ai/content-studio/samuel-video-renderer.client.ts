@@ -155,6 +155,16 @@ export async function renderSamuelCampaignVideo(
       narrationDuration,
     );
 
+    const renderProps = {
+      project,
+      audioUrl,
+      referenceImages: preparedReferences.urls,
+      quality,
+      visualStyle,
+      showBranding,
+      durationSeconds: plan.durationSeconds,
+    };
+
     const result = await renderMediaOnWeb({
       composition: {
         id: "samuel-campaign-video",
@@ -163,16 +173,9 @@ export async function renderSamuelCampaignVideo(
         fps: plan.fps,
         width: plan.width,
         height: plan.height,
+        defaultProps: renderProps,
       },
-      inputProps: {
-        project,
-        audioUrl,
-        referenceImages: preparedReferences.urls,
-        quality,
-        visualStyle,
-        showBranding,
-        durationSeconds: plan.durationSeconds,
-      },
+      inputProps: renderProps,
       container: "mp4",
       videoCodec: "h264",
       audioCodec: "aac",
