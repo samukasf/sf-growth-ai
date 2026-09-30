@@ -5,8 +5,10 @@ import {
   startElevenVideoGeneration,
 } from "@/features/samuel-ai/content-studio/elevenlabs-video.server";
 import {
+  falLtx25Readiness,
   falVideoReadiness,
   getFalVideoGeneration,
+  startFalLtx25Generation,
   startFalVideoGeneration,
   type FalVideoMode,
 } from "@/features/samuel-ai/content-studio/fal-video.server";
@@ -24,7 +26,7 @@ export const dynamic = "force-dynamic";
 
 const BUCKET = "samuel-creative";
 const MAX_VIDEO_BYTES = 192 * 1024 * 1024;
-type VideoProvider = "elevenlabs" | "runway" | "fal";
+type VideoProvider = "elevenlabs" | "runway" | "fal" | "ltx25";
 type GenerationMode = "single-shot" | "multi-shot" | "motion-control";
 
 function clean(value: unknown, max: number) {
@@ -67,7 +69,12 @@ function chooseProvider(requested: string, mode: GenerationMode, hasReferences: 
   const eleven = elevenVideoReadiness();
   const runway = runwayVideoReadiness();
   const fal = falVideoReadiness();
+  const ltx25 = falLtx25Readiness();
 
+  if (requested === "ltx25") {
+    if (!ltx25.configured) throw new Error(ltx25.detail);
+    return "ltx25";
+  }
   if (requested === "runway") {
     if (!runway.configured) throw new Error(runway.detail);
     return "runway";
@@ -120,7 +127,17 @@ export async function POST(request: Request) {
       throw new Error("Para gerar a partir da sua imagem com fal.ai, selecione ao menos uma foto de referência.");
     }
 
-    const generation = provider === "runway"
+    const generation = provider === "ltx25"
+      ? await startFalLtx25Generation({
+          prompt,
+          aspectRatio,
+          resolution,
+          durationSeconds,
+          referenceImageUrl: referenceImages[0] ?? null,
+          generateAudio,
+          quality: body?.quality === "pro" ? "pro" : "fast",
+        })
+      : provider === "runway"
       ? mode === "multi-shot"
         ? await startRunwayMultiShotGeneration({
             prompt,
@@ -155,7 +172,7 @@ export async function POST(request: Request) {
       shots: shots.length,
       generate_audio: generateAudio,
     };
-    if (provider === "fal" && "statusUrl" in generation && "responseUrl" in generation) {
+    if ((provider === "fal" || provider === "ltx25") && "statusUrl" in generation && "responseUrl" in generation) {
       output.status_url = generation.statusUrl;
       output.response_url = generation.responseUrl;
     }
@@ -205,14 +222,20 @@ export async function GET(request: Request) {
     .select("id,status,output,error_message,request_key")
     .eq("user_id", auth.user.id)
     .eq("company_id", companyId)
-    .in("request_key", [jobKey("elevenlabs", generationId), jobKey("runway", generationId), jobKey("fal", generationId)])
+    .in("request_key", [jobKey("elevenlabs", generationId), jobKey("runway", generationId), jobKey("fal", generationId), jobKey("ltx25", generationId)])
     .limit(1);
   if (jobError) return Response.json({ error: jobError.message }, { status: 500 });
   const job = jobs?.[0];
   if (!job) return Response.json({ error: "Geração não encontrada para esta empresa." }, { status: 404 });
 
   const existingOutput = (job.output ?? {}) as Record<string, unknown>;
-  const provider: VideoProvider = existingOutput.provider === "runway" ? "runway" : existingOutput.provider === "fal" ? "fal" : "elevenlabs";
+  const provider: VideoProvider = existingOutput.provider === "runway"
+    ? "runway"
+    : existingOutput.provider === "ltx25"
+      ? "ltx25"
+      : existingOutput.provider === "fal"
+        ? "fal"
+        : "elevenlabs";
   const existingAssetPath = typeof existingOutput.asset_path === "string" ? existingOutput.asset_path : null;
   if (job.status === "ready" && existingAssetPath) {
     return Response.json({
@@ -244,7 +267,7 @@ export async function GET(request: Request) {
       } else if (generation.status === "SUCCEEDED") {
         remoteUrl = generation.output?.[0] ?? null;
       }
-    } else if (provider === "fal") {
+    } else if (provider === "fal" || provider === "ltx25") {
       const statusUrl = typeof existingOutput.status_url === "string" ? existingOutput.status_url : "";
       const responseUrl = typeof existingOutput.response_url === "string" ? existingOutput.response_url : "";
       const generation = await getFalVideoGeneration(statusUrl, responseUrl);
