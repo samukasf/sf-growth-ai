@@ -1,7 +1,7 @@
 import { createConfiguredResponsesProvider } from "@/apps/web/src/core/orchestrator/openai-responses.provider";
 import { authorizeCompanyRequest } from "@/features/auth/server/authorization";
 import { elevenVideoReadiness } from "@/features/samuel-ai/content-studio/elevenlabs-video.server";
-import { falVideoReadiness } from "@/features/samuel-ai/content-studio/fal-video.server";
+import { falLtx25Readiness, falVideoReadiness } from "@/features/samuel-ai/content-studio/fal-video.server";
 import { runwayVideoReadiness } from "@/features/samuel-ai/content-studio/runway-video.server";
 import {
   generateContentProject,
@@ -24,6 +24,7 @@ async function readiness(companyId: string): Promise<ContentReadiness> {
   const elevenVideo = elevenVideoReadiness();
   const runwayVideo = runwayVideoReadiness();
   const falVideo = falVideoReadiness();
+  const ltx25Cloud = falLtx25Readiness();
   const [meta, metaConnection] = await Promise.all([
     resolveMetaClientConfigForCompany(companyId),
     findMetaOAuthConnection(companyId).catch(() => null),
@@ -91,6 +92,12 @@ async function readiness(companyId: string): Promise<ContentReadiness> {
       provider: externalVideoReady ? `${preferred.provider} · ${preferred.model}` : "Renderizador Samuel",
       model: preferred.model,
       detail: externalDetail,
+    },
+    ltx25Cloud: {
+      ready: ltx25Cloud.configured,
+      provider: ltx25Cloud.provider,
+      model: ltx25Cloud.model,
+      detail: ltx25Cloud.detail,
     },
     browserRenderer: {
       ready: true,
