@@ -50,6 +50,8 @@ type VoiceCatalogPayload = {
 type ComfyReadinessPayload = {
   readiness?: {
     ready: boolean;
+    ltx25Ready?: boolean;
+    ltx25Detail?: string;
     deviceId: string | null;
     deviceName: string | null;
     detail: string;
@@ -135,9 +137,12 @@ export function ProfessionalVideoGenerator({ companyId }: Props) {
 
   const generativeReady = Boolean(readiness?.aiVideo.ready);
   const comfyReady = Boolean(comfyReadiness?.ready);
+  const ltx25Ready = Boolean(comfyReadiness?.ltx25Ready);
   const engineReady =
-    engine === "comfyui" || engine === "ltx25"
-      ? comfyReady
+    engine === "ltx25"
+      ? ltx25Ready
+      : engine === "comfyui"
+        ? comfyReady
       : engine === "cloud"
         ? generativeReady
         : comfyReady || generativeReady;
@@ -369,9 +374,8 @@ export function ProfessionalVideoGenerator({ companyId }: Props) {
           </strong>
           <span className="mt-1 block max-w-xs text-[10px] leading-4 opacity-70">
             {engine === "ltx25"
-              ? comfyReady
-                ? `LTX 2.5 pronto via ${comfyReadiness?.deviceName ?? "Samuel Desktop"}.`
-                : "LTX 2.5 precisa do Samuel Desktop + ComfyUI local com workflow configurado."
+              ? comfyReadiness?.ltx25Detail ??
+                "LTX 2.5 precisa do Samuel Desktop + ComfyUI local com workflow configurado."
               : engine === "comfyui"
                 ? comfyReadiness?.detail ?? "Verificando Samuel Desktop…"
                 : engine === "cloud"
@@ -454,7 +458,7 @@ export function ProfessionalVideoGenerator({ companyId }: Props) {
               <Film className="mb-2 size-4" />
               <strong className="block">LTX 2.5</strong>
               <span className="mt-1 block text-[9px] opacity-60">
-                Vídeo + áudio local com workflow dedicado.
+                {ltx25Ready ? "Pronto para gerar localmente." : "Configure o workflow LTX no Desktop."}
               </span>
             </button>
             <button
