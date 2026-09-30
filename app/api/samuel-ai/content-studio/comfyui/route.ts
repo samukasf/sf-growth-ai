@@ -71,13 +71,18 @@ function dimensions(
 
 async function readiness(userId: string, companyId: string) {
   const device = await findComfyDevice(userId, companyId);
+  const ltx25Ready = Boolean(device && hasCapability(device.capabilities, "comfyui.ltx2_5"));
   return {
     ready: Boolean(device),
+    ltx25Ready,
     deviceId: device?.id ?? null,
     deviceName: device?.device_name ?? null,
     detail: device
       ? `Samuel Desktop conectado em ${device.device_name}. O vídeo será processado pelo ComfyUI local.`
       : "Atualize/abra o Samuel Desktop com a ponte ComfyUI ativa para usar o motor local.",
+    ltx25Detail: ltx25Ready
+      ? `LTX 2.5 configurado em ${device?.device_name ?? "Samuel Desktop"}.`
+      : "Configure um workflow LTX 2.5 em formato API JSON no Samuel Desktop.",
   };
 }
 
@@ -156,10 +161,13 @@ export async function GET(request: Request) {
     );
   }
 
+  const resolvedProvider = result.model === "ltx-2.5" ? "ltx-2.5" : "comfyui";
+
   return Response.json(
     {
       generationId,
-      provider: "comfyui",
+      provider: resolvedProvider,
+      model: typeof result.model === "string" ? result.model : "auto",
       status: "completed",
       assetPath,
       previewUrl: signed.signedUrl,
@@ -185,6 +193,7 @@ export async function POST(request: Request) {
     body?.aspectRatio === "16:9" || body?.aspectRatio === "1:1" ? body.aspectRatio : "9:16";
   const resolution = body?.resolution === "720p" ? "720p" : "1080p";
   const mode = body?.mode === "single-shot" ? "single-shot" : "multi-shot";
+  const videoModel = body?.videoModel === "ltx-2.5" ? "ltx-2.5" : "auto";
   const durationSeconds = Math.max(3, Math.min(20, Number(body?.durationSeconds) || 8));
   const referenceImages = Array.isArray(body?.referenceImages)
     ? body.referenceImages
@@ -238,6 +247,7 @@ export async function POST(request: Request) {
         durationSeconds,
         fps: 24,
         mode,
+        videoModel,
         referenceImageUrl: referenceImages[0] ?? null,
         voice: voiceId
           ? { provider: voiceProvider, id: voiceId, name: voiceName || null }
@@ -257,7 +267,8 @@ export async function POST(request: Request) {
       {
         jobId: command.id,
         generationId: command.id,
-        provider: "comfyui",
+        provider: videoModel === "ltx-2.5" ? "ltx-2.5" : "comfyui",
+        model: videoModel,
         mode,
         status: "queued",
         deviceName: device.device_name,

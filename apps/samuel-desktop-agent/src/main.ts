@@ -165,13 +165,18 @@ function desktopCapabilities() {
     "computer.visual_loop",
   ];
   const defaultWorkflow = path.join(app.getPath("userData"), "comfyui-video-workflow.json");
-  if (
-    process.env.SAMUEL_COMFYUI_VIDEO_WORKFLOW?.trim() ||
-    config?.comfyWorkflowPath ||
-    existsSync(defaultWorkflow)
-  ) {
-    capabilities.push("comfyui.local_api");
-  }
+  const ltxWorkflow = path.join(app.getPath("userData"), "ltx-2.5-video-workflow.json");
+  const hasGenericComfy =
+    Boolean(process.env.SAMUEL_COMFYUI_VIDEO_WORKFLOW?.trim()) ||
+    Boolean(config?.comfyWorkflowPath) ||
+    existsSync(defaultWorkflow);
+  const hasLtx25 =
+    Boolean(process.env.SAMUEL_COMFYUI_LTX25_WORKFLOW?.trim()) ||
+    existsSync(ltxWorkflow) ||
+    Boolean(config?.comfyWorkflowPath?.toLowerCase().includes("ltx"));
+
+  if (hasGenericComfy || hasLtx25) capabilities.push("comfyui.local_api");
+  if (hasLtx25) capabilities.push("comfyui.ltx2_5");
   return capabilities;
 }
 
@@ -551,13 +556,17 @@ function comfyUiBaseUrl() {
   return url.origin;
 }
 
-function comfyWorkflowCandidates() {
+function comfyWorkflowCandidates(videoModel: string) {
   const configured = process.env.SAMUEL_COMFYUI_VIDEO_WORKFLOW?.trim();
-  return [
-    configured || null,
-    config.comfyWorkflowPath || null,
-    path.join(app.getPath("userData"), "comfyui-video-workflow.json"),
-  ].filter((item): item is string => Boolean(item));
+  const ltxConfigured = process.env.SAMUEL_COMFYUI_LTX25_WORKFLOW?.trim();
+  const ltxDefault = path.join(app.getPath("userData"), "ltx-2.5-video-workflow.json");
+  const genericDefault = path.join(app.getPath("userData"), "comfyui-video-workflow.json");
+
+  return videoModel === "ltx-2.5"
+    ? [ltxConfigured || null, existsSync(ltxDefault) ? ltxDefault : null, config.comfyWorkflowPath || null, configured || null]
+        .filter((item): item is string => Boolean(item))
+    : [configured || null, config.comfyWorkflowPath || null, genericDefault]
+        .filter((item): item is string => Boolean(item));
 }
 
 function replaceComfyTokens(value: unknown, tokens: Record<string, string | number>): unknown {
@@ -584,11 +593,17 @@ function replaceComfyTokens(value: unknown, tokens: Record<string, string | numb
   return output;
 }
 
-async function loadComfyWorkflow(tokens: Record<string, string | number>) {
+async function loadComfyWorkflow(
+  tokens: Record<string, string | number>,
+  videoModel = "auto",
+) {
   let lastError: Error | null = null;
-  for (const candidate of comfyWorkflowCandidates()) {
+  for (const candidate of comfyWorkflowCandidates(videoModel)) {
     try {
       const raw = await fs.readFile(candidate, "utf8");
+      if (videoModel === "ltx-2.5" && !/ltx[-_ ]?2(?:\.5)?|ltxvideo/i.test(raw)) {
+        throw new Error("O workflow selecionado não parece ser um workflow LTX 2.5.");
+      }
       const parsed = JSON.parse(raw) as unknown;
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
         throw new Error("Workflow JSON inválido.");
@@ -607,11 +622,16 @@ async function loadComfyWorkflow(tokens: Record<string, string | number>) {
     }
   }
 
-  const expected = path.join(app.getPath("userData"), "comfyui-video-workflow.json");
+  const expected = videoModel === "ltx-2.5"
+    ? path.join(app.getPath("userData"), "ltx-2.5-video-workflow.json")
+    : path.join(app.getPath("userData"), "comfyui-video-workflow.json");
   throw new Error(
-    "Workflow ComfyUI não encontrado. Exporte o workflow em formato API para " +
+    (videoModel === "ltx-2.5" ? "Workflow LTX 2.5" : "Workflow ComfyUI") +
+      " não encontrado. Exporte o workflow em formato API para " +
       expected +
-      " ou defina SAMUEL_COMFYUI_VIDEO_WORKFLOW. " +
+      (videoModel === "ltx-2.5"
+        ? " ou defina SAMUEL_COMFYUI_LTX25_WORKFLOW. "
+        : " ou defina SAMUEL_COMFYUI_VIDEO_WORKFLOW. ") +
       (lastError ? "Detalhe: " + lastError.message : ""),
   );
 }
@@ -705,6 +725,7 @@ async function runComfyUiGeneration(command: DeviceCommand) {
   }
 
   const args = command.args ?? {};
+  const videoModel = args.videoModel === "ltx-2.5" ? "ltx-2.5" : "auto";
   const promptText = String(args.prompt ?? "").trim().slice(0, 8_000);
   if (promptText.length < 20) throw new Error("Prompt de vídeo ComfyUI insuficiente.");
 
@@ -745,6 +766,8 @@ async function runComfyUiGeneration(command: DeviceCommand) {
       : null;
   const workflow = await loadComfyWorkflow({
     PROMPT: promptText,
+    VIDEO_MODEL: videoModel,
+    LTX_MODEL: videoModel === "ltx-2.5" ? "Lightricks/LTX-2.5" : "",
     NEGATIVE_PROMPT:
       "texto ilegível, watermark, logo deformado, anatomia ruim, flicker, frames duplicados, baixa qualidade",
     VOICE_PROVIDER: typeof voice?.provider === "string" ? voice.provider : "",
@@ -758,7 +781,7 @@ async function runComfyUiGeneration(command: DeviceCommand) {
     SEED: seed,
     REFERENCE_IMAGE: referenceImage,
     OUTPUT_PREFIX: outputPrefix,
-  });
+  }, videoModel);
 
   setActivity("Executando", "ComfyUI · enviando workflow");
   const submission = await fetch(baseUrl + "/prompt", {
@@ -874,7 +897,8 @@ async function runComfyUiGeneration(command: DeviceCommand) {
   return {
     result: {
       completed: true,
-      provider: "comfyui",
+      provider: videoModel === "ltx-2.5" ? "ltx-2.5" : "comfyui",
+      model: videoModel,
       promptId,
       assetPath,
       filename: descriptor.filename,
@@ -887,7 +911,8 @@ async function runComfyUiGeneration(command: DeviceCommand) {
           : null,
     },
     evidence: {
-      type: "comfyui-output",
+      type: videoModel === "ltx-2.5" ? "ltx-2.5-output" : "comfyui-output",
+      model: videoModel,
       sha256: checksum,
       bytes: bytes.byteLength,
       filename: descriptor.filename,
