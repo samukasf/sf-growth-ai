@@ -137,7 +137,7 @@ export function ProfessionalVideoGenerator({ companyId }: Props) {
 
   const generativeReady = Boolean(readiness?.aiVideo.ready);
   const comfyReady = Boolean(comfyReadiness?.ready);
-  const ltx25Ready = Boolean(comfyReadiness?.ltx25Ready);
+  const ltx25Ready = Boolean(readiness?.ltx25Cloud.ready);
   const engineReady =
     engine === "ltx25"
       ? ltx25Ready
@@ -215,12 +215,17 @@ export function ProfessionalVideoGenerator({ companyId }: Props) {
         companyId,
         title: "Vídeo Profissional Samuel",
         prompt: fullPrompt,
-        aspectRatio: ratio,
+        aspectRatio: engine === "ltx25" && ratio === "1:1" ? "9:16" : ratio,
         resolution,
         durationSeconds,
         referenceImages: referenceUrls,
         mode: mode === "multishot" ? "multi-shot" : "single-shot",
         generateAudio,
+        provider: engine === "ltx25" ? "ltx25" : undefined,
+        quality:
+          engine === "ltx25" && resolution === "1080p" && durationSeconds <= 10
+            ? "pro"
+            : "fast",
         videoModel: engine === "ltx25" ? "ltx-2.5" : "auto",
         voiceProvider: selectedVoice?.provider,
         voiceId: selectedVoice?.id,
@@ -264,7 +269,7 @@ export function ProfessionalVideoGenerator({ companyId }: Props) {
       .join("\n")}`;
 
     const localPreferred =
-      engine === "ltx25" || engine === "comfyui" || (engine === "auto" && comfyReady);
+      engine === "comfyui" || (engine === "auto" && comfyReady);
     let endpoint = localPreferred
       ? "/api/samuel-ai/content-studio/comfyui"
       : "/api/samuel-ai/content-studio/ai-video";
@@ -357,8 +362,8 @@ export function ProfessionalVideoGenerator({ companyId }: Props) {
             Vídeo generativo real — local ou nuvem, com voz selecionável.
           </h2>
           <p className="mt-2 text-xs leading-5 text-white/45">
-            O modo Automático prioriza o motor local. LTX 2.5 usa o workflow dedicado
-            no Samuel Desktop; se o ambiente local não estiver pronto, a nuvem continua disponível.
+            O LTX 2.5 agora roda na nuvem e funciona diretamente pelo navegador. O modo
+            Automático ainda pode usar o Samuel Desktop quando houver um motor local configurado.
           </p>
         </div>
         <div
@@ -374,8 +379,7 @@ export function ProfessionalVideoGenerator({ companyId }: Props) {
           </strong>
           <span className="mt-1 block max-w-xs text-[10px] leading-4 opacity-70">
             {engine === "ltx25"
-              ? comfyReadiness?.ltx25Detail ??
-                "LTX 2.5 precisa do Samuel Desktop + ComfyUI local com workflow configurado."
+              ? readiness?.ltx25Cloud.detail ?? "Verificando LTX 2.5 cloud…"
               : engine === "comfyui"
                 ? comfyReadiness?.detail ?? "Verificando Samuel Desktop…"
                 : engine === "cloud"
@@ -458,7 +462,7 @@ export function ProfessionalVideoGenerator({ companyId }: Props) {
               <Film className="mb-2 size-4" />
               <strong className="block">LTX 2.5</strong>
               <span className="mt-1 block text-[9px] opacity-60">
-                {ltx25Ready ? "Pronto para gerar localmente." : "Configure o workflow LTX no Desktop."}
+                {ltx25Ready ? "Pronto no navegador · sem GPU local." : "LTX 2.5 cloud ainda não configurado."}
               </span>
             </button>
             <button
@@ -515,7 +519,9 @@ export function ProfessionalVideoGenerator({ companyId }: Props) {
               >
                 <option value="9:16">Vertical 9:16</option>
                 <option value="16:9">Horizontal 16:9</option>
-                <option value="1:1">Quadrado 1:1</option>
+                <option value="1:1" disabled={engine === "ltx25"}>
+                  Quadrado 1:1{engine === "ltx25" ? " · indisponível no LTX 2.5" : ""}
+                </option>
               </select>
             </label>
             <label className="text-[10px] text-white/45">
@@ -594,8 +600,8 @@ export function ProfessionalVideoGenerator({ companyId }: Props) {
               Ouvir voz
             </button>
             <p className="text-[10px] leading-4 text-white/35 sm:col-span-2">
-              No LTX 2.5/ComfyUI, o painel injeta VIDEO_MODEL, LTX_MODEL, VOICE_PROVIDER, VOICE_ID e VOICE_NAME no workflow.
-              Workflows com etapa TTS usam essa voz; motores de nuvem mantêm o áudio nativo do provedor.
+              O LTX 2.5 cloud gera vídeo e áudio diretamente no servidor. A voz selecionada
+              continua disponível para pipelines de locução; o áudio nativo do LTX é preservado quando ativado.
             </p>
             {voiceStatus ? (
               <p className="text-[10px] text-white/45 sm:col-span-2">{voiceStatus}</p>
@@ -664,8 +670,8 @@ export function ProfessionalVideoGenerator({ companyId }: Props) {
                     O vídeo aparecerá aqui
                   </strong>
                   <p className="mt-2 text-[10px] leading-5 text-white/30">
-                    ComfyUI local e motores de nuvem geram novos frames; o painel acompanha
-                    a produção até o arquivo final.
+                    O LTX 2.5 e os demais motores de nuvem geram novos frames; o painel acompanha
+                    a produção até o arquivo final e guarda o MP4 no workspace.
                   </p>
                 </div>
               )}

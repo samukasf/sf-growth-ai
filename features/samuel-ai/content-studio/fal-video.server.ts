@@ -3,6 +3,7 @@ import "server-only";
 const FAL_QUEUE_BASE = "https://queue.fal.run";
 
 export type FalVideoMode = "image-to-video" | "motion-control";
+export type FalLtx25Mode = "text-to-video" | "image-to-video";
 export type FalVideoGeneration = {
   id: string;
   statusUrl: string;
@@ -15,6 +16,18 @@ function falKey() {
   const value = process.env.FAL_KEY?.trim();
   if (!value) throw new Error("fal.ai não está configurada no servidor. Adicione FAL_KEY para ativar geração profissional de vídeo.");
   return value;
+}
+
+export function falLtx25Readiness() {
+  const configured = Boolean(process.env.FAL_KEY?.trim());
+  return {
+    configured,
+    provider: "fal.ai",
+    model: "lightricks/ltx-2.5",
+    detail: configured
+      ? "LTX 2.5 cloud ativo via fal.ai; não exige GPU local nem ComfyUI no computador."
+      : "Adicione FAL_KEY no servidor para ativar o LTX 2.5 cloud.",
+  };
 }
 
 export function falVideoReadiness() {
@@ -134,4 +147,49 @@ export async function getFalVideoGeneration(statusUrl: string, responseUrl: stri
       : "";
   if (!url) throw new Error("fal.ai concluiu a tarefa, mas não devolveu o vídeo final.");
   return { status: "completed" as const, url, mimeType: video?.content_type || "video/mp4" };
+}
+
+
+function normalizeLtxDuration(value: number, variant: "fast" | "pro") {
+  if (variant === "pro") {
+    const allowed = [6, 8, 10];
+    return allowed.reduce((best, current) =>
+      Math.abs(current - value) < Math.abs(best - value) ? current : best,
+    8);
+  }
+  const even = Math.round(Math.max(6, Math.min(20, value)) / 2) * 2;
+  return Math.max(6, Math.min(20, even));
+}
+
+export async function startFalLtx25Generation(input: {
+  prompt: string;
+  aspectRatio: "9:16" | "1:1" | "16:9";
+  resolution: "720p" | "1080p";
+  durationSeconds: number;
+  referenceImageUrl?: string | null;
+  generateAudio?: boolean;
+  quality?: "fast" | "pro";
+}): Promise<FalVideoGeneration> {
+  const quality = input.quality === "pro" ? "pro" : "fast";
+  const mode: FalLtx25Mode = input.referenceImageUrl ? "image-to-video" : "text-to-video";
+  const duration = normalizeLtxDuration(input.durationSeconds, quality);
+  const model = `lightricks/ltx-2.5/${mode}/${quality}`;
+
+  const requestInput: Record<string, unknown> = {
+    prompt: input.prompt.slice(0, 4_000),
+    resolution: input.resolution,
+    duration: String(duration),
+    generate_audio: input.generateAudio ?? true,
+    aspect_ratio: input.aspectRatio,
+  };
+  if (input.referenceImageUrl) requestInput.image_url = input.referenceImageUrl;
+
+  const payload = await falPost(model, requestInput);
+  const id = typeof payload.request_id === "string" ? payload.request_id : "";
+  const statusUrl = typeof payload.status_url === "string" ? payload.status_url : "";
+  const responseUrl = typeof payload.response_url === "string" ? payload.response_url : "";
+  if (!id || !statusUrl || !responseUrl) {
+    throw new Error("fal.ai não devolveu os dados necessários para acompanhar a geração LTX 2.5.");
+  }
+  return { id, statusUrl, responseUrl, model, durationSeconds: duration };
 }
