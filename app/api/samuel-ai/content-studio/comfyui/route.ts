@@ -71,13 +71,18 @@ function dimensions(
 
 async function readiness(userId: string, companyId: string) {
   const device = await findComfyDevice(userId, companyId);
+  const ltx25Ready = Boolean(device && hasCapability(device.capabilities, "comfyui.ltx2_5"));
   return {
     ready: Boolean(device),
+    ltx25Ready,
     deviceId: device?.id ?? null,
     deviceName: device?.device_name ?? null,
     detail: device
       ? `Samuel Desktop conectado em ${device.device_name}. O vídeo será processado pelo ComfyUI local.`
       : "Atualize/abra o Samuel Desktop com a ponte ComfyUI ativa para usar o motor local.",
+    ltx25Detail: ltx25Ready
+      ? `LTX 2.5 configurado em ${device?.device_name ?? "Samuel Desktop"}.`
+      : "Configure um workflow LTX 2.5 em formato API JSON no Samuel Desktop.",
   };
 }
 
