@@ -22,7 +22,7 @@ import type { ContentReadiness } from "./samuel-content.types";
 type Props = { companyId: string };
 type DirectorMode = "multishot" | "photo";
 type AspectRatio = "9:16" | "16:9" | "1:1";
-type VideoEngine = "auto" | "comfyui" | "cloud";
+type VideoEngine = "auto" | "ltx25" | "comfyui" | "cloud";
 
 type GenerationPayload = {
   generationId?: string;
@@ -136,7 +136,7 @@ export function ProfessionalVideoGenerator({ companyId }: Props) {
   const generativeReady = Boolean(readiness?.aiVideo.ready);
   const comfyReady = Boolean(comfyReadiness?.ready);
   const engineReady =
-    engine === "comfyui"
+    engine === "comfyui" || engine === "ltx25"
       ? comfyReady
       : engine === "cloud"
         ? generativeReady
@@ -216,6 +216,7 @@ export function ProfessionalVideoGenerator({ companyId }: Props) {
         referenceImages: referenceUrls,
         mode: mode === "multishot" ? "multi-shot" : "single-shot",
         generateAudio,
+        videoModel: engine === "ltx25" ? "ltx-2.5" : "auto",
         voiceProvider: selectedVoice?.provider,
         voiceId: selectedVoice?.id,
         voiceName: selectedVoice?.name,
@@ -257,7 +258,8 @@ export function ProfessionalVideoGenerator({ companyId }: Props) {
       .map((item) => `- ${item}`)
       .join("\n")}`;
 
-    const localPreferred = engine === "comfyui" || (engine === "auto" && comfyReady);
+    const localPreferred =
+      engine === "ltx25" || engine === "comfyui" || (engine === "auto" && comfyReady);
     let endpoint = localPreferred
       ? "/api/samuel-ai/content-studio/comfyui"
       : "/api/samuel-ai/content-studio/ai-video";
@@ -350,8 +352,8 @@ export function ProfessionalVideoGenerator({ companyId }: Props) {
             Vídeo generativo real — local ou nuvem, com voz selecionável.
           </h2>
           <p className="mt-2 text-xs leading-5 text-white/45">
-            O modo Automático prioriza o ComfyUI no Samuel Desktop quando a ponte local
-            está ativa e mantém os motores de nuvem como alternativa.
+            O modo Automático prioriza o motor local. LTX 2.5 usa o workflow dedicado
+            no Samuel Desktop; se o ambiente local não estiver pronto, a nuvem continua disponível.
           </p>
         </div>
         <div
@@ -366,9 +368,13 @@ export function ProfessionalVideoGenerator({ companyId }: Props) {
             {engineReady ? "Motor de vídeo disponível" : "Motor de vídeo pendente"}
           </strong>
           <span className="mt-1 block max-w-xs text-[10px] leading-4 opacity-70">
-            {engine === "comfyui"
-              ? comfyReadiness?.detail ?? "Verificando Samuel Desktop…"
-              : engine === "cloud"
+            {engine === "ltx25"
+              ? comfyReady
+                ? `LTX 2.5 pronto via ${comfyReadiness?.deviceName ?? "Samuel Desktop"}.`
+                : "LTX 2.5 precisa do Samuel Desktop + ComfyUI local com workflow configurado."
+              : engine === "comfyui"
+                ? comfyReadiness?.detail ?? "Verificando Samuel Desktop…"
+                : engine === "cloud"
                 ? readiness?.aiVideo.detail ?? "Verificando provedores de nuvem…"
                 : comfyReady
                   ? comfyReadiness?.detail
@@ -418,7 +424,7 @@ export function ProfessionalVideoGenerator({ companyId }: Props) {
             </button>
           </div>
 
-          <div className="grid gap-2 sm:grid-cols-3">
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
             <button
               type="button"
               onClick={() => setEngine("auto")}
@@ -433,6 +439,22 @@ export function ProfessionalVideoGenerator({ companyId }: Props) {
               <strong className="block">Automático</strong>
               <span className="mt-1 block text-[9px] opacity-60">
                 Usa o local quando disponível; senão, nuvem.
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setEngine("ltx25")}
+              className={cn(
+                "rounded-xl border p-3 text-left text-xs transition",
+                engine === "ltx25"
+                  ? "border-fuchsia-300/35 bg-fuchsia-300/[.08] text-white"
+                  : "border-white/[.07] bg-white/[.02] text-white/55",
+              )}
+            >
+              <Film className="mb-2 size-4" />
+              <strong className="block">LTX 2.5</strong>
+              <span className="mt-1 block text-[9px] opacity-60">
+                Vídeo + áudio local com workflow dedicado.
               </span>
             </button>
             <button
@@ -568,7 +590,7 @@ export function ProfessionalVideoGenerator({ companyId }: Props) {
               Ouvir voz
             </button>
             <p className="text-[10px] leading-4 text-white/35 sm:col-span-2">
-              No ComfyUI, o painel injeta VOICE_PROVIDER, VOICE_ID e VOICE_NAME no workflow.
+              No LTX 2.5/ComfyUI, o painel injeta VIDEO_MODEL, LTX_MODEL, VOICE_PROVIDER, VOICE_ID e VOICE_NAME no workflow.
               Workflows com etapa TTS usam essa voz; motores de nuvem mantêm o áudio nativo do provedor.
             </p>
             {voiceStatus ? (
