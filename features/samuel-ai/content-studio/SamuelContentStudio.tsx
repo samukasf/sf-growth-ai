@@ -16,7 +16,6 @@ import {
   PencilLine,
   RotateCcw,
   SlidersHorizontal,
-  Eye,
 } from "lucide-react";
 
 import { cn } from "@/utils/cn";
@@ -33,6 +32,7 @@ import {
   renderSamuelCampaignVideo,
   type SamuelVideoQuality,
 } from "./samuel-video-renderer.client";
+import { SamuelRemotionPreview } from "./SamuelRemotionPreview";
 
 type Props = { companyId: string };
 type MetaPublishPlatform = SocialPlatform;
@@ -236,7 +236,7 @@ export function SamuelContentStudio({ companyId }: Props) {
 
   const uploadBrowserMp4 = useCallback(async (blob: Blob, activeProject: SamuelContentProject) => {
     if (!isPublishableVideoBlob(blob)) {
-      throw new Error("Este navegador gerou WebM. Para publicação automática, use Chrome/Edge com suporte a MP4 ou gere o vídeo IA MP4.");
+      throw new Error("O renderizador não devolveu MP4. Tente novamente em um navegador compatível com WebCodecs ou use o vídeo IA MP4.");
     }
     const form = new FormData();
     form.set("companyId", companyId);
@@ -284,7 +284,7 @@ export function SamuelContentStudio({ companyId }: Props) {
             setWarning(uploadError instanceof Error ? uploadError.message : "O vídeo foi criado, mas não pôde ser preparado para publicação.");
           }
         } else {
-          setWarning("A prévia foi criada em WebM. Para publicar automaticamente, gere MP4 pela IA ou use um navegador com MediaRecorder MP4.");
+          setWarning("O navegador não devolveu MP4 publicável. Use um navegador compatível com WebCodecs ou gere o vídeo IA MP4.");
         }
       }
     } catch (cause) {
@@ -499,12 +499,12 @@ export function SamuelContentStudio({ companyId }: Props) {
 
         <div className="samuel-content-preview">
           <span>PRÉVIA OBRIGATÓRIA</span>
-          <div className="samuel-content-phone">{videoUrl ? <video src={videoUrl} controls playsInline preload="metadata" /> : <div><Eye /><strong>Veja antes de publicar</strong><p>Gere o vídeo, assista, edite se necessário e só então aprove.</p></div>}</div>
+          <div className="samuel-content-phone">{videoUrl ? <video src={videoUrl} controls playsInline preload="metadata" /> : project.format === "video" ? <SamuelRemotionPreview project={project} audioUrl={audioUrl} /> : <div><strong>Prévia do conteúdo</strong><p>Revise o texto antes de publicar.</p></div>}</div>
           {audioUrl && <audio src={audioUrl} controls />}
-          <button type="button" onClick={() => void generateNarrationAndVideo()} disabled={rendering || aiVideoBusy}>{rendering ? <LoaderCircle className="animate-spin" /> : <Mic2 />}{rendering ? `Montando vídeo · ${renderProgress}%` : project.format === "video" ? `Gerar prévia ${quality} · ${fps}fps` : "Gerar narração"}</button>
+          <button type="button" onClick={() => void generateNarrationAndVideo()} disabled={rendering || aiVideoBusy}>{rendering ? <LoaderCircle className="animate-spin" /> : <Mic2 />}{rendering ? `Montando vídeo · ${renderProgress}%` : project.format === "video" ? `Renderizar MP4 Remotion · ${quality} · ${fps}fps` : "Gerar narração"}</button>
           {project.format === "video" && <button type="button" className="is-secondary" onClick={() => void generateAiVideo()} disabled={aiVideoBusy || rendering || !readiness?.aiVideo.ready}>{aiVideoBusy ? <LoaderCircle className="animate-spin" /> : <Sparkles />}{aiVideoBusy ? aiVideoStatus ?? "Gerando vídeo IA…" : "Gerar vídeo visual IA MP4"}</button>}
           {aiVideoStatus && !aiVideoBusy && <p className="samuel-content-feedback">{aiVideoStatus}</p>}
-          {videoSource && <small>{videoSource === "ai" ? "Fonte: vídeo IA MP4" : `Fonte: renderizador ${quality} · ${fps}fps · ${videoBlob?.type || "vídeo"}`}{videoAssetPath ? " · guardado para publicação" : ""}</small>}
+          {videoSource && <small>{videoSource === "ai" ? "Fonte: vídeo IA MP4" : `Fonte: Remotion · ${quality} · ${fps}fps · ${videoBlob?.type || "vídeo"}`}{videoAssetPath ? " · guardado para publicação" : ""}</small>}
           {videoUrl && <button type="button" className={cn("is-secondary", previewApproved && "!border-emerald-400/40 !bg-emerald-400/10")} onClick={() => setPreviewApproved((current) => !current)}><Check />{previewApproved ? "Aprovado para publicação" : "Aprovar para publicação"}</button>}
           {videoBlob && <button type="button" className="is-secondary" onClick={() => downloadBlob(videoBlob, `${project.name.replace(/\W+/g, "-").toLowerCase()}.${isPublishableVideoBlob(videoBlob) ? "mp4" : "webm"}`)}><Download /> Baixar vídeo</button>}
         </div>
