@@ -94,7 +94,7 @@ async function readiness(companyId: string): Promise<ContentReadiness> {
     },
     browserRenderer: {
       ready: true,
-      detail: "Fallback local: monta narração e referências com pan/zoom e composição. Para movimento corporal, troca real de cenário/roupa e novos takes, use o modo Vídeo IA Profissional.",
+      detail: "Remotion renderiza no navegador a composição final em MP4 com timeline por frames, narração, referências, textos e animações. Para gerar novos frames, movimento corporal ou trocar cenário/roupa, use Runway, FAL ou ComfyUI como fonte visual.",
     },
     publishing,
   };
