@@ -215,14 +215,17 @@ export function ProfessionalVideoGenerator({ companyId }: Props) {
         companyId,
         title: "Vídeo Profissional Samuel",
         prompt: fullPrompt,
-        aspectRatio: ratio,
+        aspectRatio: engine === "ltx25" && ratio === "1:1" ? "9:16" : ratio,
         resolution,
         durationSeconds,
         referenceImages: referenceUrls,
         mode: mode === "multishot" ? "multi-shot" : "single-shot",
         generateAudio,
         provider: engine === "ltx25" ? "ltx25" : undefined,
-        quality: engine === "ltx25" && resolution === "1080p" ? "pro" : "fast",
+        quality:
+          engine === "ltx25" && resolution === "1080p" && durationSeconds <= 10
+            ? "pro"
+            : "fast",
         videoModel: engine === "ltx25" ? "ltx-2.5" : "auto",
         voiceProvider: selectedVoice?.provider,
         voiceId: selectedVoice?.id,
@@ -516,7 +519,9 @@ export function ProfessionalVideoGenerator({ companyId }: Props) {
               >
                 <option value="9:16">Vertical 9:16</option>
                 <option value="16:9">Horizontal 16:9</option>
-                <option value="1:1">Quadrado 1:1</option>
+                <option value="1:1" disabled={engine === "ltx25"}>
+                  Quadrado 1:1{engine === "ltx25" ? " · indisponível no LTX 2.5" : ""}
+                </option>
               </select>
             </label>
             <label className="text-[10px] text-white/45">
