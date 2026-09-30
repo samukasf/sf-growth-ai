@@ -44,6 +44,7 @@ export type ContentReadiness = {
   generation: { ready: boolean; detail: string };
   narration: { ready: boolean; provider: string; detail: string };
   aiVideo: { ready: boolean; provider: string; model: string; detail: string };
+  ltx25Cloud: { ready: boolean; provider: string; model: string; detail: string };
   browserRenderer: { ready: true; detail: string };
   publishing: Record<SocialPlatform, { ready: boolean; detail: string }>;
 };
