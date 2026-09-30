@@ -165,15 +165,18 @@ function desktopCapabilities() {
     "computer.visual_loop",
   ];
   const defaultWorkflow = path.join(app.getPath("userData"), "comfyui-video-workflow.json");
-  if (
-    process.env.SAMUEL_COMFYUI_VIDEO_WORKFLOW?.trim() ||
-    process.env.SAMUEL_COMFYUI_LTX25_WORKFLOW?.trim() ||
-    config?.comfyWorkflowPath ||
-    existsSync(defaultWorkflow) ||
-    existsSync(path.join(app.getPath("userData"), "ltx-2.5-video-workflow.json"))
-  ) {
-    capabilities.push("comfyui.local_api");
-  }
+  const ltxWorkflow = path.join(app.getPath("userData"), "ltx-2.5-video-workflow.json");
+  const hasGenericComfy =
+    Boolean(process.env.SAMUEL_COMFYUI_VIDEO_WORKFLOW?.trim()) ||
+    Boolean(config?.comfyWorkflowPath) ||
+    existsSync(defaultWorkflow);
+  const hasLtx25 =
+    Boolean(process.env.SAMUEL_COMFYUI_LTX25_WORKFLOW?.trim()) ||
+    existsSync(ltxWorkflow) ||
+    Boolean(config?.comfyWorkflowPath?.toLowerCase().includes("ltx"));
+
+  if (hasGenericComfy || hasLtx25) capabilities.push("comfyui.local_api");
+  if (hasLtx25) capabilities.push("comfyui.ltx2_5");
   return capabilities;
 }
 
@@ -598,6 +601,9 @@ async function loadComfyWorkflow(
   for (const candidate of comfyWorkflowCandidates(videoModel)) {
     try {
       const raw = await fs.readFile(candidate, "utf8");
+      if (videoModel === "ltx-2.5" && !/ltx[-_ ]?2(?:\.5)?|ltxvideo/i.test(raw)) {
+        throw new Error("O workflow selecionado não parece ser um workflow LTX 2.5.");
+      }
       const parsed = JSON.parse(raw) as unknown;
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
         throw new Error("Workflow JSON inválido.");
