@@ -21,10 +21,10 @@ export function SamuelRemotionPreview({ project, audioUrl }: Props) {
     refresh();
 
     window.addEventListener("storage", refresh);
-    window.addEventListener("sf-growth-ai:references-changed", refresh);
+    window.addEventListener("samuel:studio-reference-change", refresh);
     return () => {
       window.removeEventListener("storage", refresh);
-      window.removeEventListener("sf-growth-ai:references-changed", refresh);
+      window.removeEventListener("samuel:studio-reference-change", refresh);
     };
   }, [project.id]);
 
