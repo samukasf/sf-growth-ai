@@ -119,6 +119,7 @@ export async function POST(request: Request) {
       ? "single-shot"
       : "multi-shot";
   const generateAudio = body?.generateAudio !== false;
+  const durationSeconds = Math.max(6, Math.min(20, Number(body?.durationSeconds) || 8));
   if (prompt.length < 20) return Response.json({ error: "Descreva o vídeo com mais detalhe." }, { status: 400 });
 
   try {
