@@ -12,3 +12,4 @@ export * from "./samuel-orchestration.types";
 export * from "./samuel-runtime";
 export * from "./samuel-runtime.types";
 export * from "./live-provider.types";
+export * from "./samuel-skills.registry";
