@@ -19,6 +19,14 @@ describe("Samuel skills registry", () => {
     expect(selected).toContain("calendar");
   });
 
+  it("selects live web for current weather questions", () => {
+    const selected = selectSamuelSkills(
+      "Qual a previsão do tempo hoje em Lisboa?",
+    ).map((skill) => skill.id);
+
+    expect(selected).toContain("live-web");
+  });
+
   it("marks execution claims as evidence-bound in the LLM context", () => {
     const context = formatSamuelSkillContext(
       selectSamuelSkills("Abra uma pasta no meu computador"),
