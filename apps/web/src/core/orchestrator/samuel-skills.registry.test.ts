@@ -19,6 +19,14 @@ describe("Samuel skills registry", () => {
     expect(selected).toContain("calendar");
   });
 
+  it("selects music for voice playback commands", () => {
+    const selected = selectSamuelSkills(
+      "Samuel, toca uma música relaxante e abaixa o volume",
+    ).map((skill) => skill.id);
+
+    expect(selected).toContain("music");
+  });
+
   it("selects live web for current weather questions", () => {
     const selected = selectSamuelSkills(
       "Qual a previsão do tempo hoje em Lisboa?",
