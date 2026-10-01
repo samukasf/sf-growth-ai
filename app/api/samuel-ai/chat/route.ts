@@ -290,10 +290,12 @@ export async function POST(request: Request) {
           send({ type: "music_action", command: musicCommand });
         }
 
-        const workspaceSignal = await loadGoogleWorkspaceChatSignal(
-          chatRequest.query,
-          chatRequest.companyId,
-        );
+        const workspaceSignal = musicCommand
+          ? undefined
+          : await loadGoogleWorkspaceChatSignal(
+              chatRequest.query,
+              chatRequest.companyId,
+            );
 
         const canUseCompanyIntegrations = UUID_PATTERN.test(chatRequest.companyId);
         const gmailPlan = canUseCompanyIntegrations
@@ -311,7 +313,7 @@ export async function POST(request: Request) {
           toolFragments.push(musicCommandFragment(musicCommand));
         }
 
-        try {
+        if (!musicCommand) try {
           const company = chatRequest.companyContext?.executiveContext?.company;
           const locationHint = [company?.city, company?.country]
             .filter(Boolean)
@@ -475,7 +477,7 @@ export async function POST(request: Request) {
         if (!content) {
           content =
             toolFragments.map((line) => line.replace(/^\[.*?\]\s*/, "")).join("\n\n") ||
-            workspaceSignal.fallbackAnswer ||
+            workspaceSignal?.fallbackAnswer ||
             buildSamuelFallbackAnswer(chatRequest.query, runtimeSummary, {
               providerConfigured: Boolean(provider),
             });
