@@ -13,3 +13,4 @@ export * from "./samuel-runtime";
 export * from "./samuel-runtime.types";
 export * from "./live-provider.types";
 export * from "./samuel-skills.registry";
+export * from "./samuel-agent-kernel";
