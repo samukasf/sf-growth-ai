@@ -142,6 +142,10 @@ function buildCompletionInput(
     payload: {
       ...response.runtime.llmPayload,
       userQuery: response.runtime.query,
+      metadata: {
+        ...response.runtime.llmPayload.metadata,
+        channel,
+      },
       conversationHistory: selectConversationHistory(history),
       fragments: [
         ...response.runtime.llmPayload.fragments,
@@ -281,6 +285,11 @@ export async function POST(request: Request) {
       }
 
       try {
+        const musicCommand = parseSamuelMusicCommand(chatRequest.query);
+        if (musicCommand) {
+          send({ type: "music_action", command: musicCommand });
+        }
+
         const workspaceSignal = await loadGoogleWorkspaceChatSignal(
           chatRequest.query,
           chatRequest.companyId,
@@ -298,9 +307,7 @@ export async function POST(request: Request) {
         const toolFragments: string[] = [];
         let pendingAction: SamuelToolActionPlan | null = null;
         let liveWebResult: Awaited<ReturnType<typeof searchSamuelLiveWeb>> = null;
-        const musicCommand = parseSamuelMusicCommand(chatRequest.query);
         if (musicCommand) {
-          send({ type: "music_action", command: musicCommand });
           toolFragments.push(musicCommandFragment(musicCommand));
         }
 
