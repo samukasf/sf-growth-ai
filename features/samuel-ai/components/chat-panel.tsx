@@ -632,8 +632,9 @@ export function ChatPanel({
       active: conversationVoice.active,
       error: conversationVoice.error,
     };
-    setContinuousVoice(detail);
     window.dispatchEvent(new CustomEvent("samuel:voice-state", { detail }));
+    const timer = window.setTimeout(() => setContinuousVoice(detail), 0);
+    return () => window.clearTimeout(timer);
   }, [
     browserSpeaking,
     conversationVoice.active,
