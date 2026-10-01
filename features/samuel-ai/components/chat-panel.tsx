@@ -14,6 +14,7 @@ import {
   MicOff,
   Radio,
   RotateCcw,
+  Search,
   Send,
   SlidersHorizontal,
   Sparkles,
@@ -39,12 +40,18 @@ import {
   useSamuelConversationVoice,
 } from "../voice/use-samuel-conversation-voice";
 import { useSamuelSpeech } from "../voice/use-samuel-speech";
+import {
+  DEFAULT_SAMUEL_VOICE_PRESET,
+  SAMUEL_VOICE_PRESETS,
+  findSamuelVoicePreset,
+} from "../voice/samuel-voice-presets";
 import { useSamuelIdlePresence } from "../voice/use-samuel-idle-presence";
 import type {
   SamuelChatSendOptions,
   SamuelChatSendResult,
   SamuelToolActionPlan,
   SamuelToolResult,
+  SamuelWebSource,
 } from "../chat/samuel-chat.types";
 import type { ChatMessage } from "../types";
 
@@ -132,6 +139,10 @@ function createMessageId(role: ChatMessage["role"]) {
 
 function storageKey(companyId: string) {
   return `sf-growth-ai:samuel-chat:${companyId}`;
+}
+
+function voiceStorageKey(companyId: string) {
+  return `sf-growth-ai:samuel-voice:${companyId}`;
 }
 
 function readLocalHistory(companyId: string): LocalHistory | null {
@@ -273,6 +284,10 @@ export function ChatPanel({
   const [voiceAutoSend, setVoiceAutoSend] = useState(true);
   const [voiceReplyEnabled, setVoiceReplyEnabled] = useState(true);
   const [voiceConsoleOpen, setVoiceConsoleOpen] = useState(false);
+  const [selectedVoiceId, setSelectedVoiceId] = useState(
+    DEFAULT_SAMUEL_VOICE_PRESET.id,
+  );
+  const [webSources, setWebSources] = useState<SamuelWebSource[]>([]);
   const [continuousVoice, setContinuousVoice] = useState<ContinuousVoiceState>({
     phase: "idle",
     active: false,
@@ -281,6 +296,7 @@ export function ChatPanel({
   const [historyExpanded, setHistoryExpanded] = useState(false);
   const presenceSleeping = useSamuelIdlePresence();
   const [activeBrowserMessageId, setActiveBrowserMessageId] = useState<string | null>(null);
+  const selectedVoice = findSamuelVoicePreset(selectedVoiceId);
   const {
     blocked: browserSpeechBlocked,
     cancel: cancelBrowserSpeech,
@@ -295,13 +311,33 @@ export function ChatPanel({
     supported: browserSpeechSupported,
     voiceLabel: browserVoiceLabel,
     wordIndex: browserSpeechWordIndex,
-  } = useSamuelSpeech({ enabled: voiceReplyEnabled, companyId });
+  } = useSamuelSpeech({
+    enabled: voiceReplyEnabled,
+    companyId,
+    elevenLabsVoiceId: selectedVoice.id,
+    elevenLabsVoiceName: selectedVoice.name,
+  });
   const abortRef = useRef<AbortController | null>(null);
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const spokenAssistantRef = useRef<string | null>(null);
   const hasEngaged = messages.length > 0;
   const busy = sending || isProcessing;
+
+  useEffect(() => {
+    let nextVoiceId = DEFAULT_SAMUEL_VOICE_PRESET.id;
+    try {
+      const saved = localStorage.getItem(voiceStorageKey(companyId));
+      if (saved && SAMUEL_VOICE_PRESETS.some((voice) => voice.id === saved)) {
+        nextVoiceId = saved;
+      }
+    } catch {
+      // Keep the default voice when local storage is unavailable.
+    }
+    const timer = window.setTimeout(() => setSelectedVoiceId(nextVoiceId), 0);
+    return () => window.clearTimeout(timer);
+  }, [companyId]);
+
   useEffect(() => {
     const controller = new AbortController();
     const local = readLocalHistory(companyId);
@@ -464,6 +500,7 @@ export function ChatPanel({
       setSending(true);
       setError(null);
       setWarning(null);
+      setWebSources([]);
       setProviderLabel(null);
       setLastFailedQuery(null);
       setPendingAction(null);
@@ -500,6 +537,7 @@ export function ChatPanel({
           onEvent(event) {
             if (event.type === "start") setConversationId(event.conversationId);
             if (event.type === "warning") setWarning(event.message);
+            if (event.type === "web_sources") setWebSources(event.sources);
             if (event.type === "provider") {
               setProviderLabel(
                 event.model ? `${event.provider} · ${event.model}` : event.provider,
@@ -884,6 +922,28 @@ export function ChatPanel({
           );
         })}
 
+        {webSources.length > 0 && (
+          <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/[.05] px-4 py-3 text-xs text-[#cfeaff]">
+            <div className="flex items-center gap-2 font-semibold text-white">
+              <Search aria-hidden="true" className="size-4 text-cyan-300" />
+              Fontes consultadas em tempo real
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {webSources.map((source) => (
+                <a
+                  key={source.url}
+                  href={source.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="max-w-full truncate rounded-lg border border-cyan-300/15 bg-black/20 px-2.5 py-1.5 text-[11px] text-cyan-100 underline-offset-2 hover:underline"
+                >
+                  {source.title}
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
         {warning && (
           <div className="samuel-chat-notice samuel-chat-notice--warning">
             {warning}
@@ -1006,7 +1066,7 @@ export function ChatPanel({
                               ? "Respondendo pela ElevenLabs"
                         : browserVoiceLabel
                           ? `${browserVoiceLabel} · pronta`
-                          : "Camilla · ElevenLabs pronta"}
+                          : `${selectedVoice.name} · ElevenLabs pronta`}
                 </strong>
               </div>
             </div>
@@ -1055,6 +1115,32 @@ export function ChatPanel({
               {voiceConsoleOpen ? "Ocultar ajustes" : "Ajustes"}
             </button>
           </div>
+
+          <label className="samuel-voice-selector mt-3 block">
+            <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[.16em] text-[#87cfff]">
+              Voz do Samuel
+            </span>
+            <select
+              value={selectedVoice.id}
+              onChange={(event) => {
+                const next = findSamuelVoicePreset(event.target.value);
+                setSelectedVoiceId(next.id);
+                cancelBrowserSpeech();
+                try {
+                  localStorage.setItem(voiceStorageKey(companyId), next.id);
+                } catch {
+                  // Keep the in-memory choice if local storage is unavailable.
+                }
+              }}
+              className="min-h-11 w-full rounded-xl border border-[#185d87] bg-[#061421] px-3 text-sm text-white outline-none focus:border-cyan-300"
+            >
+              {SAMUEL_VOICE_PRESETS.map((voice) => (
+                <option key={voice.id} value={voice.id}>
+                  {voice.name} — {voice.description}
+                </option>
+              ))}
+            </select>
+          </label>
 
           {continuousVoice.phase === "error" && continuousVoice.error && (
             <div className="samuel-voice-console__error" role="alert">

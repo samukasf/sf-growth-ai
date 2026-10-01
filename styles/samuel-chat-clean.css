@@ -457,6 +457,22 @@
     display: block !important;
   }
 
+  .samuel-conversation-dialog .samuel-voice-selector {
+    margin: .35rem 0 .5rem !important;
+  }
+
+  .samuel-conversation-dialog .samuel-voice-selector > span {
+    display: none !important;
+  }
+
+  .samuel-conversation-dialog .samuel-voice-selector select {
+    min-height: 38px !important;
+    border-radius: 999px !important;
+    padding-inline: .9rem !important;
+    font-size: .75rem !important;
+    background: #061421 !important;
+  }
+
   .samuel-conversation-dialog .samuel-voice-console__start {
     width: 100% !important;
     min-height: 42px !important;

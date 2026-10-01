@@ -36,6 +36,7 @@ import {
   executeCalendarTool,
 } from "@/features/google-calendar";
 import { SamuelConversationRepository } from "@/features/samuel-ai/server/samuel-conversation.repository";
+import { searchSamuelLiveWeb } from "@/features/samuel-ai/web/samuel-live-web.server";
 import { getWorkspaceSessionIdentity } from "@/features/samuel-ai/server/workspace-session";
 import type { ChatMessage } from "@/features/samuel-ai/types";
 import { authorizeCompanyRequest } from "@/features/auth/server/authorization";
@@ -292,6 +293,40 @@ export async function POST(request: Request) {
             : null;
         const toolFragments: string[] = [];
         let pendingAction: SamuelToolActionPlan | null = null;
+        let liveWebResult: Awaited<ReturnType<typeof searchSamuelLiveWeb>> = null;
+
+        try {
+          const company = chatRequest.companyContext?.executiveContext?.company;
+          const locationHint = [company?.city, company?.country]
+            .filter(Boolean)
+            .join(", ");
+          liveWebResult = await searchSamuelLiveWeb({
+            query: chatRequest.query,
+            locationHint: locationHint || null,
+            signal: request.signal,
+          });
+          if (liveWebResult) {
+            if (liveWebResult.sources.length) {
+              send({ type: "web_sources", sources: liveWebResult.sources });
+            }
+            toolFragments.push(
+              `[WEB AO VIVO — PESQUISA VERIFICADA] ${liveWebResult.summary}`,
+              liveWebResult.sources.length
+                ? `[WEB AO VIVO — FONTES] ${liveWebResult.sources
+                    .map((source) => `${source.title}: ${source.url}`)
+                    .join(" | ")}`
+                : "[WEB AO VIVO — FONTES] A pesquisa não devolveu URLs citáveis.",
+            );
+          }
+        } catch (webError) {
+          if (request.signal.aborted) throw webError;
+          send({
+            type: "warning",
+            code: "LIVE_WEB_UNAVAILABLE",
+            message:
+              "A pesquisa em tempo real ficou indisponível nesta resposta; não vou tratar dados atuais como verificados.",
+          });
+        }
 
         if (isContentCreationRequest(chatRequest.query)) {
           const generatedContent = await generateContentProject(contentRequestFromQuery(chatRequest.query));
@@ -446,6 +481,7 @@ export async function POST(request: Request) {
               model,
               channel: turnPlan.channel,
               skills: turnPlan.skills.map((skill) => skill.id),
+              webSources: liveWebResult?.sources ?? [],
             });
             await repository.setProvider(conversationId, providerId, model);
           } catch {

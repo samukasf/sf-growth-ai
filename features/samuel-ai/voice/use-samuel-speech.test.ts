@@ -13,6 +13,9 @@ describe("Samuel neural provider metadata", () => {
     expect(resolveSamuelNeuralEngine("openai")).toBe("openai-neural");
     expect(resolveSamuelNeuralEngine(null)).toBe("server-neural");
     expect(resolveSamuelNeuralVoiceLabel("elevenlabs")).toBe("ElevenLabs · Camilla");
+    expect(resolveSamuelNeuralVoiceLabel("elevenlabs", "Marilita")).toBe(
+      "ElevenLabs · Marilita",
+    );
     expect(resolveSamuelNeuralVoiceLabel("openai")).toBe("OpenAI · voz feminina");
   });
 });
