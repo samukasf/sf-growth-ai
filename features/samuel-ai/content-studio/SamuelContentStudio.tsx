@@ -204,6 +204,11 @@ export function SamuelContentStudio({ companyId }: Props) {
         setAspectRatio(next.aspectRatio);
         setPlatforms(next.platforms);
         setAutoProduce(true);
+        setWarning(
+          next.format === "video"
+            ? "Pedido recebido do Samuel. Preparando narração e vídeo automaticamente…"
+            : null,
+        );
         sessionStorage.removeItem("sf-growth-ai:samuel-content:incoming");
       } catch {
         // Ignore malformed browser state.
@@ -459,13 +464,13 @@ export function SamuelContentStudio({ companyId }: Props) {
   }
 
   useEffect(() => {
-    if (!autoProduce || !project || rendering) return;
+    if (!autoProduce || !project || rendering || !readiness) return;
     const timer = window.setTimeout(() => {
       setAutoProduce(false);
       void generateNarrationAndVideo();
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [autoProduce, generateNarrationAndVideo, project, rendering]);
+  }, [autoProduce, generateNarrationAndVideo, project, readiness, rendering]);
 
   async function ensurePublishAsset() {
     if (!previewApproved) throw new Error("Revise a prévia e clique em “Aprovar para publicação” antes de publicar.");
