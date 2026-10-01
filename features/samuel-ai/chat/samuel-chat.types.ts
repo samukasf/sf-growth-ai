@@ -8,6 +8,7 @@ import type { ExecutiveContext } from "@/services/executive-context.service";
 
 import type { ChatMessage } from "../types";
 import type { SamuelContentProject } from "../content-studio/samuel-content.types";
+import type { SamuelMusicCommand } from "../music/samuel-music.types";
 
 export type SamuelChatCompanyContext = {
   executiveContext: ExecutiveContext | null;
@@ -58,6 +59,7 @@ export type SamuelChatStreamEvent =
   | { type: "warning"; code: string; message: string }
   | { type: "web_sources"; sources: SamuelWebSource[] }
   | { type: "content_project"; project: SamuelContentProject }
+  | { type: "music_action"; command: SamuelMusicCommand }
   | { type: "delta"; delta: string }
   | {
       type: "action_proposal";
