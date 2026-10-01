@@ -227,21 +227,21 @@ async function searchWeather(context: SearchContext): Promise<SamuelLiveWebResul
 
   const currentParts = [
     `Tempo agora em ${placeName}: ${Number(current.temperature_2m ?? 0).toFixed(1)} °C`,
-    Number.isFinite(current.apparent_temperature)
-      ? `sensação de ${Number(current.apparent_temperature).toFixed(1)} °C`
+    typeof current.apparent_temperature === "number"
+      ? `sensação de ${current.apparent_temperature.toFixed(1)} °C`
       : "",
     currentCode >= 0 ? weatherCodeLabel(currentCode) : "",
-    Number.isFinite(current.wind_speed_10m)
-      ? `vento de ${Number(current.wind_speed_10m).toFixed(0)} km/h`
+    typeof current.wind_speed_10m === "number"
+      ? `vento de ${current.wind_speed_10m.toFixed(0)} km/h`
       : "",
   ].filter(Boolean);
 
   const todayParts = [
-    Number.isFinite(todayMin) && Number.isFinite(todayMax)
-      ? `Hoje: mínima de ${Number(todayMin).toFixed(0)} °C e máxima de ${Number(todayMax).toFixed(0)} °C`
+    typeof todayMin === "number" && typeof todayMax === "number"
+      ? `Hoje: mínima de ${todayMin.toFixed(0)} °C e máxima de ${todayMax.toFixed(0)} °C`
       : "",
-    Number.isFinite(rainChance)
-      ? `probabilidade máxima de precipitação de ${Number(rainChance).toFixed(0)}%`
+    typeof rainChance === "number"
+      ? `probabilidade máxima de precipitação de ${rainChance.toFixed(0)}%`
       : "",
   ].filter(Boolean);
 
@@ -256,10 +256,10 @@ async function searchWeather(context: SearchContext): Promise<SamuelLiveWebResul
       return [
         date,
         code >= 0 ? weatherCodeLabel(code) : "",
-        Number.isFinite(min) && Number.isFinite(max)
-          ? `${Number(min).toFixed(0)}–${Number(max).toFixed(0)} °C`
+        typeof min === "number" && typeof max === "number"
+          ? `${min.toFixed(0)}–${max.toFixed(0)} °C`
           : "",
-        Number.isFinite(probability) ? `chuva até ${Number(probability).toFixed(0)}%` : "",
+        typeof probability === "number" ? `chuva até ${probability.toFixed(0)}%` : "",
       ]
         .filter(Boolean)
         .join(", ");
