@@ -33,7 +33,10 @@ import {
   SamuelHologram,
   type SamuelHologramState,
 } from "./samuel-hologram";
-import { useSamuelRealtimeVoice } from "../realtime/use-samuel-realtime-voice";
+import {
+  isSamuelConfirmationPhrase,
+  useSamuelConversationVoice,
+} from "../voice/use-samuel-conversation-voice";
 import { useSamuelSpeech } from "../voice/use-samuel-speech";
 import { useSamuelIdlePresence } from "../voice/use-samuel-idle-presence";
 import type {
@@ -277,9 +280,6 @@ export function ChatPanel({
   const [historyExpanded, setHistoryExpanded] = useState(false);
   const presenceSleeping = useSamuelIdlePresence();
   const [activeBrowserMessageId, setActiveBrowserMessageId] = useState<string | null>(null);
-  const [activeRealtimeMessageId, setActiveRealtimeMessageId] = useState<string | null>(null);
-  const [realtimeSettling, setRealtimeSettling] = useState(false);
-  const previousRealtimeStateRef = useRef<string>("idle");
   const {
     blocked: browserSpeechBlocked,
     cancel: cancelBrowserSpeech,
@@ -299,7 +299,6 @@ export function ChatPanel({
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const spokenAssistantRef = useRef<string | null>(null);
-  const realtimeAssistantMessageRef = useRef<string | null>(null);
   const hasEngaged = messages.length > 0;
   const busy = sending || isProcessing;
   useEffect(() => {
@@ -357,15 +356,6 @@ export function ChatPanel({
     [cancelBrowserSpeech],
   );
 
-  useEffect(() => {
-    const handleVoiceState = (event: Event) => {
-      const detail = (event as CustomEvent<ContinuousVoiceState>).detail;
-      if (detail) setContinuousVoice(detail);
-    };
-    window.addEventListener("samuel:voice-state", handleVoiceState as EventListener);
-    return () => window.removeEventListener("samuel:voice-state", handleVoiceState as EventListener);
-  }, []);
-
   const speakSamuel = useCallback((content: string, messageId: string, force = false) => {
     if (!voiceReplyEnabled) return;
     const trimmed = content.trim();
@@ -381,127 +371,20 @@ export function ChatPanel({
     if (!launched) setActiveBrowserMessageId(null);
   }, [speakBrowserSpeech, voiceReplyEnabled]);
 
-  const appendVoiceTranscript = useCallback(
-    ({
-      role,
-      content,
-      final,
-    }: {
-      role: ChatMessage["role"];
-      content: string;
-      final: boolean;
-    }) => {
-      if (!content || (final && !content.trim())) return;
-
-      if (role === "user") {
-        if (!final) return;
-        realtimeAssistantMessageRef.current = null;
-        setMessages((current) => [
-          ...current,
-          {
-            id: createMessageId(role),
-            role,
-            content: content.trim(),
-            timestamp: new Date().toISOString(),
-            status: "complete",
-          },
-        ]);
-        return;
-      }
-
-      let messageId = realtimeAssistantMessageRef.current;
-      if (!messageId) {
-        if (!content.trim()) return;
-        const createdMessageId = createMessageId("assistant");
-        messageId = createdMessageId;
-        realtimeAssistantMessageRef.current = createdMessageId;
-        setActiveRealtimeMessageId(createdMessageId);
-        setMessages((current) => [
-          ...current,
-          {
-            id: createdMessageId,
-            role: "assistant",
-            content: final ? content.trim() : content,
-            timestamp: new Date().toISOString(),
-            status: final ? "complete" : "streaming",
-          },
-        ]);
-        return;
-      }
-
-      setActiveRealtimeMessageId(messageId);
-      setMessages((current) => current.map((message) =>
-        message.id === messageId
-          ? {
-              ...message,
-              content: final ? content.trim() : `${message.content}${content}`,
-              status: final ? "complete" : "streaming",
-            }
-          : message,
-      ));
-    },
-    [],
-  );
-  const realtimeVoice = useSamuelRealtimeVoice({
-    companyId,
-    conversationId,
-    contextSummary:
-      "Samuel AI deve usar o contexto empresarial do workspace, a memória sincronizada e a identidade executiva preservada pelo SF Growth AI.",
-    onTranscript: appendVoiceTranscript,
-  });
-
-  useEffect(() => {
-    const previous = previousRealtimeStateRef.current;
-    const current = realtimeVoice.session.state;
-    previousRealtimeStateRef.current = current;
-
-    if (current === "speaking") {
-      const resetTimer = window.setTimeout(() => setRealtimeSettling(false), 0);
-      return () => window.clearTimeout(resetTimer);
-    }
-    if (previous !== "speaking") return;
-
-    const startTimer = window.setTimeout(() => setRealtimeSettling(true), 0);
-    const endTimer = window.setTimeout(() => setRealtimeSettling(false), 650);
-    return () => {
-      window.clearTimeout(startTimer);
-      window.clearTimeout(endTimer);
-    };
-  }, [realtimeVoice.session.state]);
-
-  const samuelSpeaking =
-    browserSpeaking || continuousVoice.phase === "speaking" || realtimeVoice.session.state === "speaking";
-  const realtimeSpeechWordIndex = useMemo(
-    () => Math.max(0, realtimeVoice.session.assistantTranscript.trim().split(/\s+/).length - 1),
-    [realtimeVoice.session.assistantTranscript],
-  );
-  const activeSpokenMessageId = browserSpeaking
-    ? activeBrowserMessageId
-    : realtimeVoice.session.state === "speaking"
-      ? activeRealtimeMessageId
-      : null;
-  const activeSpokenWordIndex = browserSpeaking
-    ? browserSpeechWordIndex
-    : realtimeSpeechWordIndex;
-  const hologramAudioLevel = browserSpeaking
-    ? browserMouthLevel
-    : realtimeVoice.session.state === "speaking"
-      ? Math.min(1, Math.max(0.24, realtimeVoice.session.outputAudioLevel * 3.2))
-      : 0;
-  const hologramSpeechProgress = browserSpeaking
-    ? browserSpeechProgress
-    : realtimeVoice.session.state === "speaking"
-      ? (realtimeSpeechWordIndex % 24) / 24
-      : 0;
+  const samuelSpeaking = browserSpeaking || continuousVoice.phase === "speaking";
+  const activeSpokenMessageId = browserSpeaking ? activeBrowserMessageId : null;
+  const activeSpokenWordIndex = browserSpeaking ? browserSpeechWordIndex : -1;
+  const hologramAudioLevel = browserSpeaking ? browserMouthLevel : 0;
+  const hologramSpeechProgress = browserSpeaking ? browserSpeechProgress : 0;
   const hologramState: SamuelHologramState = samuelSpeaking
     ? "speaking"
     : continuousVoice.phase === "error"
       ? "error"
-      : browserSpeechSettling || realtimeSettling || listening || continuousVoice.phase === "listening" || realtimeVoice.session.state === "listening"
+      : browserSpeechSettling || listening || continuousVoice.phase === "listening"
         ? "listening"
-        : busy || continuousVoice.phase === "processing" || realtimeVoice.session.state === "processing"
+        : busy || continuousVoice.phase === "processing"
           ? "processing"
-          : continuousVoice.phase === "connecting" || realtimeVoice.session.state === "requesting_permission"
+          : continuousVoice.phase === "connecting"
             ? "executing"
             : presenceSleeping
               ? "sleeping"
@@ -714,6 +597,58 @@ export function ChatPanel({
       speakSamuel,
     ],
   );
+
+  const interruptSamuel = useCallback(() => {
+    cancelBrowserSpeech();
+    abortRef.current?.abort();
+  }, [cancelBrowserSpeech]);
+
+  const conversationVoice = useSamuelConversationVoice({
+    companyId,
+    assistantSpeaking: browserSpeaking,
+    assistantText: lastAssistantMessage?.content ?? "",
+    onInterrupt: interruptSamuel,
+    onTranscript: async ({ text }) => {
+      if (pendingAction && isSamuelConfirmationPhrase(text)) {
+        await confirmPendingAction();
+        return;
+      }
+      await performSend(text);
+    },
+  });
+
+  useEffect(() => {
+    const phase: ContinuousVoiceState["phase"] = browserSpeaking
+      ? "speaking"
+      : conversationVoice.phase;
+    const detail: ContinuousVoiceState = {
+      phase,
+      active: conversationVoice.active,
+      error: conversationVoice.error,
+    };
+    setContinuousVoice(detail);
+    window.dispatchEvent(new CustomEvent("samuel:voice-state", { detail }));
+  }, [
+    browserSpeaking,
+    conversationVoice.active,
+    conversationVoice.error,
+    conversationVoice.phase,
+  ]);
+
+  useEffect(() => {
+    const toggle = () => void conversationVoice.toggle();
+    const stop = () => {
+      conversationVoice.stop();
+      interruptSamuel();
+    };
+    window.addEventListener("samuel:voice-toggle", toggle);
+    window.addEventListener("samuel:voice-stop", stop);
+    return () => {
+      window.removeEventListener("samuel:voice-toggle", toggle);
+      window.removeEventListener("samuel:voice-stop", stop);
+    };
+  }, [conversationVoice.stop, conversationVoice.toggle, interruptSamuel]);
+
 
   const stopVoiceInput = useCallback(() => {
     recognitionRef.current?.stop();
@@ -1064,7 +999,8 @@ export function ChatPanel({
           <div className="samuel-voice-console__primary-actions">
             <button
               type="button"
-              disabled={busy || !hydrated}
+              onClick={() => void conversationVoice.toggle()}
+              disabled={!hydrated}
               className="samuel-reference-mic samuel-voice-console__start"
               aria-pressed={continuousVoice.active}
             >
@@ -1102,13 +1038,13 @@ export function ChatPanel({
               <div className="samuel-voice-console__controls">
                 <button
                   type="button"
-                  onClick={cancelBrowserSpeech}
-                  disabled={!browserSpeaking}
+                  onClick={interruptSamuel}
+                  disabled={!browserSpeaking && !busy}
                 >
                   <VolumeX aria-hidden="true" /> Interromper Samuel
                 </button>
               </div>
-              <p>O microfone permanece ativo, a ElevenLabs transcreve sua fala e cada pedido segue pelo mesmo fluxo seguro do texto.</p>
+              <p>O microfone permanece ativo e cada fala entra na mesma sessão, memória, skills e ferramentas usadas pelo texto.</p>
             </div>
           )}
         </div>
