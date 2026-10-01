@@ -38,6 +38,7 @@ import {
 import { SamuelConversationRepository } from "@/features/samuel-ai/server/samuel-conversation.repository";
 import { searchSamuelLiveWeb } from "@/features/samuel-ai/web/samuel-live-web.server";
 import {
+  musicCommandAcknowledgement,
   musicCommandFragment,
   parseSamuelMusicCommand,
 } from "@/features/samuel-ai/music/samuel-music.server";
@@ -476,6 +477,7 @@ export async function POST(request: Request) {
 
         if (!content) {
           content =
+            (musicCommand ? musicCommandAcknowledgement(musicCommand) : "") ||
             toolFragments.map((line) => line.replace(/^\[.*?\]\s*/, "")).join("\n\n") ||
             workspaceSignal?.fallbackAnswer ||
             buildSamuelFallbackAnswer(chatRequest.query, runtimeSummary, {
