@@ -62,7 +62,7 @@ export function resolveSamuelNeuralVoiceLabel(
   provider: string | null,
   elevenLabsVoiceName?: string,
 ) {
-  if (provider === "elevenlabs") return `ElevenLabs · ${elevenLabsVoiceName?.trim() || "voz PT-BR"}`;
+  if (provider === "elevenlabs") return `ElevenLabs · ${elevenLabsVoiceName?.trim() || "Camilla"}`;
   if (provider === "openai") return "OpenAI · voz feminina";
   return "Samuel Neural";
 }
