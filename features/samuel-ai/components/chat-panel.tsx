@@ -1115,6 +1115,32 @@ export function ChatPanel({
             </button>
           </div>
 
+          <label className="samuel-voice-selector mt-3 block">
+            <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[.16em] text-[#87cfff]">
+              Voz do Samuel
+            </span>
+            <select
+              value={selectedVoice.id}
+              onChange={(event) => {
+                const next = findSamuelVoicePreset(event.target.value);
+                setSelectedVoiceId(next.id);
+                cancelBrowserSpeech();
+                try {
+                  localStorage.setItem(voiceStorageKey(companyId), next.id);
+                } catch {
+                  // Keep the in-memory choice if local storage is unavailable.
+                }
+              }}
+              className="min-h-11 w-full rounded-xl border border-[#185d87] bg-[#061421] px-3 text-sm text-white outline-none focus:border-cyan-300"
+            >
+              {SAMUEL_VOICE_PRESETS.map((voice) => (
+                <option key={voice.id} value={voice.id}>
+                  {voice.name} — {voice.description}
+                </option>
+              ))}
+            </select>
+          </label>
+
           {continuousVoice.phase === "error" && continuousVoice.error && (
             <div className="samuel-voice-console__error" role="alert">
               <AlertTriangle aria-hidden="true" />
@@ -1128,31 +1154,6 @@ export function ChatPanel({
 
           {(voiceConsoleOpen || continuousVoice.active) && (
             <div className="samuel-voice-console__details">
-              <label className="block">
-                <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[.16em] text-[#87cfff]">
-                  Voz do Samuel
-                </span>
-                <select
-                  value={selectedVoice.id}
-                  onChange={(event) => {
-                    const next = findSamuelVoicePreset(event.target.value);
-                    setSelectedVoiceId(next.id);
-                    cancelBrowserSpeech();
-                    try {
-                      localStorage.setItem(voiceStorageKey(companyId), next.id);
-                    } catch {
-                      // Keep the in-memory choice if local storage is unavailable.
-                    }
-                  }}
-                  className="min-h-11 w-full rounded-xl border border-[#185d87] bg-[#061421] px-3 text-sm text-white outline-none focus:border-cyan-300"
-                >
-                  {SAMUEL_VOICE_PRESETS.map((voice) => (
-                    <option key={voice.id} value={voice.id}>
-                      {voice.name} — {voice.description}
-                    </option>
-                  ))}
-                </select>
-              </label>
               <div className="samuel-voice-console__controls">
                 <button
                   type="button"
