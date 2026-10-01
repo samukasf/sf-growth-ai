@@ -1025,19 +1025,19 @@ function ConversationLayer({
     <div
       className={
         open
-          ? "fixed inset-0 z-[150] flex items-center justify-center bg-black/82 p-0 backdrop-blur-md sm:p-4"
-          : "pointer-events-none fixed left-[-10000px] top-0 h-px w-px overflow-hidden opacity-0"
+          ? "samuel-conversation-layer fixed inset-0 z-[150] flex items-center justify-center bg-black/82 p-0 backdrop-blur-md sm:p-4"
+          : "samuel-conversation-layer pointer-events-none fixed left-[-10000px] top-0 h-px w-px overflow-hidden opacity-0"
       }
       aria-hidden={!open}
     >
-      <div className={open ? "flex h-dvh w-full max-w-5xl flex-col overflow-hidden border border-[#0d78c5] bg-[#03101b] shadow-[0_0_70px_rgba(0,127,255,.28)] sm:h-[min(90dvh,860px)] sm:rounded-3xl" : "h-full w-full"}>
+      <div className={open ? "samuel-conversation-dialog flex h-dvh w-full max-w-5xl flex-col overflow-hidden border border-[#0d78c5] bg-[#03101b] shadow-[0_0_70px_rgba(0,127,255,.28)] sm:h-[min(90dvh,860px)] sm:rounded-3xl" : "samuel-conversation-dialog h-full w-full"}>
         {open && (
-          <div className="flex shrink-0 items-center justify-between border-b border-[#164f78] px-4 pb-3 pt-[max(.75rem,env(safe-area-inset-top))] sm:px-5 sm:py-4">
+          <div className="samuel-conversation-header flex shrink-0 items-center justify-between border-b border-[#164f78] px-4 pb-3 pt-[max(.75rem,env(safe-area-inset-top))] sm:px-5 sm:py-4">
             <div>
-              <strong className="block text-base text-white">Conversar com Samuel</strong>
-              <span className="mt-1 block text-xs text-[#86abc9]">Voz, texto e execução no mesmo lugar.</span>
+              <strong className="block text-base text-white">Samuel · modo conversa</strong>
+              <span className="mt-1 block text-xs text-[#86abc9]">Presença contínua, voz e execução em tempo real.</span>
             </div>
-            <button type="button" onClick={onClose} className="min-h-11 rounded-xl border border-[#164f78] px-4 text-sm text-[#b9d9f1] hover:border-[#0d9dff]">
+            <button type="button" onClick={onClose} className="samuel-conversation-close min-h-11 rounded-xl border border-[#164f78] px-4 text-sm text-[#b9d9f1] hover:border-[#0d9dff]">
               Fechar
             </button>
           </div>
