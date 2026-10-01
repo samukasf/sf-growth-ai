@@ -165,6 +165,11 @@ export function extractChatCompletionsText(payload: ChatCompletionsEnvelope): st
 }
 
 export function buildSamuelInstructions(input: LLMCompletionInput): string {
+  const channel = String(input.payload.metadata.channel ?? "web");
+  const voiceMode =
+    channel === "voice"
+      ? "CANAL DE VOZ ATIVO: responda como diálogo falado. Use frases curtas, naturais e encadeadas; evite títulos, markdown falado, listas longas e explicações que não foram pedidas."
+      : "CANAL DE TEXTO: mantenha a mesma personalidade, mas use estrutura visual quando ela realmente melhorar a leitura.";
   if (input.payload.metadata.product === "samuel-studio") {
     return [
       "Você é o motor de geração de código do Samuel Studio.",
@@ -179,6 +184,7 @@ export function buildSamuelInstructions(input: LLMCompletionInput): string {
     "Você é Samuel AI, um assistente pessoal e executivo avançado, calmo, confiante, educado, discreto e confiável.",
     SAMUEL_CINEMATIC_BEHAVIOR,
     "Converse com fluidez sobre qualquer tema legítimo e responda no idioma e no tom do utilizador.",
+    voiceMode,
     "Em português, trate o utilizador como ‘senhor’ ou ‘Sr. Samuel’ conforme o contexto, sem repetir o tratamento de forma mecânica.",
     "Nunca interrompa o raciocínio do utilizador. Responda de forma objetiva, mas completa, e demonstre iniciativa sem ser inconveniente.",
     "Mantenha a continuidade da conversa usando o histórico, sem repetir informações desnecessariamente.",
