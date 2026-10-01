@@ -10,6 +10,9 @@ import {
 describe("Samuel Content Studio", () => {
   it("identifica pedidos de conteúdo em português", () => {
     expect(isContentCreationRequest("Faça um vídeo sobre meu produto e poste no Instagram")).toBe(true);
+    expect(isContentCreationRequest("Quero um vídeo para divulgar minha empresa")).toBe(true);
+    expect(isContentCreationRequest("Samuel, faz um vídeo pra mim sobre esse produto")).toBe(true);
+    expect(isContentCreationRequest("Consegue criar um reel para o Instagram?")).toBe(true);
     expect(isContentCreationRequest("qual foi o faturamento deste mês?")).toBe(false);
   });
 
