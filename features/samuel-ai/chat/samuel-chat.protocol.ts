@@ -1,4 +1,6 @@
 import type { ChatMessage } from "../types";
+import { isSamuelConversationChannel } from "@/apps/web/src/core/orchestrator";
+
 import type { SamuelChatRequest, SamuelChatStreamEvent } from "./samuel-chat.types";
 
 export const MAX_CHAT_QUERY_LENGTH = 8_000;
@@ -54,6 +56,7 @@ export function parseSamuelChatRequest(value: unknown): SamuelChatRequest {
     companyContext: isRecord(value.companyContext)
       ? value.companyContext as SamuelChatRequest["companyContext"]
       : null,
+    channel: isSamuelConversationChannel(value.channel) ? value.channel : "web",
   };
 }
 
