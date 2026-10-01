@@ -40,6 +40,16 @@ type WebResponse = {
   }>;
 };
 
+function sourceTitle(url: string, title?: string) {
+  const cleanTitle = title?.trim();
+  if (cleanTitle) return cleanTitle;
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return "Fonte web";
+  }
+}
+
 function collectSources(payload: WebResponse) {
   const candidates: SamuelWebSource[] = [];
 
@@ -48,7 +58,7 @@ function collectSources(payload: WebResponse) {
       if (source.url) {
         candidates.push({
           url: source.url,
-          title: source.title?.trim() || new URL(source.url).hostname,
+          title: sourceTitle(source.url, source.title),
         });
       }
     }
@@ -57,7 +67,7 @@ function collectSources(payload: WebResponse) {
         if (annotation.type === "url_citation" && annotation.url) {
           candidates.push({
             url: annotation.url,
-            title: annotation.title?.trim() || new URL(annotation.url).hostname,
+            title: sourceTitle(annotation.url, annotation.title),
           });
         }
       }
