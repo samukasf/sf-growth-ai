@@ -140,8 +140,17 @@ export function parseContentProject(content: string, input: ReturnType<typeof va
 
 export function isContentCreationRequest(query: string) {
   const normalized = query.toLocaleLowerCase("pt-BR");
-  const creation = /\b(crie|cria|criar|faça|fazer|gere|gerar|produza|produzir|monte|montar)\b/i.test(normalized);
-  const content = /\b(vídeo|video|reel|short|post|postagem|conteúdo|conteudo|campanha)\b/i.test(normalized);
+  const creation =
+    /\b(crie|cria|criar|faz|faça|fazer|gere|gerar|produza|produzir|monte|montar|prepare|prepara|quero|preciso)\b/i.test(
+      normalized,
+    ) ||
+    /\b(vamos|pode|consegue)\s+(?:criar|fazer|gerar|produzir|montar|preparar)\b/i.test(
+      normalized,
+    );
+  const content =
+    /\b(vídeo|video|reels?|shorts?|post|postagem|conteúdo|conteudo|campanha)\b/i.test(
+      normalized,
+    );
   return creation && content;
 }
 

@@ -94,6 +94,77 @@ function permalinkFromJob(job: PublishJob | undefined) {
   return typeof value === "string" && value.startsWith("http") ? value : null;
 }
 
+function selectedSamuelVoiceId(companyId: string) {
+  try {
+    const value = localStorage.getItem(`sf-growth-ai:samuel-voice:${companyId}`)?.trim();
+    return value && /^[A-Za-z0-9_-]{8,128}$/.test(value) ? value : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+async function generateAiVideoAsset(
+  companyId: string,
+  project: SamuelContentProject,
+  onStatus: (status: string) => void,
+) {
+  const visualBrief = [
+    `Crie um vídeo publicitário ${project.aspectRatio === "9:16" ? "vertical" : project.aspectRatio === "1:1" ? "quadrado" : "horizontal"} premium para ${project.name}.`,
+    `Objetivo: ${project.objective}. Público: ${project.audience}. Gancho: ${project.hook}.`,
+    ...project.scenes.map(
+      (scene, index) =>
+        `Cena ${index + 1}: ${scene.visualDirection}. Ideia: ${scene.headline}.`,
+    ),
+    "Movimento de câmera natural, iluminação publicitária, aparência realista, transições elegantes. Não invente logotipos e evite texto embutido na imagem.",
+  ].join("\n");
+
+  const response = await fetch("/api/samuel-ai/content-studio/ai-video", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      companyId,
+      projectId: project.id,
+      title: project.name,
+      aspectRatio: project.aspectRatio,
+      prompt: visualBrief,
+    }),
+  });
+  const started = (await response.json().catch(() => ({}))) as {
+    generationId?: string;
+    status?: string;
+    error?: string;
+  };
+  if (!response.ok || !started.generationId) {
+    throw new Error(started.error || "A geração IA não iniciou.");
+  }
+
+  const generationId = started.generationId;
+  for (let attempt = 0; attempt < 60; attempt += 1) {
+    if (attempt > 0) await sleep(10_000);
+    onStatus(`Gerando vídeo IA… ${Math.min(95, 8 + attempt * 2)}%`);
+    const check = await fetch(
+      `/api/samuel-ai/content-studio/ai-video?companyId=${encodeURIComponent(companyId)}&generationId=${encodeURIComponent(generationId)}`,
+      { cache: "no-store" },
+    );
+    const payload = (await check.json().catch(() => ({}))) as {
+      status?: string;
+      previewUrl?: string;
+      assetPath?: string;
+      error?: string;
+    };
+    if (payload.status === "completed" && payload.previewUrl && payload.assetPath) {
+      return { previewUrl: payload.previewUrl, assetPath: payload.assetPath };
+    }
+    if (payload.status === "failed" || (!check.ok && check.status !== 202)) {
+      throw new Error(payload.error || "A geração IA falhou.");
+    }
+  }
+
+  throw new Error(
+    "A geração IA demorou além do esperado. O trabalho ficou guardado para consulta.",
+  );
+}
+
 export function SamuelContentStudio({ companyId }: Props) {
   const [format, setFormat] = useState<ContentFormat>("video");
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>("9:16");
@@ -133,6 +204,11 @@ export function SamuelContentStudio({ companyId }: Props) {
         setAspectRatio(next.aspectRatio);
         setPlatforms(next.platforms);
         setAutoProduce(true);
+        setWarning(
+          next.format === "video"
+            ? "Pedido recebido do Samuel. Preparando narração e vídeo automaticamente…"
+            : null,
+        );
         sessionStorage.removeItem("sf-growth-ai:samuel-content:incoming");
       } catch {
         // Ignore malformed browser state.
@@ -259,7 +335,11 @@ export function SamuelContentStudio({ companyId }: Props) {
       const response = await fetch("/api/samuel-ai/voice/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ companyId, text: project.script }),
+        body: JSON.stringify({
+          companyId,
+          text: project.script,
+          elevenLabsVoiceId: selectedSamuelVoiceId(companyId),
+        }),
       });
       if (!response.ok) {
         const payload = await response.json().catch(() => null) as { error?: string } | null;
@@ -288,11 +368,65 @@ export function SamuelContentStudio({ companyId }: Props) {
         }
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Falha ao produzir o conteúdo.");
+      const localMessage =
+        cause instanceof Error ? cause.message : "Falha ao produzir o conteúdo.";
+
+      if (
+        project.format === "video" &&
+        readiness?.aiVideo.ready &&
+        !aiVideoBusy
+      ) {
+        setWarning(
+          `O render local falhou. Alternando automaticamente para ${readiness.aiVideo.provider}.`,
+        );
+        setAiVideoBusy(true);
+        setAiVideoStatus("Iniciando geração cinematográfica em nuvem…");
+        try {
+          const generated = await generateAiVideoAsset(
+            companyId,
+            project,
+            setAiVideoStatus,
+          );
+          if (videoUrl?.startsWith("blob:")) URL.revokeObjectURL(videoUrl);
+          setVideoUrl(generated.previewUrl);
+          setVideoBlob(null);
+          setVideoAssetPath(generated.assetPath);
+          setVideoSource("ai");
+          setAiVideoStatus(
+            "Vídeo IA MP4 pronto. Revise a prévia antes de publicar.",
+          );
+          setError(null);
+          return;
+        } catch (cloudError) {
+          const cloudMessage =
+            cloudError instanceof Error
+              ? cloudError.message
+              : "Falha ao gerar vídeo IA.";
+          setAiVideoStatus(null);
+          setError(
+            `O render local falhou: ${localMessage} Também tentei o motor de nuvem, mas ele respondeu: ${cloudMessage}`,
+          );
+        } finally {
+          setAiVideoBusy(false);
+        }
+      } else {
+        setError(localMessage);
+      }
     } finally {
       setRendering(false);
     }
-  }, [audioUrl, companyId, fps, project, quality, rendering, uploadBrowserMp4, videoUrl]);
+  }, [
+    aiVideoBusy,
+    audioUrl,
+    companyId,
+    fps,
+    project,
+    quality,
+    readiness,
+    rendering,
+    uploadBrowserMp4,
+    videoUrl,
+  ]);
 
   async function generateAiVideo() {
     if (!project || project.format !== "video" || aiVideoBusy) return;
@@ -300,43 +434,27 @@ export function SamuelContentStudio({ companyId }: Props) {
       setError(readiness?.aiVideo.detail ?? "Vídeo IA não está configurado.");
       return;
     }
+
     setAiVideoBusy(true);
     setError(null);
     setWarning(null);
     setPreviewApproved(false);
     setAiVideoStatus("Iniciando geração cinematográfica…");
-    const visualBrief = [
-      `Crie um vídeo publicitário ${project.aspectRatio === "9:16" ? "vertical" : project.aspectRatio === "1:1" ? "quadrado" : "horizontal"} premium para ${project.name}.`,
-      `Objetivo: ${project.objective}. Público: ${project.audience}. Gancho: ${project.hook}.`,
-      ...project.scenes.map((scene, index) => `Cena ${index + 1}: ${scene.visualDirection}. Ideia: ${scene.headline}.`),
-      "Movimento de câmera natural, iluminação publicitária, aparência realista, transições elegantes. Não invente logotipos e evite texto embutido na imagem.",
-    ].join("\n");
+
     try {
-      const response = await fetch("/api/samuel-ai/content-studio/ai-video", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ companyId, projectId: project.id, title: project.name, aspectRatio: project.aspectRatio, prompt: visualBrief }),
-      });
-      const started = await response.json().catch(() => ({})) as { generationId?: string; status?: string; error?: string };
-      if (!response.ok || !started.generationId) throw new Error(started.error || "A geração IA não iniciou.");
-      const generationId = started.generationId;
-      for (let attempt = 0; attempt < 60; attempt += 1) {
-        if (attempt > 0) await sleep(10_000);
-        setAiVideoStatus(`Gerando vídeo IA… ${Math.min(95, 8 + attempt * 2)}%`);
-        const check = await fetch(`/api/samuel-ai/content-studio/ai-video?companyId=${encodeURIComponent(companyId)}&generationId=${encodeURIComponent(generationId)}`, { cache: "no-store" });
-        const payload = await check.json().catch(() => ({})) as { status?: string; previewUrl?: string; assetPath?: string; error?: string };
-        if (payload.status === "completed" && payload.previewUrl && payload.assetPath) {
-          if (videoUrl?.startsWith("blob:")) URL.revokeObjectURL(videoUrl);
-          setVideoUrl(payload.previewUrl);
-          setVideoBlob(null);
-          setVideoAssetPath(payload.assetPath);
-          setVideoSource("ai");
-          setAiVideoStatus("Vídeo IA MP4 pronto. Revise a prévia antes de publicar.");
-          return;
-        }
-        if (payload.status === "failed" || (!check.ok && check.status !== 202)) throw new Error(payload.error || "A geração IA falhou.");
-      }
-      throw new Error("A geração IA demorou além do esperado. O trabalho ficou guardado para consulta.");
+      const generated = await generateAiVideoAsset(
+        companyId,
+        project,
+        setAiVideoStatus,
+      );
+      if (videoUrl?.startsWith("blob:")) URL.revokeObjectURL(videoUrl);
+      setVideoUrl(generated.previewUrl);
+      setVideoBlob(null);
+      setVideoAssetPath(generated.assetPath);
+      setVideoSource("ai");
+      setAiVideoStatus(
+        "Vídeo IA MP4 pronto. Revise a prévia antes de publicar.",
+      );
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Falha ao gerar vídeo IA.");
       setAiVideoStatus(null);
@@ -346,13 +464,13 @@ export function SamuelContentStudio({ companyId }: Props) {
   }
 
   useEffect(() => {
-    if (!autoProduce || !project || rendering) return;
+    if (!autoProduce || !project || rendering || !readiness) return;
     const timer = window.setTimeout(() => {
       setAutoProduce(false);
       void generateNarrationAndVideo();
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [autoProduce, generateNarrationAndVideo, project, rendering]);
+  }, [autoProduce, generateNarrationAndVideo, project, readiness, rendering]);
 
   async function ensurePublishAsset() {
     if (!previewApproved) throw new Error("Revise a prévia e clique em “Aprovar para publicação” antes de publicar.");
