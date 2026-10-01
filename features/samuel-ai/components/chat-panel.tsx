@@ -641,13 +641,29 @@ export function ChatPanel({
       conversationVoice.stop();
       interruptSamuel();
     };
+    const submit = (event: Event) => {
+      const detail = (event as CustomEvent<{ message?: string }>).detail;
+      const message = detail?.message?.trim();
+      if (message) void performSend(message);
+    };
+    const cancel = () => interruptSamuel();
+
     window.addEventListener("samuel:voice-toggle", toggle);
     window.addEventListener("samuel:voice-stop", stop);
+    window.addEventListener("samuel:chat-submit", submit as EventListener);
+    window.addEventListener("samuel:chat-cancel", cancel);
     return () => {
       window.removeEventListener("samuel:voice-toggle", toggle);
       window.removeEventListener("samuel:voice-stop", stop);
+      window.removeEventListener("samuel:chat-submit", submit as EventListener);
+      window.removeEventListener("samuel:chat-cancel", cancel);
     };
-  }, [conversationVoice.stop, conversationVoice.toggle, interruptSamuel]);
+  }, [
+    conversationVoice.stop,
+    conversationVoice.toggle,
+    interruptSamuel,
+    performSend,
+  ]);
 
 
   const stopVoiceInput = useCallback(() => {
