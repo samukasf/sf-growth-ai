@@ -37,6 +37,10 @@ import {
 } from "@/features/google-calendar";
 import { SamuelConversationRepository } from "@/features/samuel-ai/server/samuel-conversation.repository";
 import { searchSamuelLiveWeb } from "@/features/samuel-ai/web/samuel-live-web.server";
+import {
+  musicCommandFragment,
+  parseSamuelMusicCommand,
+} from "@/features/samuel-ai/music/samuel-music.server";
 import { getWorkspaceSessionIdentity } from "@/features/samuel-ai/server/workspace-session";
 import type { ChatMessage } from "@/features/samuel-ai/types";
 import { authorizeCompanyRequest } from "@/features/auth/server/authorization";
@@ -294,6 +298,11 @@ export async function POST(request: Request) {
         const toolFragments: string[] = [];
         let pendingAction: SamuelToolActionPlan | null = null;
         let liveWebResult: Awaited<ReturnType<typeof searchSamuelLiveWeb>> = null;
+        const musicCommand = parseSamuelMusicCommand(chatRequest.query);
+        if (musicCommand) {
+          send({ type: "music_action", command: musicCommand });
+          toolFragments.push(musicCommandFragment(musicCommand));
+        }
 
         try {
           const company = chatRequest.companyContext?.executiveContext?.company;
