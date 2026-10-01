@@ -254,8 +254,32 @@ export function SamuelAiFocusV6({ data, handlers, onNavigate }: Props) {
               </div>
             </header>
 
-            <section className="relative mt-2 min-h-[430px] shrink-0 sm:min-h-[500px] xl:mt-0 xl:min-h-[500px] xl:flex-1 2xl:min-h-[510px]">
-              <div className="absolute inset-0 hidden xl:block">
+            <section className="mt-5 flex shrink-0 flex-col items-center xl:hidden">
+              <div className="relative size-[238px] sm:size-[280px]">
+                <MobileLivingCore
+                  active={voiceActive || processing}
+                  phase={voicePhase}
+                />
+              </div>
+              <div className="mt-4 w-full max-w-[330px] rounded-2xl border border-[#0b6aa9]/70 bg-[#03111d]/92 px-4 py-2.5 text-center shadow-[0_0_28px_rgba(0,139,255,.12)]">
+                <div className="flex items-center justify-center gap-2">
+                  <span
+                    className={`size-2 rounded-full ${
+                      voiceActive
+                        ? "bg-cyan-300 shadow-[0_0_12px_#22d3ee]"
+                        : processing
+                          ? "bg-violet-300 shadow-[0_0_12px_#c084fc]"
+                          : "bg-emerald-400 shadow-[0_0_10px_#34d399]"
+                    }`}
+                  />
+                  <strong className="text-[13px] text-white">{copy.title}</strong>
+                </div>
+                <p className="mt-1 text-[11px] text-[#9fc5df]">{copy.subtitle}</p>
+              </div>
+            </section>
+
+            <section className="relative mt-0 hidden min-h-[500px] shrink-0 xl:block xl:flex-1 2xl:min-h-[510px]">
+              <div className="absolute inset-0">
                 <OrbState
                   className="left-[4%] top-[16%]"
                   icon={Activity}
@@ -290,21 +314,14 @@ export function SamuelAiFocusV6({ data, handlers, onNavigate }: Props) {
                 />
               </div>
 
-              <div className="absolute left-1/2 top-1/2 size-[min(84vw,355px)] -translate-x-1/2 -translate-y-1/2 sm:size-[min(66vw,430px)] xl:size-[min(55vh,535px)] 2xl:size-[min(53vh,540px)]">
+              <div className="absolute left-1/2 top-1/2 size-[min(55vh,535px)] -translate-x-1/2 -translate-y-1/2 2xl:size-[min(53vh,540px)]">
                 <LivingCore active={voiceActive || processing} phase={voicePhase} />
-              </div>
-
-              <div className="absolute inset-0 xl:hidden">
-                <MobileOrbState className="left-0 top-[15%]" icon={Activity} label="OUVINDO" sub="Captando e entendendo..." color="#25d7ff" active={voicePhase === "listening"} />
-                <MobileOrbState className="right-0 top-[15%] text-right" icon={BrainCircuit} label="PENSANDO" sub="Analisando ideias..." color="#b56aff" active={processing} align="right" />
-                <MobileOrbState className="bottom-[14%] left-0" icon={Settings} label="EXECUTANDO" sub="Colocando em prática..." color="#37f5c8" active={handlers.isProcessing} />
-                <MobileOrbState className="bottom-[14%] right-0 text-right" icon={MessageSquareText} label="FALANDO" sub="Respondendo para você..." color="#ffb67a" active={voicePhase === "speaking"} align="right" />
               </div>
             </section>
 
             <VoiceStatusCard title={copy.title} subtitle={copy.subtitle} active={voiceActive} />
 
-            <div className="mx-auto mt-3 grid w-full max-w-[610px] shrink-0 grid-cols-[1fr_1.35fr_1fr] items-start gap-3 text-center sm:gap-8">
+            <div className="mx-auto mt-5 grid w-full max-w-[610px] shrink-0 grid-cols-[1fr_1.35fr_1fr] items-start gap-2 text-center sm:gap-8 xl:mt-5">
               <RoundControl
                 icon={Keyboard}
                 label="Digitar"
@@ -325,13 +342,7 @@ export function SamuelAiFocusV6({ data, handlers, onNavigate }: Props) {
 
             <QuickActions actions={QUICK_ACTIONS} onAction={runAction} />
 
-            <MobileContent
-              actions={RIGHT_ACTIONS}
-              onAction={runAction}
-              voiceActive={voiceActive}
-              companyReady={companyId !== "default-company"}
-              copy={copy}
-            />
+
 
             <footer className="mt-4 hidden min-h-10 shrink-0 items-center justify-between border-t border-[#0a416a]/50 px-1 pt-3 text-[8px] uppercase tracking-[.24em] text-[#7e9eb8] xl:flex">
               <span>
@@ -640,6 +651,50 @@ function LivingCore({ active, phase }: { active: boolean; phase: VoicePhase }) {
   );
 }
 
+function MobileLivingCore({
+  active,
+  phase,
+}: {
+  active: boolean;
+  phase: VoicePhase;
+}) {
+  const phaseGlow =
+    phase === "speaking"
+      ? "from-amber-300/35 via-fuchsia-400/20 to-cyan-300/30"
+      : phase === "processing"
+        ? "from-violet-400/35 via-blue-400/25 to-cyan-300/30"
+        : "from-cyan-300/35 via-blue-500/25 to-violet-400/25";
+
+  return (
+    <div className="relative h-full w-full" aria-hidden="true">
+      <div
+        className={`absolute inset-[2%] rounded-full bg-gradient-to-br ${phaseGlow} blur-3xl transition-opacity duration-500 ${
+          active ? "opacity-80" : "opacity-45"
+        }`}
+      />
+      <div
+        className="absolute inset-[3%] rounded-full border border-cyan-300/35"
+        style={{ animation: "samuelOrbSpin 14s linear infinite" }}
+      >
+        <span className="absolute left-1/2 top-[-4px] size-2.5 -translate-x-1/2 rounded-full bg-cyan-200 shadow-[0_0_16px_#67e8f9]" />
+      </div>
+      <div
+        className="absolute inset-[11%] rounded-full border border-dashed border-violet-300/30"
+        style={{ animation: "samuelOrbSpinReverse 10s linear infinite" }}
+      />
+      <div className="absolute inset-[18%] overflow-hidden rounded-full border border-cyan-200/45 bg-[radial-gradient(circle_at_38%_30%,rgba(255,255,255,.42),rgba(45,185,255,.28)_20%,rgba(25,86,190,.34)_48%,rgba(18,13,57,.92)_78%,rgba(2,7,14,1)_100%)] shadow-[inset_0_0_34px_rgba(52,211,255,.22),0_0_42px_rgba(0,153,255,.25)]">
+        <div className="absolute inset-[12%] rounded-[48%] border-2 border-cyan-200/35 [transform:rotate(28deg)]" style={{ animation: "samuelOrbSpin 8s linear infinite" }} />
+        <div className="absolute inset-[18%] rounded-[46%] border border-violet-300/45 [transform:rotate(-32deg)]" style={{ animation: "samuelOrbSpinReverse 6s linear infinite" }} />
+        <div className="absolute inset-[30%] rounded-full bg-cyan-200/15 blur-xl" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_60%_60%,rgba(140,92,255,.22),transparent_36%)]" />
+      </div>
+      <div className={`absolute inset-[26%] rounded-full border border-white/10 transition-all duration-500 ${
+        active ? "scale-105 shadow-[0_0_34px_rgba(70,210,255,.28)]" : ""
+      }`} />
+    </div>
+  );
+}
+
 function OrbState({
   className,
   icon: Icon,
@@ -671,37 +726,6 @@ function OrbState({
   );
 }
 
-function MobileOrbState({
-  className,
-  icon: Icon,
-  label,
-  sub,
-  color,
-  active,
-  align = "left",
-}: {
-  className: string;
-  icon: LucideIcon;
-  label: string;
-  sub: string;
-  color: string;
-  active: boolean;
-  align?: "left" | "right";
-}) {
-  return (
-    <div className={`absolute z-20 w-[88px] ${className}`}>
-      <span
-        className={`samuel-state-icon flex size-10 items-center justify-center rounded-full border ${align === "right" ? "ml-auto" : ""} ${active ? "is-live" : ""}`}
-        style={{ borderColor: `${color}55`, color, boxShadow: `0 0 16px ${color}22` }}
-      >
-        <Icon className="size-5" />
-      </span>
-      <strong className="mt-1 block text-[9px] tracking-[.04em] text-white">{label}</strong>
-      <p className="mt-1 text-[8px] leading-3 text-[#9fbfd6]">{sub}</p>
-    </div>
-  );
-}
-
 function VoiceStatusCard({
   title,
   subtitle,
@@ -712,9 +736,9 @@ function VoiceStatusCard({
   active: boolean;
 }) {
   return (
-    <div aria-live="polite" className="samuel-neon-card mx-auto mt-1 w-full max-w-[470px] shrink-0 rounded-[28px] border border-[#0c7de5] bg-[#031326]/95 px-5 py-3.5 text-center">
+    <div aria-live="polite" className="samuel-neon-card mx-auto mt-0 hidden w-full max-w-[360px] shrink-0 rounded-[20px] border border-[#0c7de5] bg-[#031326]/95 px-4 py-2.5 text-center xl:block">
       <div className="flex items-center justify-center gap-4">
-        <Activity className={`samuel-neon-icon size-7 text-[#21b5ff] ${active ? "animate-pulse" : ""}`} />
+        <Activity className={`samuel-neon-icon size-5 text-[#21b5ff] ${active ? "animate-pulse" : ""}`} />
         <div className="min-w-0">
           <strong className="block truncate text-sm text-white">{title}</strong>
           <span className="block truncate text-xs text-[#b9d6ed]">{subtitle}</span>
@@ -738,12 +762,12 @@ function PrimaryMic({
       type="button"
       onClick={onClick}
       aria-label="Ativar ou desativar voz"
-      className="samuel-reference-mic group mx-auto flex min-h-28 min-w-28 touch-manipulation flex-col items-center gap-2 rounded-2xl text-xs font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
+      className="samuel-reference-mic group mx-auto flex min-h-24 min-w-24 touch-manipulation flex-col items-center gap-2 rounded-2xl text-[11px] font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 xl:min-h-28 xl:min-w-28 xl:text-xs"
     >
-      <span className={`samuel-mic-ring relative flex size-[96px] items-center justify-center rounded-full border border-[#0d7ef6] bg-[radial-gradient(circle_at_50%_42%,#1164b8_0%,#082d60_45%,#020b16_100%)] ${active ? "is-live" : ""}`}>
+      <span className={`samuel-mic-ring relative flex size-[78px] items-center justify-center rounded-full border border-[#0d7ef6] xl:size-[96px] bg-[radial-gradient(circle_at_50%_42%,#1164b8_0%,#082d60_45%,#020b16_100%)] ${active ? "is-live" : ""}`}>
         <span className="samuel-mic-orbit absolute inset-[-13px] rounded-full border border-[#1fd5ff]/30" />
         <span className="samuel-mic-orbit samuel-mic-orbit-b absolute inset-[-23px] rounded-full border border-[#227fff]/18" />
-        <Mic className="samuel-neon-icon size-10 text-white" />
+        <Mic className="samuel-neon-icon size-8 text-white xl:size-10" />
       </span>
       <span>{phase === "processing" ? "Pensando" : phase === "speaking" ? "Falando" : active ? "Ouvindo" : "Toque para falar"}</span>
     </button>
@@ -763,10 +787,10 @@ function RoundControl({
     <button
       type="button"
       onClick={onClick}
-      className="group mx-auto flex min-h-20 min-w-16 touch-manipulation flex-col items-center gap-2 rounded-xl text-xs text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+      className="group mx-auto flex min-h-16 min-w-14 touch-manipulation flex-col items-center gap-1.5 rounded-xl text-[10px] text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 xl:min-h-20 xl:min-w-16 xl:gap-2 xl:text-xs"
     >
-      <span className="samuel-neon-control flex size-[64px] items-center justify-center rounded-full border border-[#0d65ac] bg-[#03101b]/95 transition group-active:scale-95">
-        <Icon className="size-6" />
+      <span className="samuel-neon-control flex size-[52px] items-center justify-center rounded-full border border-[#0d65ac] xl:size-[64px] bg-[#03101b]/95 transition group-active:scale-95">
+        <Icon className="size-5 xl:size-6" />
       </span>
       {label}
     </button>
@@ -781,7 +805,7 @@ function QuickActions({
   onAction: (action: Action) => void;
 }) {
   return (
-    <div className="mt-4 shrink-0 xl:mt-3">
+    <div className="mt-4 hidden shrink-0 xl:block xl:mt-3">
       <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden xl:grid xl:grid-cols-5 xl:overflow-visible">
         {actions.map((action) => (
           <button
@@ -888,57 +912,6 @@ function LiveStatus({ label, active = false }: { label: string; active?: boolean
         )}
       </span>
       <span className="min-w-0 truncate">{label}</span>
-    </div>
-  );
-}
-
-function MobileContent({
-  actions,
-  onAction,
-  voiceActive,
-  companyReady,
-  copy,
-}: {
-  actions: Action[];
-  onAction: (action: Action) => void;
-  voiceActive: boolean;
-  companyReady: boolean;
-  copy: { title: string; subtitle: string };
-}) {
-  return (
-    <div className="mt-6 space-y-3 xl:hidden">
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {actions.map((action) => (
-          <button
-            key={action.label}
-            type="button"
-            onClick={() => onAction(action)}
-            className="samuel-action-card flex min-h-[82px] items-center gap-3 rounded-xl border border-[#0a568e] bg-[#031321]/88 p-3 text-left text-[11px]"
-          >
-            <action.icon className="samuel-neon-icon size-6 shrink-0 text-[#18b5ff]" />
-            <span>{action.label}</span>
-          </button>
-        ))}
-      </div>
-      <section className="samuel-neon-card rounded-2xl border border-[#0b75c7] bg-[#03101b]/90 p-4">
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="text-sm font-semibold text-white">Status em tempo real</h3>
-          <span className="flex items-center gap-2 text-[11px] text-emerald-300">
-            <span className="samuel-online-dot size-2 rounded-full bg-emerald-400" />
-            {voiceActive ? "Voz conectada" : "Pronto"}
-          </span>
-        </div>
-        <div className="mt-3 space-y-2.5 text-xs text-[#b8d2e5]">
-          <LiveStatus label={copy.title} active={voiceActive} />
-          <LiveStatus label="Ferramentas integradas" active />
-          <LiveStatus label={companyReady ? "Memória e contexto habilitados" : "Contexto padrão ativo"} active={companyReady} />
-          <LiveStatus label="Pronto para executar tarefas" active />
-        </div>
-      </section>
-      <blockquote className="samuel-neon-card rounded-2xl border border-[#0b75c7] bg-[#03101b]/90 p-4 text-sm italic leading-6 text-[#c7dcec]">
-        “Mais do que uma IA, um parceiro para o seu crescimento.”
-        <span className="mt-2 block text-right text-lg not-italic text-white">Samuel IA</span>
-      </blockquote>
     </div>
   );
 }
