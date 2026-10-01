@@ -673,6 +673,7 @@ export function ChatPanel({
 
   const startVoiceInput = useCallback(() => {
     if (busy || !hydrated) return;
+    if (conversationVoice.active) conversationVoice.stop();
 
     const Recognition = getSpeechRecognitionConstructor();
     if (!Recognition) {
@@ -731,7 +732,15 @@ export function ChatPanel({
     setListening(true);
     setVoiceNotice("Samuel está ouvindo… fale naturalmente.");
     recognition.start();
-  }, [busy, cancelBrowserSpeech, hydrated, performSend, voiceAutoSend]);
+  }, [
+    busy,
+    cancelBrowserSpeech,
+    conversationVoice.active,
+    conversationVoice.stop,
+    hydrated,
+    performSend,
+    voiceAutoSend,
+  ]);
 
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === "Enter" && !event.shiftKey) {
@@ -1014,7 +1023,10 @@ export function ChatPanel({
           <div className="samuel-voice-console__primary-actions">
             <button
               type="button"
-              onClick={() => void conversationVoice.toggle()}
+              onClick={() => {
+                if (listening) stopVoiceInput();
+                void conversationVoice.toggle();
+              }}
               disabled={!hydrated}
               className="samuel-reference-mic samuel-voice-console__start"
               aria-pressed={continuousVoice.active}
