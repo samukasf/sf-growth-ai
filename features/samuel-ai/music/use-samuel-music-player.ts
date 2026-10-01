@@ -8,6 +8,22 @@ import type {
   SamuelMusicTrack,
 } from "./samuel-music.types";
 
+type SpotifyStatus = {
+  configured?: boolean;
+  connected?: boolean;
+  displayName?: string | null;
+  premium?: boolean;
+};
+
+type SpotifyControlResponse = {
+  ok?: boolean;
+  playing?: boolean;
+  volume?: number;
+  track?: SamuelMusicTrack;
+  message?: string;
+  error?: string;
+};
+
 type SamuelMusicPlayerState = {
   track: SamuelMusicTrack | null;
   playing: boolean;
@@ -16,6 +32,11 @@ type SamuelMusicPlayerState = {
   queueLength: number;
   error: string | null;
   limitation: string | null;
+  provider: "spotify" | "itunes-preview" | null;
+  spotifyConfigured: boolean;
+  spotifyConnected: boolean;
+  spotifyDisplayName: string | null;
+  spotifyPremium: boolean | null;
 };
 
 const SILENT_WAV =
@@ -47,11 +68,58 @@ export function useSamuelMusicPlayer(companyId: string) {
     queueLength: 0,
     error: null,
     limitation: null,
+    provider: null,
+    spotifyConfigured: false,
+    spotifyConnected: false,
+    spotifyDisplayName: null,
+    spotifyPremium: null,
   });
+
+  const connectUrl = `/api/samuel-ai/music/spotify/connect?companyId=${encodeURIComponent(companyId)}&returnTo=${encodeURIComponent("/samuel-ai")}`;
+
+  const refreshSpotifyStatus = useCallback(async () => {
+    try {
+      const response = await fetch(
+        `/api/samuel-ai/music/spotify/status?companyId=${encodeURIComponent(companyId)}`,
+        { cache: "no-store" },
+      );
+      const payload = (await response.json().catch(() => ({}))) as SpotifyStatus & {
+        error?: string;
+      };
+      if (!response.ok) throw new Error(payload.error || "Falha ao verificar Spotify.");
+      setState((current) => ({
+        ...current,
+        spotifyConfigured: Boolean(payload.configured),
+        spotifyConnected: Boolean(payload.connected),
+        spotifyDisplayName: payload.displayName ?? null,
+        spotifyPremium:
+          typeof payload.premium === "boolean" ? payload.premium : null,
+      }));
+    } catch {
+      setState((current) => ({
+        ...current,
+        spotifyConnected: false,
+      }));
+    }
+  }, [companyId]);
+
+  useEffect(() => {
+    void refreshSpotifyStatus();
+  }, [refreshSpotifyStatus]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const status = new URLSearchParams(window.location.search).get("spotify");
+    if (!status) return;
+    if (status === "connected") void refreshSpotifyStatus();
+  }, [refreshSpotifyStatus]);
 
   const effectiveVolume = useCallback(() => {
     return duckedRef.current
-      ? Math.min(baseVolumeRef.current, Math.max(0.08, baseVolumeRef.current * 0.22))
+      ? Math.min(
+          baseVolumeRef.current,
+          Math.max(0.08, baseVolumeRef.current * 0.22),
+        )
       : baseVolumeRef.current;
   }, []);
 
@@ -67,16 +135,25 @@ export function useSamuelMusicPlayer(companyId: string) {
     audio.preload = "auto";
     audio.volume = effectiveVolume();
     audio.addEventListener("play", () => {
-      setState((current) => ({ ...current, playing: true, error: null }));
+      setState((current) => ({
+        ...current,
+        playing: true,
+        error: null,
+        provider: "itunes-preview",
+      }));
     });
     audio.addEventListener("pause", () => {
-      setState((current) => ({ ...current, playing: false }));
+      setState((current) =>
+        current.provider === "itunes-preview"
+          ? { ...current, playing: false }
+          : current,
+      );
     });
     audio.addEventListener("error", () => {
       setState((current) => ({
         ...current,
         playing: false,
-        error: "O navegador não conseguiu reproduzir esta faixa.",
+        error: "O navegador não conseguiu reproduzir esta prévia.",
       }));
     });
     audioRef.current = audio;
@@ -106,7 +183,7 @@ export function useSamuelMusicPlayer(companyId: string) {
       if (!queue.length) throw new Error("A fila de música está vazia.");
       const normalized = ((index % queue.length) + queue.length) % queue.length;
       const track = queue[normalized];
-      if (!track) throw new Error("Faixa indisponível.");
+      if (!track?.previewUrl) throw new Error("Esta faixa não tem prévia reproduzível.");
 
       const audio = ensureAudio();
       indexRef.current = normalized;
@@ -119,6 +196,7 @@ export function useSamuelMusicPlayer(companyId: string) {
         queueIndex: normalized,
         queueLength: queue.length,
         error: null,
+        provider: "itunes-preview",
       }));
       updateMediaSession(track);
       await audio.play();
@@ -127,12 +205,12 @@ export function useSamuelMusicPlayer(companyId: string) {
     [ensureAudio, syncVolume, updateMediaSession],
   );
 
-  const next = useCallback(async () => {
+  const nextPreview = useCallback(async () => {
     if (!queueRef.current.length) throw new Error("Não há próxima faixa na fila.");
     return playIndex(indexRef.current + 1);
   }, [playIndex]);
 
-  const previous = useCallback(async () => {
+  const previousPreview = useCallback(async () => {
     if (!queueRef.current.length) throw new Error("Não há faixa anterior na fila.");
     return playIndex(indexRef.current - 1);
   }, [playIndex]);
@@ -140,7 +218,7 @@ export function useSamuelMusicPlayer(companyId: string) {
   useEffect(() => {
     const audio = ensureAudio();
     const handleEnded = () => {
-      if (queueRef.current.length > 1) void next().catch(() => undefined);
+      if (queueRef.current.length > 1) void nextPreview().catch(() => undefined);
     };
     audio.addEventListener("ended", handleEnded);
 
@@ -157,8 +235,8 @@ export function useSamuelMusicPlayer(companyId: string) {
       };
       safeHandler("play", () => void audio.play());
       safeHandler("pause", () => audio.pause());
-      safeHandler("nexttrack", () => void next());
-      safeHandler("previoustrack", () => void previous());
+      safeHandler("nexttrack", () => void nextPreview());
+      safeHandler("previoustrack", () => void previousPreview());
       safeHandler("stop", () => {
         audio.pause();
         audio.currentTime = 0;
@@ -168,7 +246,7 @@ export function useSamuelMusicPlayer(companyId: string) {
     return () => {
       audio.removeEventListener("ended", handleEnded);
     };
-  }, [ensureAudio, next, previous]);
+  }, [ensureAudio, nextPreview, previousPreview]);
 
   useEffect(
     () => () => {
@@ -184,6 +262,7 @@ export function useSamuelMusicPlayer(companyId: string) {
   );
 
   const unlock = useCallback(() => {
+    if (state.spotifyConnected) return;
     const audio = ensureAudio();
     if (audio.src || !audio.paused) return;
     const previousMuted = audio.muted;
@@ -201,7 +280,7 @@ export function useSamuelMusicPlayer(companyId: string) {
       .catch(() => {
         audio.muted = previousMuted;
       });
-  }, [ensureAudio]);
+  }, [ensureAudio, state.spotifyConnected]);
 
   const setDucked = useCallback(
     (ducked: boolean) => {
@@ -211,84 +290,135 @@ export function useSamuelMusicPlayer(companyId: string) {
     [syncVolume],
   );
 
-  const execute = useCallback(
+  const executeSpotify = useCallback(
+    async (command: SamuelMusicCommand) => {
+      const response = await fetch("/api/samuel-ai/music/spotify/control", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ companyId, command }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as SpotifyControlResponse;
+      if (!response.ok || !payload.ok) {
+        throw new Error(payload.error || "Não foi possível controlar o Spotify.");
+      }
+
+      setState((current) => ({
+        ...current,
+        track: payload.track ?? current.track,
+        playing:
+          typeof payload.playing === "boolean" ? payload.playing : current.playing,
+        volume:
+          typeof payload.volume === "number" ? payload.volume : current.volume,
+        queueIndex: payload.track ? 0 : current.queueIndex,
+        queueLength: payload.track ? 1 : current.queueLength,
+        error: null,
+        limitation:
+          "Spotify Connect ativo. A música completa toca no seu dispositivo Spotify.",
+        provider: "spotify",
+      }));
+      if (payload.track) updateMediaSession(payload.track);
+      return payload.message || "Spotify atualizado.";
+    },
+    [companyId, updateMediaSession],
+  );
+
+  const executePreview = useCallback(
     async (command: SamuelMusicCommand) => {
       const audio = ensureAudio();
-      setState((current) => ({ ...current, error: null }));
 
-      try {
-        if (command.action === "play") {
-          const query = command.query?.trim();
-          if (!query) throw new Error("Diga qual música ou artista deseja ouvir.");
-          const response = await fetch(
-            `/api/samuel-ai/music/search?companyId=${encodeURIComponent(companyId)}&q=${encodeURIComponent(query)}`,
-            { cache: "no-store" },
-          );
-          const payload = (await response.json().catch(() => ({}))) as
-            | SamuelMusicSearchResponse
-            | { error?: string };
-          if (!response.ok || !("tracks" in payload) || !payload.tracks.length) {
-            throw new Error(
-              responseError(payload, "Não encontrei uma faixa reproduzível."),
-            );
-          }
-
-          queueRef.current = payload.tracks;
-          indexRef.current = -1;
-          setState((current) => ({
-            ...current,
-            queueLength: payload.tracks.length,
-            limitation: payload.limitation,
-          }));
-          const track = await playIndex(0);
-          return `Tocando ${track.title}, de ${track.artist}.`;
-        }
-
-        if (command.action === "pause") {
-          audio.pause();
-          return state.track ? `Pausado: ${state.track.title}.` : "Música pausada.";
-        }
-
-        if (command.action === "resume") {
-          if (!audio.src) throw new Error("Ainda não há uma música carregada.");
-          await audio.play();
-          return state.track ? `Continuando ${state.track.title}.` : "Continuando a música.";
-        }
-
-        if (command.action === "stop") {
-          audio.pause();
-          audio.currentTime = 0;
-          setState((current) => ({ ...current, playing: false }));
-          return "Música encerrada.";
-        }
-
-        if (command.action === "next") {
-          const track = await next();
-          return `Próxima: ${track.title}, de ${track.artist}.`;
-        }
-
-        if (command.action === "previous") {
-          const track = await previous();
-          return `Voltando para ${track.title}, de ${track.artist}.`;
-        }
-
-        if (command.action === "set_volume") {
-          const nextVolume = Math.max(0, Math.min(100, command.volume ?? 70));
-          baseVolumeRef.current = nextVolume / 100;
-          syncVolume();
-          setState((current) => ({ ...current, volume: nextVolume }));
-          return `Volume em ${nextVolume}%.`;
-        }
-
-        const delta = command.action === "volume_up" ? 0.1 : -0.1;
-        baseVolumeRef.current = Math.max(
-          0,
-          Math.min(1, baseVolumeRef.current + delta),
+      if (command.action === "play") {
+        const query = command.query?.trim();
+        if (!query) throw new Error("Diga qual música ou artista deseja ouvir.");
+        const response = await fetch(
+          `/api/samuel-ai/music/search?companyId=${encodeURIComponent(companyId)}&q=${encodeURIComponent(query)}`,
+          { cache: "no-store" },
         );
+        const payload = (await response.json().catch(() => ({}))) as
+          | SamuelMusicSearchResponse
+          | { error?: string };
+        if (!response.ok || !("tracks" in payload) || !payload.tracks.length) {
+          throw new Error(
+            responseError(payload, "Não encontrei uma faixa reproduzível."),
+          );
+        }
+
+        queueRef.current = payload.tracks;
+        indexRef.current = -1;
+        setState((current) => ({
+          ...current,
+          queueLength: payload.tracks.length,
+          limitation: payload.limitation,
+          provider: "itunes-preview",
+        }));
+        const track = await playIndex(0);
+        return `Tocando uma prévia de ${track.title}, de ${track.artist}.`;
+      }
+
+      if (command.action === "pause") {
+        audio.pause();
+        return state.track ? `Pausado: ${state.track.title}.` : "Música pausada.";
+      }
+
+      if (command.action === "resume") {
+        if (!audio.src) throw new Error("Ainda não há uma música carregada.");
+        await audio.play();
+        return state.track ? `Continuando ${state.track.title}.` : "Continuando a música.";
+      }
+
+      if (command.action === "stop") {
+        audio.pause();
+        audio.currentTime = 0;
+        setState((current) => ({ ...current, playing: false }));
+        return "Música encerrada.";
+      }
+
+      if (command.action === "next") {
+        const track = await nextPreview();
+        return `Próxima: ${track.title}, de ${track.artist}.`;
+      }
+
+      if (command.action === "previous") {
+        const track = await previousPreview();
+        return `Voltando para ${track.title}, de ${track.artist}.`;
+      }
+
+      if (command.action === "set_volume") {
+        const nextVolume = Math.max(0, Math.min(100, command.volume ?? 70));
+        baseVolumeRef.current = nextVolume / 100;
         syncVolume();
-        const nextVolume = Math.round(baseVolumeRef.current * 100);
         setState((current) => ({ ...current, volume: nextVolume }));
         return `Volume em ${nextVolume}%.`;
+      }
+
+      const delta = command.action === "volume_up" ? 0.1 : -0.1;
+      baseVolumeRef.current = Math.max(
+        0,
+        Math.min(1, baseVolumeRef.current + delta),
+      );
+      syncVolume();
+      const nextVolume = Math.round(baseVolumeRef.current * 100);
+      setState((current) => ({ ...current, volume: nextVolume }));
+      return `Volume em ${nextVolume}%.`;
+    },
+    [
+      companyId,
+      ensureAudio,
+      nextPreview,
+      playIndex,
+      previousPreview,
+      state.track,
+      syncVolume,
+    ],
+  );
+
+  const execute = useCallback(
+    async (command: SamuelMusicCommand) => {
+      setState((current) => ({ ...current, error: null }));
+      try {
+        if (state.spotifyConnected) {
+          return await executeSpotify(command);
+        }
+        return await executePreview(command);
       } catch (error) {
         const message =
           error instanceof DOMException && error.name === "NotAllowedError"
@@ -300,15 +430,21 @@ export function useSamuelMusicPlayer(companyId: string) {
         throw new Error(message);
       }
     },
-    [companyId, ensureAudio, next, playIndex, previous, state.track, syncVolume],
+    [executePreview, executeSpotify, state.spotifyConnected],
   );
 
   return {
     ...state,
     execute,
-    next,
-    previous,
+    next: state.spotifyConnected
+      ? () => executeSpotify({ action: "next" })
+      : nextPreview,
+    previous: state.spotifyConnected
+      ? () => executeSpotify({ action: "previous" })
+      : previousPreview,
     unlock,
     setDucked,
+    connectUrl,
+    refreshSpotifyStatus,
   };
 }
