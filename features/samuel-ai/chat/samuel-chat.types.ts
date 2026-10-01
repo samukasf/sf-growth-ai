@@ -29,6 +29,11 @@ export type SamuelChatRequest = {
   channel?: SamuelConversationChannel;
 };
 
+export type SamuelWebSource = {
+  title: string;
+  url: string;
+};
+
 export type SamuelChatRuntimeSummary = {
   intent: string;
   confidence: number;
@@ -51,6 +56,7 @@ export type SamuelChatStreamEvent =
   | { type: "step"; step: PipelineStep }
   | { type: "provider"; provider: string; model: string | null }
   | { type: "warning"; code: string; message: string }
+  | { type: "web_sources"; sources: SamuelWebSource[] }
   | { type: "content_project"; project: SamuelContentProject }
   | { type: "delta"; delta: string }
   | {
