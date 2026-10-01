@@ -49,7 +49,7 @@ export async function searchSamuelMusicCatalog(input: {
         typeof item.trackName === "string" &&
         typeof item.artistName === "string" &&
         typeof item.previewUrl === "string" &&
-        /^https:///i.test(item.previewUrl),
+        item.previewUrl.startsWith("https://"),
     )
     .map((item) => ({
       id: String(item.trackId),
