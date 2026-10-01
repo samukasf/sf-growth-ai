@@ -104,14 +104,20 @@ export function useSamuelMusicPlayer(companyId: string) {
   }, [companyId]);
 
   useEffect(() => {
-    void refreshSpotifyStatus();
+    const timer = window.setTimeout(() => {
+      void refreshSpotifyStatus();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [refreshSpotifyStatus]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const status = new URLSearchParams(window.location.search).get("spotify");
-    if (!status) return;
-    if (status === "connected") void refreshSpotifyStatus();
+    if (status !== "connected") return;
+    const timer = window.setTimeout(() => {
+      void refreshSpotifyStatus();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [refreshSpotifyStatus]);
 
   const effectiveVolume = useCallback(() => {
