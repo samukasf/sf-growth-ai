@@ -88,7 +88,7 @@ export const SAMUEL_SKILLS: readonly SamuelSkill[] = [
     name: "Internet em tempo real",
     description: "Consulta a web ao vivo para dados atuais como clima, notícias, preços, horários e resultados.",
     capabilities: ["web.search", "web.sources", "weather", "fresh-data"],
-    triggers: [/internet|web|online|tempo real|agora|hoje|previs[aã]o|meteorolog|clima|not[ií]cia|pre[cç]o|cota[cç][aã]o|hor[aá]rio|resultado|placar/i],
+    triggers: [/internet|web|online|tempo real|agora|hoje|encontre|localize|previs[aã]o|meteorolog|clima|not[ií]cia|pre[cç]o|cota[cç][aã]o|hor[aá]rio|resultado|placar/i],
     risk: "read",
     surfaces: ["chat", "voice", "research"],
   },
