@@ -10,7 +10,7 @@ export type SamuelLiveWebResult = {
 };
 
 const LIVE_WEB_PATTERN =
-  /\b(pesquis|procure|buscar?|busque|encontre|localize|internet|web|online|tempo real|em tempo real|atualizad|agora|hoje|amanh[aã]|ontem|recente|[uú]ltim|previs[aã]o|meteorolog|clima|not[ií]cia|pre[cç]o|valor atual|cota[cç][aã]o|d[oó]lar|euro|bolsa|tr[aâ]nsito|tr[aá]fego|hor[aá]rio|aberto agora|resultado|placar|lan[cç]amento|disponibilidade)\b/i;
+  /\b(pesquis(?:a|e|ar|ando)?|procure|buscar?|busque|encontre|localize|internet|web|online|tempo real|em tempo real|atualizad[oa]s?|agora|hoje|amanh[aã]|ontem|recentes?|[uú]ltim[oa]s?|previs[aã]o|meteorolog(?:ia|ic[oa])?|clima|not[ií]cias?|pre[cç]os?|valor atual|cota[cç][aã]o|d[oó]lar|euro|bolsa|tr[aâ]nsito|tr[aá]fego|hor[aá]rios?|aberto agora|resultados?|placar|lan[cç]amentos?|disponibilidade)\b/i;
 
 export function shouldUseSamuelLiveWeb(query: string) {
   return LIVE_WEB_PATTERN.test(query.normalize("NFC"));
