@@ -24,7 +24,12 @@ export type SpeakOptions = {
   onError?: () => void;
 };
 
-type UseSamuelSpeechInput = { enabled?: boolean; companyId?: string };
+type UseSamuelSpeechInput = {
+  enabled?: boolean;
+  companyId?: string;
+  elevenLabsVoiceId?: string;
+  elevenLabsVoiceName?: string;
+};
 type Playback = {
   text: string;
   charIndex: number;
@@ -53,8 +58,11 @@ export function resolveSamuelNeuralEngine(provider: string | null): SamuelSpeech
   return "server-neural";
 }
 
-export function resolveSamuelNeuralVoiceLabel(provider: string | null) {
-  if (provider === "elevenlabs") return "ElevenLabs · Camilla";
+export function resolveSamuelNeuralVoiceLabel(
+  provider: string | null,
+  elevenLabsVoiceName?: string,
+) {
+  if (provider === "elevenlabs") return `ElevenLabs · ${elevenLabsVoiceName?.trim() || "voz PT-BR"}`;
   if (provider === "openai") return "OpenAI · voz feminina";
   return "Samuel Neural";
 }
@@ -114,7 +122,12 @@ function supportSnapshot() {
 }
 function serverSnapshot() { return false; }
 
-export function useSamuelSpeech({ enabled = true, companyId = "default-company" }: UseSamuelSpeechInput = {}) {
+export function useSamuelSpeech({
+  enabled = true,
+  companyId = "default-company",
+  elevenLabsVoiceId,
+  elevenLabsVoiceName,
+}: UseSamuelSpeechInput = {}) {
   const [status, setStatus] = useState<SamuelSpeechStatus>("idle");
   const [settling, setSettling] = useState(false);
   const [playback, setPlayback] = useState<Playback>(EMPTY);
@@ -387,7 +400,11 @@ export function useSamuelSpeech({ enabled = true, companyId = "default-company" 
       const response = await fetch("/api/samuel-ai/voice/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ companyId, text }),
+        body: JSON.stringify({
+          companyId,
+          text,
+          elevenLabsVoiceId,
+        }),
         signal: controller.signal,
         cache: "no-store",
       });
@@ -397,6 +414,7 @@ export function useSamuelSpeech({ enabled = true, companyId = "default-company" 
       );
       const neuralVoiceLabel = resolveSamuelNeuralVoiceLabel(
         response.headers.get("X-Samuel-TTS-Provider"),
+        elevenLabsVoiceName,
       );
       const blob = await response.blob();
       if (!blob.size) throw new Error("TTS neural retornou áudio vazio.");
@@ -436,7 +454,16 @@ export function useSamuelSpeech({ enabled = true, companyId = "default-company" 
     } finally {
       if (abortRef.current === controller) abortRef.current = null;
     }
-  }, [beginProgress, browserSpeak, companyId, ensureAudioElement, finish, piperSpeak]);
+  }, [
+    beginProgress,
+    browserSpeak,
+    companyId,
+    elevenLabsVoiceId,
+    elevenLabsVoiceName,
+    ensureAudioElement,
+    finish,
+    piperSpeak,
+  ]);
 
   const speak = useCallback((content: string, options: SpeakOptions = {}) => {
     if (!enabled || typeof window === "undefined") return false;
