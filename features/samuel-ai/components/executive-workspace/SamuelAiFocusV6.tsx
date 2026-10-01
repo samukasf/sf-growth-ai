@@ -158,6 +158,11 @@ export function SamuelAiFocusV6({ data, handlers, onNavigate }: Props) {
 
   useEffect(() => {
     const openConversation = () => setConversationOpen(true);
+    const openContentStudio = () => {
+      setConversationOpen(false);
+      setMenuOpen(false);
+      onNavigate("studio");
+    };
     const syncVoice = (event: Event) => {
       const detail = (event as CustomEvent<VoiceStateDetail>).detail;
       if (detail?.phase) setVoicePhase(detail.phase);
@@ -175,15 +180,17 @@ export function SamuelAiFocusV6({ data, handlers, onNavigate }: Props) {
     };
 
     window.addEventListener("samuel:conversation-open", openConversation);
+    window.addEventListener("samuel-open-content-studio", openContentStudio);
     window.addEventListener("samuel:voice-state", syncVoice as EventListener);
     const timer = window.setTimeout(syncInitial, 100);
 
     return () => {
       window.clearTimeout(timer);
       window.removeEventListener("samuel:conversation-open", openConversation);
+      window.removeEventListener("samuel-open-content-studio", openContentStudio);
       window.removeEventListener("samuel:voice-state", syncVoice as EventListener);
     };
-  }, []);
+  }, [onNavigate]);
 
   const sendThroughSamuel = (message: string) => {
     const clean = message.trim();
