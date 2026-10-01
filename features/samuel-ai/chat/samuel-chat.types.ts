@@ -1,4 +1,7 @@
-import type { PipelineStep } from "@/apps/web/src/core/orchestrator";
+import type {
+  PipelineStep,
+  SamuelConversationChannel,
+} from "@/apps/web/src/core/orchestrator";
 import type { GmailActionPlan, GmailToolResult } from "@/features/gmail/gmail.types";
 import type { CalendarActionPlan, CalendarToolResult } from "@/features/google-calendar";
 import type { ExecutiveContext } from "@/services/executive-context.service";
@@ -23,6 +26,7 @@ export type SamuelChatRequest = {
   companyId: string;
   history?: ChatMessage[];
   companyContext?: SamuelChatCompanyContext | null;
+  channel?: SamuelConversationChannel;
 };
 
 export type SamuelChatRuntimeSummary = {
@@ -84,6 +88,7 @@ export type SamuelChatSendOptions = {
   history: ChatMessage[];
   signal?: AbortSignal;
   onEvent?: (event: SamuelChatStreamEvent) => void;
+  channel?: SamuelConversationChannel;
 };
 
 export type SamuelChatSendResult = {

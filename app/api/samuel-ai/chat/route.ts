@@ -2,8 +2,10 @@ import { randomUUID } from "node:crypto";
 
 import {
   createConfiguredResponsesProvider,
+  planSamuelAgentTurn,
   runSamuelRuntime,
   type LLMCompletionInput,
+  type SamuelConversationChannel,
   type SamuelRuntimeCompanyInput,
 } from "@/apps/web/src/core/orchestrator";
 import {
@@ -115,8 +117,11 @@ function buildCompletionInput(
   workspaceSignal?: GoogleWorkspaceChatSignal,
   toolFragments: string[] = [],
   pendingAction?: SamuelToolActionPlan | null,
+  channel: SamuelConversationChannel = "web",
 ): LLMCompletionInput {
   const response = runtimeResult.response;
+  const turnPlan = planSamuelAgentTurn(response.runtime.query, channel);
+  const skillContext = turnPlan.context;
   const pendingSurface = pendingAction?.surface === "calendar" ? "GOOGLE AGENDA" : "GMAIL";
   const actionHint = pendingAction
     ? [
@@ -140,6 +145,7 @@ function buildCompletionInput(
         `[RUNTIME] Próximo passo: ${response.nextStep}`,
         `[RUNTIME] Evidências consolidadas: ${runtimeResult.evidenceCount}`,
         ...(workspaceSignal?.fragments ?? []),
+        ...(skillContext ? [skillContext] : []),
         ...toolFragments,
         ...actionHint,
       ],
@@ -204,6 +210,11 @@ export async function POST(request: Request) {
   });
   if (!auth.ok) return auth.response;
 
+  const turnPlan = planSamuelAgentTurn(
+    chatRequest.query,
+    chatRequest.channel ?? "web",
+  );
+
   const { sessionKey, sessionHash } = await getWorkspaceSessionIdentity();
   const repository = new SamuelConversationRepository();
   let persistence: "supabase" | "client" = repository.available
@@ -234,7 +245,10 @@ export async function POST(request: Request) {
 
   if (persistence === "supabase") {
     try {
-      await repository.appendMessage(conversationId, userMessage);
+      await repository.appendMessage(conversationId, userMessage, {
+        channel: turnPlan.channel,
+        skills: turnPlan.skills.map((skill) => skill.id),
+      });
     } catch {
       persistence = "client";
     }
@@ -372,6 +386,7 @@ export async function POST(request: Request) {
                 workspaceSignal,
                 toolFragments,
                 pendingAction,
+                turnPlan.channel,
               ),
               (delta) => {
                 content += delta;
@@ -429,6 +444,8 @@ export async function POST(request: Request) {
               runtime: runtimeSummary,
               provider: providerId,
               model,
+              channel: turnPlan.channel,
+              skills: turnPlan.skills.map((skill) => skill.id),
             });
             await repository.setProvider(conversationId, providerId, model);
           } catch {
