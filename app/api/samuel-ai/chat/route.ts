@@ -2,7 +2,9 @@ import { randomUUID } from "node:crypto";
 
 import {
   createConfiguredResponsesProvider,
+  formatSamuelSkillContext,
   runSamuelRuntime,
+  selectSamuelSkills,
   type LLMCompletionInput,
   type SamuelRuntimeCompanyInput,
 } from "@/apps/web/src/core/orchestrator";
@@ -117,6 +119,8 @@ function buildCompletionInput(
   pendingAction?: SamuelToolActionPlan | null,
 ): LLMCompletionInput {
   const response = runtimeResult.response;
+  const selectedSkills = selectSamuelSkills(response.runtime.query);
+  const skillContext = formatSamuelSkillContext(selectedSkills);
   const pendingSurface = pendingAction?.surface === "calendar" ? "GOOGLE AGENDA" : "GMAIL";
   const actionHint = pendingAction
     ? [
@@ -140,6 +144,7 @@ function buildCompletionInput(
         `[RUNTIME] Próximo passo: ${response.nextStep}`,
         `[RUNTIME] Evidências consolidadas: ${runtimeResult.evidenceCount}`,
         ...(workspaceSignal?.fragments ?? []),
+        ...(skillContext ? [skillContext] : []),
         ...toolFragments,
         ...actionHint,
       ],
