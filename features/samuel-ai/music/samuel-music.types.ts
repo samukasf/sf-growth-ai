@@ -21,12 +21,13 @@ export type SamuelMusicTrack = {
   artist: string;
   album?: string | null;
   artworkUrl?: string | null;
-  previewUrl: string;
+  previewUrl?: string | null;
+  provider?: "spotify" | "itunes-preview";
   externalUrl?: string | null;
 };
 
 export type SamuelMusicSearchResponse = {
   tracks: SamuelMusicTrack[];
-  provider: "itunes-preview";
+  provider: "itunes-preview" | "spotify";
   limitation: string;
 };
