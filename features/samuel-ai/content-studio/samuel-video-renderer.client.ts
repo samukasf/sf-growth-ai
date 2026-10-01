@@ -121,6 +121,13 @@ async function prepareReferences(urls: string[]): Promise<PreparedReferences> {
   return { urls: prepared, revoke };
 }
 
+function constrainedMobileRuntime() {
+  if (typeof window === "undefined") return false;
+  const narrow = window.matchMedia?.("(max-width: 767px)")?.matches ?? false;
+  const mobileAgent = /iPhone|iPad|iPod|Android|Mobile/i.test(navigator.userAgent);
+  return narrow || mobileAgent;
+}
+
 export async function renderSamuelCampaignVideo(
   project: SamuelContentProject,
   audio: Blob,
@@ -131,14 +138,8 @@ export async function renderSamuelCampaignVideo(
     throw new Error("O renderizador Remotion precisa ser executado no navegador.");
   }
 
-  if (!("VideoEncoder" in window) || !("AudioEncoder" in window)) {
-    throw new Error(
-      "Este navegador não oferece WebCodecs suficientes para renderizar MP4. Use Safari 26+, Chrome 94+ ou Firefox 130+.",
-    );
-  }
-
-  const quality = options.quality ?? "1080p";
-  const fps = options.fps ?? 30;
+  const requestedQuality = options.quality ?? "1080p";
+  const requestedFps = options.fps ?? 30;
   const visualStyle = options.visualStyle ?? "cinematic";
   const showBranding = options.showBranding ?? true;
   const requestedReferences =
@@ -146,7 +147,10 @@ export async function renderSamuelCampaignVideo(
   const preparedReferences = await prepareReferences(requestedReferences);
   const audioUrl = URL.createObjectURL(audio);
 
-  try {
+  const renderOnce = async (
+    quality: SamuelVideoQuality,
+    fps: 24 | 30 | 60,
+  ) => {
     const narrationDuration = await mediaDurationSeconds(audio);
     const plan = buildSamuelRemotionPlan(
       project,
@@ -186,7 +190,7 @@ export async function renderSamuelCampaignVideo(
       metadata: {
         title: project.name,
         artist: "SF Growth AI",
-        comment: "Samuel IA browser render",
+        comment: `Samuel IA browser render · ${quality} · ${fps}fps`,
       },
       onProgress: ({ progress }) => {
         onProgress?.(Math.max(0, Math.min(100, Math.round(progress * 100))));
@@ -197,11 +201,48 @@ export async function renderSamuelCampaignVideo(
     if (blob.size < 32_000) {
       throw new Error("O Remotion encerrou a renderização antes de gerar um MP4 válido.");
     }
-
-    onProgress?.(100);
     return blob;
+  };
+
+  try {
+    const mobile = constrainedMobileRuntime();
+    const firstQuality: SamuelVideoQuality = mobile ? "720p" : requestedQuality;
+    const firstFps: 24 | 30 | 60 = mobile ? 24 : requestedFps;
+
+    try {
+      const blob = await renderOnce(firstQuality, firstFps);
+      onProgress?.(100);
+      return blob;
+    } catch (firstError) {
+      const alreadyFallback = firstQuality === "720p" && firstFps === 24;
+      if (alreadyFallback) throw firstError;
+
+      onProgress?.(0);
+      console.warn("Samuel browser video render retrying in compatibility mode", {
+        requestedQuality,
+        requestedFps,
+        fallbackQuality: "720p",
+        fallbackFps: 24,
+        message: firstError instanceof Error ? firstError.message : "render failed",
+      });
+
+      try {
+        const blob = await renderOnce("720p", 24);
+        onProgress?.(100);
+        return blob;
+      } catch (fallbackError) {
+        const firstMessage =
+          firstError instanceof Error ? firstError.message : "falha no render principal";
+        const fallbackMessage =
+          fallbackError instanceof Error ? fallbackError.message : "falha no modo compatível";
+        throw new Error(
+          `O render MP4 falhou no modo principal e no modo compatível 720p/24fps. Principal: ${firstMessage}. Compatível: ${fallbackMessage}.`,
+        );
+      }
+    }
   } finally {
     URL.revokeObjectURL(audioUrl);
     preparedReferences.revoke.forEach((url) => URL.revokeObjectURL(url));
   }
 }
+
