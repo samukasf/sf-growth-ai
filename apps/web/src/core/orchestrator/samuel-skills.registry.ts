@@ -57,6 +57,15 @@ export const SAMUEL_SKILLS: readonly SamuelSkill[] = [
     surfaces: ["desktop", "chat", "voice"],
   },
   {
+    id: "music",
+    name: "Música",
+    description: "Pesquisa e controla reprodução musical por texto ou voz no player do Samuel.",
+    capabilities: ["music.search", "music.play", "music.pause", "music.queue", "music.volume"],
+    triggers: [/m[uú]sica|faixa|playlist|toque|toca|reproduz|pause|pausa|volume|pr[oó]xima|anterior/i],
+    risk: "read",
+    surfaces: ["chat", "voice", "music"],
+  },
+  {
     id: "content",
     name: "Conteúdo e vídeo",
     description: "Cria roteiros, cenas, narração, composições e materiais para redes sociais.",

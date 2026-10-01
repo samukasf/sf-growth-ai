@@ -12,10 +12,15 @@ import {
   AlertTriangle,
   Mic,
   MicOff,
+  Music2,
+  Pause,
+  Play,
   Radio,
   RotateCcw,
   Search,
   Send,
+  SkipBack,
+  SkipForward,
   SlidersHorizontal,
   Sparkles,
   Volume2,
@@ -46,6 +51,7 @@ import {
   findSamuelVoicePreset,
 } from "../voice/samuel-voice-presets";
 import { useSamuelIdlePresence } from "../voice/use-samuel-idle-presence";
+import { useSamuelMusicPlayer } from "../music/use-samuel-music-player";
 import type {
   SamuelChatSendOptions,
   SamuelChatSendResult,
@@ -288,6 +294,8 @@ export function ChatPanel({
     DEFAULT_SAMUEL_VOICE_PRESET.id,
   );
   const [webSources, setWebSources] = useState<SamuelWebSource[]>([]);
+  const [musicNotice, setMusicNotice] = useState<string | null>(null);
+  const [userSpeechActive, setUserSpeechActive] = useState(false);
   const [continuousVoice, setContinuousVoice] = useState<ContinuousVoiceState>({
     phase: "idle",
     active: false,
@@ -297,6 +305,18 @@ export function ChatPanel({
   const presenceSleeping = useSamuelIdlePresence();
   const [activeBrowserMessageId, setActiveBrowserMessageId] = useState<string | null>(null);
   const selectedVoice = findSamuelVoicePreset(selectedVoiceId);
+  const {
+    track: musicTrack,
+    playing: musicPlaying,
+    volume: musicVolume,
+    queueIndex: musicQueueIndex,
+    queueLength: musicQueueLength,
+    error: musicError,
+    limitation: musicLimitation,
+    execute: executeMusic,
+    unlock: unlockMusic,
+    setDucked: setMusicDucked,
+  } = useSamuelMusicPlayer(companyId);
   const {
     blocked: browserSpeechBlocked,
     cancel: cancelBrowserSpeech,
@@ -317,6 +337,10 @@ export function ChatPanel({
     elevenLabsVoiceId: selectedVoice.id,
     elevenLabsVoiceName: selectedVoice.name,
   });
+
+  useEffect(() => {
+    setMusicDucked(browserSpeaking || userSpeechActive);
+  }, [browserSpeaking, setMusicDucked, userSpeechActive]);
   const abortRef = useRef<AbortController | null>(null);
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
@@ -501,6 +525,7 @@ export function ChatPanel({
       setError(null);
       setWarning(null);
       setWebSources([]);
+      setMusicNotice(null);
       setProviderLabel(null);
       setLastFailedQuery(null);
       setPendingAction(null);
@@ -538,6 +563,17 @@ export function ChatPanel({
             if (event.type === "start") setConversationId(event.conversationId);
             if (event.type === "warning") setWarning(event.message);
             if (event.type === "web_sources") setWebSources(event.sources);
+            if (event.type === "music_action") {
+              void executeMusic(event.command)
+                .then((message) => setMusicNotice(message))
+                .catch((musicFailure: unknown) => {
+                  setMusicNotice(
+                    musicFailure instanceof Error
+                      ? musicFailure.message
+                      : "Não foi possível controlar a música.",
+                  );
+                });
+            }
             if (event.type === "provider") {
               setProviderLabel(
                 event.model ? `${event.provider} · ${event.model}` : event.provider,
@@ -639,6 +675,7 @@ export function ChatPanel({
       onFirstMessage,
       onSendMessage,
       speakSamuel,
+      executeMusic,
     ],
   );
 
@@ -652,6 +689,7 @@ export function ChatPanel({
     assistantSpeaking: browserSpeaking,
     assistantText: lastAssistantMessage?.content ?? "",
     onInterrupt: interruptSamuel,
+    onSpeechActivity: setUserSpeechActive,
     onTranscript: async ({ text }) => {
       if (pendingAction && isSamuelConfirmationPhrase(text)) {
         await confirmPendingAction();
@@ -681,7 +719,10 @@ export function ChatPanel({
   ]);
 
   useEffect(() => {
-    const toggle = () => void conversationVoice.toggle();
+    const toggle = () => {
+      unlockMusic();
+      void conversationVoice.toggle();
+    };
     const stop = () => {
       conversationVoice.stop();
       interruptSamuel();
@@ -708,6 +749,7 @@ export function ChatPanel({
     conversationVoice.toggle,
     interruptSamuel,
     performSend,
+    unlockMusic,
   ]);
 
 
@@ -718,6 +760,7 @@ export function ChatPanel({
 
   const startVoiceInput = useCallback(() => {
     if (busy || !hydrated) return;
+    unlockMusic();
     if (conversationVoice.active) conversationVoice.stop();
 
     const Recognition = getSpeechRecognitionConstructor();
@@ -784,6 +827,7 @@ export function ChatPanel({
     conversationVoice.stop,
     hydrated,
     performSend,
+    unlockMusic,
     voiceAutoSend,
   ]);
 
@@ -944,6 +988,84 @@ export function ChatPanel({
           </div>
         )}
 
+        {(musicTrack || musicNotice || musicError) && (
+          <div className="rounded-2xl border border-fuchsia-300/20 bg-fuchsia-300/[.05] px-4 py-3 text-xs text-[#f7e9ff]">
+            <div className="flex items-center gap-3">
+              <div
+                aria-hidden="true"
+                className="flex size-12 shrink-0 items-center justify-center rounded-xl border border-fuchsia-300/20 bg-[#10081a] bg-cover bg-center shadow-[0_0_20px_rgba(217,70,239,.12)]"
+                style={
+                  musicTrack?.artworkUrl
+                    ? { backgroundImage: `url("${musicTrack.artworkUrl}")` }
+                    : undefined
+                }
+              >
+                {!musicTrack?.artworkUrl && <Music2 className="size-5 text-fuchsia-200" />}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 font-semibold text-white">
+                  <Music2 aria-hidden="true" className="size-4 text-fuchsia-300" />
+                  Música por voz
+                </div>
+                {musicTrack ? (
+                  <>
+                    <p className="mt-1 truncate font-medium text-white">
+                      {musicTrack.title}
+                    </p>
+                    <p className="truncate text-[11px] text-fuchsia-100/70">
+                      {musicTrack.artist}
+                      {musicQueueLength > 1
+                        ? ` · ${musicQueueIndex + 1}/${musicQueueLength}`
+                        : ""}
+                    </p>
+                  </>
+                ) : null}
+                {(musicError || musicNotice) && (
+                  <p className={cn("mt-1 text-[11px]", musicError ? "text-rose-200" : "text-fuchsia-100/75")}>
+                    {musicError || musicNotice}
+                  </p>
+                )}
+              </div>
+            </div>
+            {musicTrack && (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => void executeMusic({ action: "previous" }).then(setMusicNotice).catch((error) => setMusicNotice(error instanceof Error ? error.message : "Falha ao voltar a faixa."))}
+                  className="inline-flex size-9 items-center justify-center rounded-full border border-white/10 bg-white/[.04] text-white"
+                  aria-label="Faixa anterior"
+                >
+                  <SkipBack className="size-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void executeMusic({ action: musicPlaying ? "pause" : "resume" }).then(setMusicNotice).catch((error) => setMusicNotice(error instanceof Error ? error.message : "Falha ao controlar a música."))}
+                  className="inline-flex size-10 items-center justify-center rounded-full border border-fuchsia-300/30 bg-fuchsia-300/10 text-white"
+                  aria-label={musicPlaying ? "Pausar música" : "Continuar música"}
+                >
+                  {musicPlaying ? <Pause className="size-4" /> : <Play className="size-4" />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void executeMusic({ action: "next" }).then(setMusicNotice).catch((error) => setMusicNotice(error instanceof Error ? error.message : "Falha ao avançar a faixa."))}
+                  className="inline-flex size-9 items-center justify-center rounded-full border border-white/10 bg-white/[.04] text-white"
+                  aria-label="Próxima faixa"
+                >
+                  <SkipForward className="size-4" />
+                </button>
+                <span className="ml-1 text-[10px] text-white/45">
+                  Volume {musicVolume}% · prévia integrada
+                </span>
+              </div>
+            )}
+            {musicLimitation && musicTrack && (
+              <p className="mt-2 text-[10px] leading-relaxed text-white/35">
+                {musicLimitation}
+              </p>
+            )}
+          </div>
+        )}
+
         {warning && (
           <div className="samuel-chat-notice samuel-chat-notice--warning">
             {warning}
@@ -1091,6 +1213,7 @@ export function ChatPanel({
             <button
               type="button"
               onClick={() => {
+                unlockMusic();
                 if (listening) stopVoiceInput();
                 void conversationVoice.toggle();
               }}

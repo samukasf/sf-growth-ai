@@ -78,6 +78,9 @@ describe("OpenAIResponsesProvider", () => {
     expect(instructions).toContain("Sr. Samuel");
     expect(instructions).toContain("eventos reais");
     expect(instructions).toContain("Não pergunte genericamente");
+    expect(instructions).toContain("MODO ASSISTENTE DE BORDO");
+    expect(instructions).toContain("humor seco");
+    expect(instructions).toContain("Nunca diga 'feito'");
     expect(input).toHaveLength(3);
     expect(input[0]).toEqual({ role: "user", content: "Chamo-me Ana" });
     expect(input[1]).toEqual({ role: "assistant", content: "Prazer, Ana." });

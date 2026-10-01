@@ -37,6 +37,11 @@ import {
 } from "@/features/google-calendar";
 import { SamuelConversationRepository } from "@/features/samuel-ai/server/samuel-conversation.repository";
 import { searchSamuelLiveWeb } from "@/features/samuel-ai/web/samuel-live-web.server";
+import {
+  musicCommandAcknowledgement,
+  musicCommandFragment,
+  parseSamuelMusicCommand,
+} from "@/features/samuel-ai/music/samuel-music.server";
 import { getWorkspaceSessionIdentity } from "@/features/samuel-ai/server/workspace-session";
 import type { ChatMessage } from "@/features/samuel-ai/types";
 import { authorizeCompanyRequest } from "@/features/auth/server/authorization";
@@ -138,6 +143,10 @@ function buildCompletionInput(
     payload: {
       ...response.runtime.llmPayload,
       userQuery: response.runtime.query,
+      metadata: {
+        ...response.runtime.llmPayload.metadata,
+        channel,
+      },
       conversationHistory: selectConversationHistory(history),
       fragments: [
         ...response.runtime.llmPayload.fragments,
@@ -277,10 +286,17 @@ export async function POST(request: Request) {
       }
 
       try {
-        const workspaceSignal = await loadGoogleWorkspaceChatSignal(
-          chatRequest.query,
-          chatRequest.companyId,
-        );
+        const musicCommand = parseSamuelMusicCommand(chatRequest.query);
+        if (musicCommand) {
+          send({ type: "music_action", command: musicCommand });
+        }
+
+        const workspaceSignal = musicCommand
+          ? undefined
+          : await loadGoogleWorkspaceChatSignal(
+              chatRequest.query,
+              chatRequest.companyId,
+            );
 
         const canUseCompanyIntegrations = UUID_PATTERN.test(chatRequest.companyId);
         const gmailPlan = canUseCompanyIntegrations
@@ -294,8 +310,11 @@ export async function POST(request: Request) {
         const toolFragments: string[] = [];
         let pendingAction: SamuelToolActionPlan | null = null;
         let liveWebResult: Awaited<ReturnType<typeof searchSamuelLiveWeb>> = null;
+        if (musicCommand) {
+          toolFragments.push(musicCommandFragment(musicCommand));
+        }
 
-        try {
+        if (!musicCommand) try {
           const company = chatRequest.companyContext?.executiveContext?.company;
           const locationHint = [company?.city, company?.country]
             .filter(Boolean)
@@ -458,8 +477,9 @@ export async function POST(request: Request) {
 
         if (!content) {
           content =
+            (musicCommand ? musicCommandAcknowledgement(musicCommand) : "") ||
             toolFragments.map((line) => line.replace(/^\[.*?\]\s*/, "")).join("\n\n") ||
-            workspaceSignal.fallbackAnswer ||
+            workspaceSignal?.fallbackAnswer ||
             buildSamuelFallbackAnswer(chatRequest.query, runtimeSummary, {
               providerConfigured: Boolean(provider),
             });

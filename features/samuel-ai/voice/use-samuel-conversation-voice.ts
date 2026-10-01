@@ -39,6 +39,7 @@ type UseSamuelVoiceV3Input = {
   assistantText: string;
   onInterrupt: () => void;
   onTranscript: (turn: VoiceTranscript) => void | Promise<void>;
+  onSpeechActivity?: (active: boolean) => void;
 };
 
 function normalizeText(value: string) {
@@ -96,6 +97,7 @@ export function useSamuelConversationVoice({
   assistantText,
   onInterrupt,
   onTranscript,
+  onSpeechActivity,
 }: UseSamuelVoiceV3Input) {
   const [active, setActive] = useState(false);
   const [phase, setPhase] = useState<SamuelConversationVoicePhase>("idle");
@@ -107,6 +109,7 @@ export function useSamuelConversationVoice({
   const assistantTextRef = useRef(assistantText);
   const onInterruptRef = useRef(onInterrupt);
   const onTranscriptRef = useRef(onTranscript);
+  const onSpeechActivityRef = useRef(onSpeechActivity);
   const streamRef = useRef<MediaStream | null>(null);
   const contextRef = useRef<AudioContext | null>(null);
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
@@ -131,6 +134,9 @@ export function useSamuelConversationVoice({
   useEffect(() => {
     onTranscriptRef.current = onTranscript;
   }, [onTranscript]);
+  useEffect(() => {
+    onSpeechActivityRef.current = onSpeechActivity;
+  }, [onSpeechActivity]);
 
   const maxPreRollSamples = Math.round(
     (SAMUEL_VOICE_SAMPLE_RATE * SAMUEL_VOICE_PRE_ROLL_MS) / 1_000,
@@ -233,6 +239,7 @@ export function useSamuelConversationVoice({
     );
 
     if (decision.started) {
+      onSpeechActivityRef.current?.(true);
       segmentBargeInRef.current = decision.bargeIn;
       segmentRef.current = preRollRef.current.map((part) => part.slice());
       segmentRef.current.push(pcm.slice());
@@ -256,7 +263,10 @@ export function useSamuelConversationVoice({
       pushPreRoll(pcm);
     }
 
-    if (decision.ended) finalizeSegment();
+    if (decision.ended) {
+      onSpeechActivityRef.current?.(false);
+      finalizeSegment();
+    }
   }, [companyId, finalizeSegment, pushPreRoll]);
 
   const stop = useCallback(() => {
@@ -275,6 +285,7 @@ export function useSamuelConversationVoice({
     contextRef.current = null;
     detectorRef.current.reset();
     clearBuffers();
+    onSpeechActivityRef.current?.(false);
     setActive(false);
     setPhase("idle");
     postTelemetry(companyId, "unified_session_ended");
