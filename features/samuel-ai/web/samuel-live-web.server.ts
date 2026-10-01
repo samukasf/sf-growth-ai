@@ -1,5 +1,3 @@
-import "server-only";
-
 export type SamuelWebSource = {
   title: string;
   url: string;
