@@ -21,6 +21,7 @@ import {
   VolumeX,
 } from "lucide-react";
 
+import type { SamuelConversationChannel } from "@/apps/web/src/core/orchestrator";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/cn";
 
@@ -416,7 +417,11 @@ export function ChatPanel({
   }, [activeSpokenMessageId, lastAssistantMessage?.content, messages]);
 
   const performSend = useCallback(
-    async (rawContent: string, retry = false) => {
+    async (
+      rawContent: string,
+      retry = false,
+      channel: SamuelConversationChannel = "web",
+    ) => {
       const trimmed = rawContent.trim();
       if (!trimmed || busy || !onSendMessage) return;
 
@@ -491,6 +496,7 @@ export function ChatPanel({
           conversationId,
           history,
           signal: controller.signal,
+          channel,
           onEvent(event) {
             if (event.type === "start") setConversationId(event.conversationId);
             if (event.type === "warning") setWarning(event.message);
@@ -613,7 +619,7 @@ export function ChatPanel({
         await confirmPendingAction();
         return;
       }
-      await performSend(text);
+      await performSend(text, false, "voice");
     },
   });
 
@@ -722,7 +728,7 @@ export function ChatPanel({
 
       const transcript = finalTranscript.trim();
       if (voiceAutoSend && transcript) {
-        void performSend(transcript);
+        void performSend(transcript, false, "voice");
       } else if (transcript) {
         setVoiceNotice("Mensagem de voz transcrita. Revise e envie quando quiser.");
       }
