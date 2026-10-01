@@ -763,21 +763,20 @@ export function ChatPanel({
       }
       setActionResult(payload);
       setPendingAction(null);
-      setMessages((current) => [
-        ...current,
-        {
-          id:
-            typeof crypto !== "undefined" && "randomUUID" in crypto
-              ? crypto.randomUUID()
-              : `${pendingAction.surface}-${Date.now()}`,
-          role: "assistant",
-          content: payload.ok
-            ? `✅ Ação executada no ${target}.\n\n${payload.summary}`
-            : `❌ Não consegui executar no ${target}.\n\n${payload.summary || payload.error}`,
-          timestamp: new Date().toISOString(),
-          status: "complete",
-        },
-      ]);
+      const actionMessage: ChatMessage = {
+        id:
+          typeof crypto !== "undefined" && "randomUUID" in crypto
+            ? crypto.randomUUID()
+            : `${pendingAction.surface}-${Date.now()}`,
+        role: "assistant",
+        content: payload.ok
+          ? `✅ Ação executada no ${target}.\n\n${payload.summary}`
+          : `❌ Não consegui executar no ${target}.\n\n${payload.summary || payload.error}`,
+        timestamp: new Date().toISOString(),
+        status: "complete",
+      };
+      setMessages((current) => [...current, actionMessage]);
+      speakSamuel(actionMessage.content, actionMessage.id);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : `Falha ao confirmar ação no ${target}.`);
     } finally {
@@ -792,14 +791,14 @@ export function ChatPanel({
           state={hologramState}
           audioLevel={hologramAudioLevel}
           speechProgress={hologramSpeechProgress}
-          smiling={browserSpeechSettling || realtimeSettling}
+          smiling={browserSpeechSettling}
         />
         <div className="samuel-chat-presence__copy">
           <span>Samuel AI · presença executiva</span>
           <strong>
             {samuelSpeaking
               ? "Estou falando com você"
-              : browserSpeechSettling || realtimeSettling || realtimeVoice.session.state === "listening"
+              : browserSpeechSettling || continuousVoice.phase === "listening"
                 ? "Estou ouvindo"
                 : busy
                   ? "Estou analisando"
