@@ -2,28 +2,15 @@ export type SamuelVoicePreset = {
   id: string;
   name: string;
   description: string;
+  gender: "masculina" | "feminina";
 };
 
 export const SAMUEL_VOICE_PRESETS: readonly SamuelVoicePreset[] = [
   {
-    id: "k5aKjuBz9NhUMZc7SDpl",
-    name: "Marilita",
-    description: "Natural e conversacional · PT-BR",
-  },
-  {
-    id: "YklVF5l1Q8os8glyd5SM",
-    name: "Camilla",
-    description: "Suave, moderna e natural · PT-BR",
-  },
-  {
-    id: "fpqzllOdDmER4wwFESLO",
-    name: "Athena",
-    description: "Humana, confiante e sofisticada · PT-BR",
-  },
-  {
-    id: "HRSah1W6jpO9LAGaA4T7",
-    name: "Deya",
-    description: "Fluida, acolhedora e profissional · PT-BR",
+    id: "nLSNxtDmAgEDCV5VA6oz",
+    name: "Bruno Ferreira",
+    description: "Natural, firme e conversacional · PT-BR",
+    gender: "masculina",
   },
 ] as const;
 
