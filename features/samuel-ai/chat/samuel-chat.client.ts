@@ -39,6 +39,7 @@ export async function sendSamuelChatMessage(
       ...request,
       conversationId: options.conversationId,
       history: options.history,
+      channel: options.channel ?? request.channel ?? "web",
     }),
     signal: options.signal,
   });
