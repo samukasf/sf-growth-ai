@@ -70,3 +70,29 @@ export function musicCommandFragment(command: SamuelMusicCommand) {
   }
   return `[MÚSICA — COMANDO LOCAL] Ação: ${command.action}. O navegador executará o player; responda de forma breve.`;
 }
+
+
+export function musicCommandAcknowledgement(command: SamuelMusicCommand) {
+  switch (command.action) {
+    case "play":
+      return command.query
+        ? `Certo. Vou colocar ${command.query}.`
+        : "Certo. Vou colocar a música.";
+    case "pause":
+      return "Certo. Pausando.";
+    case "resume":
+      return "Continuando.";
+    case "stop":
+      return "Música encerrada.";
+    case "next":
+      return "Próxima faixa.";
+    case "previous":
+      return "Voltando uma faixa.";
+    case "set_volume":
+      return `Volume em ${command.volume ?? 70}%.`;
+    case "volume_up":
+      return "Aumentando o volume.";
+    case "volume_down":
+      return "Baixando o volume.";
+  }
+}
