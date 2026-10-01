@@ -32,7 +32,6 @@ import {
 } from "lucide-react";
 
 import { ChatPanel } from "../chat-panel";
-import { SamuelVoiceReliabilityBridge } from "../samuel-voice-reliability-bridge";
 import type {
   ExecutiveWorkspaceData,
   ExecutiveWorkspaceHandlers,
@@ -146,15 +145,6 @@ function phaseCopy(phase: VoicePhase, processing: boolean) {
   };
 }
 
-function setNativeTextareaValue(textarea: HTMLTextAreaElement, value: string) {
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLTextAreaElement.prototype,
-    "value",
-  );
-  descriptor?.set?.call(textarea, value);
-  textarea.dispatchEvent(new Event("input", { bubbles: true }));
-}
-
 export function SamuelAiFocusV6({ data, handlers, onNavigate }: Props) {
   const companyId = data.executiveContext?.company.id ?? "default-company";
   const [conversationOpen, setConversationOpen] = useState(false);
@@ -200,19 +190,9 @@ export function SamuelAiFocusV6({ data, handlers, onNavigate }: Props) {
     if (!clean) return;
     setConversationOpen(true);
     window.requestAnimationFrame(() => {
-      const cockpit = document.querySelector<HTMLElement>(".samuel-focus-cockpit");
-      const textarea = cockpit?.querySelector<HTMLTextAreaElement>(
-        ".samuel-chat-textarea",
+      window.dispatchEvent(
+        new CustomEvent("samuel:chat-submit", { detail: { message: clean } }),
       );
-      if (!textarea) return;
-      setNativeTextareaValue(textarea, clean);
-      window.setTimeout(() => {
-        cockpit
-          ?.querySelector<HTMLButtonElement>(
-            ".samuel-chat-send:not(.is-cancel)",
-          )
-          ?.click();
-      }, 0);
     });
   };
 
@@ -223,9 +203,7 @@ export function SamuelAiFocusV6({ data, handlers, onNavigate }: Props) {
 
   const stopSamuel = () => {
     window.dispatchEvent(new CustomEvent("samuel:voice-stop"));
-    document
-      .querySelector<HTMLButtonElement>(".samuel-chat-send.is-cancel")
-      ?.click();
+    window.dispatchEvent(new CustomEvent("samuel:chat-cancel"));
     if ("speechSynthesis" in window) window.speechSynthesis.cancel();
   };
 
@@ -240,7 +218,6 @@ export function SamuelAiFocusV6({ data, handlers, onNavigate }: Props) {
   return (
     <section className="samuel-focus-cockpit samuel-pixel-ui relative h-dvh w-full min-w-0 overflow-hidden bg-[#01060c] text-[#dcecff]">
       <span hidden data-samuel-company-id={companyId} />
-      <SamuelVoiceReliabilityBridge />
       <ConversationLayer
         open={conversationOpen}
         onClose={() => setConversationOpen(false)}
@@ -333,7 +310,16 @@ export function SamuelAiFocusV6({ data, handlers, onNavigate }: Props) {
                 label="Digitar"
                 onClick={() => setConversationOpen(true)}
               />
-              <PrimaryMic active={voiceActive} phase={voicePhase} />
+              <PrimaryMic
+                active={voiceActive}
+                phase={voicePhase}
+                onClick={() => {
+                  setConversationOpen(true);
+                  window.requestAnimationFrame(() => {
+                    window.dispatchEvent(new CustomEvent("samuel:voice-toggle"));
+                  });
+                }}
+              />
               <RoundControl icon={Square} label="Encerrar" onClick={stopSamuel} />
             </div>
 
@@ -738,10 +724,19 @@ function VoiceStatusCard({
   );
 }
 
-function PrimaryMic({ active, phase }: { active: boolean; phase: VoicePhase }) {
+function PrimaryMic({
+  active,
+  phase,
+  onClick,
+}: {
+  active: boolean;
+  phase: VoicePhase;
+  onClick: () => void;
+}) {
   return (
     <button
       type="button"
+      onClick={onClick}
       aria-label="Ativar ou desativar voz"
       className="samuel-reference-mic group mx-auto flex min-h-28 min-w-28 touch-manipulation flex-col items-center gap-2 rounded-2xl text-xs font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
     >
@@ -867,7 +862,7 @@ function RightPanel({
         <h3 className="text-sm font-semibold text-white">Status em tempo real</h3>
         <div className="mt-3 space-y-2.5 text-xs text-[#bdd3e5]">
           <LiveStatus label={voiceActive ? copy.title : "Pronto para ajudar"} active={voiceActive} />
-          <LiveStatus label={voiceActive ? "OpenAI Realtime conectado" : "Voz pronta para conectar"} active={voiceActive} />
+          <LiveStatus label={voiceActive ? "Conversa unificada ativa" : "Voz pronta para conectar"} active={voiceActive} />
           <LiveStatus label="Ferramentas integradas" active />
           <LiveStatus label={companyReady ? "Memória e contexto habilitados" : "Contexto padrão ativo"} active={companyReady} />
           <LiveStatus label="Pronto para executar tarefas" active />
