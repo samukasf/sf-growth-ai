@@ -325,16 +325,17 @@ export function ChatPanel({
   const busy = sending || isProcessing;
 
   useEffect(() => {
+    let nextVoiceId = DEFAULT_SAMUEL_VOICE_PRESET.id;
     try {
       const saved = localStorage.getItem(voiceStorageKey(companyId));
       if (saved && SAMUEL_VOICE_PRESETS.some((voice) => voice.id === saved)) {
-        setSelectedVoiceId(saved);
-      } else {
-        setSelectedVoiceId(DEFAULT_SAMUEL_VOICE_PRESET.id);
+        nextVoiceId = saved;
       }
     } catch {
-      setSelectedVoiceId(DEFAULT_SAMUEL_VOICE_PRESET.id);
+      // Keep the default voice when local storage is unavailable.
     }
+    const timer = window.setTimeout(() => setSelectedVoiceId(nextVoiceId), 0);
+    return () => window.clearTimeout(timer);
   }, [companyId]);
 
   useEffect(() => {
