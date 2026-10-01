@@ -295,6 +295,7 @@ export function ChatPanel({
   );
   const [webSources, setWebSources] = useState<SamuelWebSource[]>([]);
   const [musicNotice, setMusicNotice] = useState<string | null>(null);
+  const [userSpeechActive, setUserSpeechActive] = useState(false);
   const [continuousVoice, setContinuousVoice] = useState<ContinuousVoiceState>({
     phase: "idle",
     active: false,
@@ -338,8 +339,8 @@ export function ChatPanel({
   });
 
   useEffect(() => {
-    setMusicDucked(browserSpeaking);
-  }, [browserSpeaking, setMusicDucked]);
+    setMusicDucked(browserSpeaking || userSpeechActive);
+  }, [browserSpeaking, setMusicDucked, userSpeechActive]);
   const abortRef = useRef<AbortController | null>(null);
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
@@ -688,6 +689,7 @@ export function ChatPanel({
     assistantSpeaking: browserSpeaking,
     assistantText: lastAssistantMessage?.content ?? "",
     onInterrupt: interruptSamuel,
+    onSpeechActivity: setUserSpeechActive,
     onTranscript: async ({ text }) => {
       if (pendingAction && isSamuelConfirmationPhrase(text)) {
         await confirmPendingAction();
