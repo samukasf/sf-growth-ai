@@ -30,11 +30,11 @@ export type SamuelTtsGeneration =
     };
 
 export const DEFAULT_ELEVENLABS_MODEL = "eleven_flash_v2_5";
-export const DEFAULT_ELEVENLABS_VOICE_ID = "YklVF5l1Q8os8glyd5SM";
-export const DEFAULT_ELEVENLABS_VOICE_NAME = "Camilla";
+export const DEFAULT_ELEVENLABS_VOICE_ID = "nLSNxtDmAgEDCV5VA6oz";
+export const DEFAULT_ELEVENLABS_VOICE_NAME = "Bruno Ferreira";
 export const DEFAULT_ELEVENLABS_OUTPUT_FORMAT = "mp3_44100_128";
 export const DEFAULT_OPENAI_TTS_MODEL = "gpt-4o-mini-tts";
-export const DEFAULT_OPENAI_TTS_VOICE = "coral";
+export const DEFAULT_OPENAI_TTS_VOICE = "cedar";
 
 const ELEVENLABS_SPEECH_URL = "https://api.elevenlabs.io/v1/text-to-speech";
 const OPENAI_SPEECH_URL = "https://api.openai.com/v1/audio/speech";
@@ -70,8 +70,7 @@ export function resolveElevenLabsModel(env: NodeJS.ProcessEnv = process.env) {
 
 export function resolveElevenLabsVoiceId(env: NodeJS.ProcessEnv = process.env) {
   return (
-    env.ELEVENLABS_FEMALE_VOICE_ID?.trim() ||
-    env.ELEVENLABS_VOICE_ID?.trim() ||
+    env.ELEVENLABS_MALE_VOICE_ID?.trim() ||
     DEFAULT_ELEVENLABS_VOICE_ID
   );
 }
@@ -86,9 +85,8 @@ export function resolveElevenLabsVoiceName(env: NodeJS.ProcessEnv = process.env)
     return DEFAULT_ELEVENLABS_VOICE_NAME;
   }
   return (
-    env.ELEVENLABS_FEMALE_VOICE_NAME?.trim() ||
-    env.ELEVENLABS_VOICE_NAME?.trim() ||
-    "Camilla"
+    env.ELEVENLABS_MALE_VOICE_NAME?.trim() ||
+    "Bruno Ferreira"
   );
 }
 
@@ -146,9 +144,7 @@ export function ttsProviderReadiness(env: NodeJS.ProcessEnv = process.env) {
       configured: configured.elevenlabs,
       model: resolveElevenLabsModel(env),
       voiceName: resolveElevenLabsVoiceName(env),
-      customVoice: Boolean(
-        env.ELEVENLABS_FEMALE_VOICE_ID?.trim() || env.ELEVENLABS_VOICE_ID?.trim(),
-      ),
+      customVoice: Boolean(env.ELEVENLABS_MALE_VOICE_ID?.trim()),
       outputFormat: resolveElevenLabsOutputFormat(env),
       missingKey: configured.elevenlabs ? null : "ELEVENLABS_API_KEY",
     },
@@ -339,7 +335,7 @@ async function generateWithOpenAi(
         voice,
         input: text,
         instructions:
-          "Fale em português brasileiro natural. Voz feminina adulta, fluida, calma, segura e próxima. Ritmo de conversa presencial, frases fluidas, sem tom de locutora, sem exagerar pausas e sem soar robótico. Dê ênfase natural ao significado.",
+          "Fale em português brasileiro natural. Voz masculina adulta, inteligente, calma, firme e próxima. Ritmo de conversa presencial, com respostas fluidas, discretamente sofisticadas, sem tom de locutor, sem exagerar pausas e sem soar robótico. Dê ênfase natural ao significado.",
         response_format: "mp3",
         speed: 1,
       }),

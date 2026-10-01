@@ -313,6 +313,12 @@ export function ChatPanel({
     queueLength: musicQueueLength,
     error: musicError,
     limitation: musicLimitation,
+    provider: musicProvider,
+    spotifyConfigured,
+    spotifyConnected,
+    spotifyDisplayName,
+    spotifyPremium,
+    connectUrl: spotifyConnectUrl,
     execute: executeMusic,
     unlock: unlockMusic,
     setDucked: setMusicDucked,
@@ -939,7 +945,7 @@ export function ChatPanel({
             <strong>Samuel está pronto para começar</strong>
             <p>
               Escreva sua mensagem ou use o microfone. As respostas podem ser
-              reproduzidas com a voz feminina do Samuel pela ElevenLabs.
+              reproduzidas com a voz masculina do Samuel pela ElevenLabs.
             </p>
           </div>
         )}
@@ -1005,7 +1011,7 @@ export function ChatPanel({
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 font-semibold text-white">
                   <Music2 aria-hidden="true" className="size-4 text-fuchsia-300" />
-                  Música por voz
+                  Música por voz{musicProvider === "spotify" ? " · Spotify" : ""}
                 </div>
                 {musicTrack ? (
                   <>
@@ -1054,7 +1060,7 @@ export function ChatPanel({
                   <SkipForward className="size-4" />
                 </button>
                 <span className="ml-1 text-[10px] text-white/45">
-                  Volume {musicVolume}% · prévia integrada
+                  Volume {musicVolume}% · {musicProvider === "spotify" ? "Spotify Connect" : "prévia integrada"}
                 </span>
               </div>
             )}
@@ -1172,7 +1178,7 @@ export function ChatPanel({
             <div className="samuel-voice-console__identity">
               <span><Radio aria-hidden="true" /></span>
               <div>
-                <p>Samuel Voice · feminina</p>
+                <p>Samuel Voice · {selectedVoice.gender}</p>
                 <strong>
                   {browserSpeechStatus === "preparing"
                     ? `Preparando ${browserVoiceLabel ?? "voz neural"} · ${Math.round(browserVoiceLoadProgress * 100)}%`
@@ -1237,6 +1243,27 @@ export function ChatPanel({
               <SlidersHorizontal aria-hidden="true" />
               {voiceConsoleOpen ? "Ocultar ajustes" : "Ajustes"}
             </button>
+          </div>
+
+          <div className="samuel-voice-console__services">
+            <div className="samuel-voice-console__service">
+              <Music2 aria-hidden="true" />
+              <div>
+                <strong>Spotify</strong>
+                <span>
+                  {!spotifyConfigured
+                    ? "Integração ainda não configurada"
+                    : spotifyConnected
+                      ? `Conectado${spotifyDisplayName ? ` · ${spotifyDisplayName}` : ""}${spotifyPremium === false ? " · Premium necessário para reprodução" : ""}`
+                      : "Conecte uma vez para controlar música por voz"}
+                </span>
+              </div>
+              {spotifyConfigured && !spotifyConnected ? (
+                <a href={spotifyConnectUrl}>Conectar</a>
+              ) : spotifyConnected ? (
+                <span className="samuel-voice-console__service-status">ativo</span>
+              ) : null}
+            </div>
           </div>
 
           <label className="samuel-voice-selector mt-3 block">
@@ -1315,7 +1342,7 @@ export function ChatPanel({
             )}
           >
             {voiceReplyEnabled ? <Volume2 aria-hidden="true" /> : <VolumeX aria-hidden="true" />}
-            Voz feminina {voiceReplyEnabled ? "ativa" : "desativada"}
+            Voz {selectedVoice.gender} {voiceReplyEnabled ? "ativa" : "desativada"}
           </button>
           <button
             type="button"
