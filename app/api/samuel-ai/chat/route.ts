@@ -320,6 +320,12 @@ export async function POST(request: Request) {
           }
         } catch (webError) {
           if (request.signal.aborted) throw webError;
+          console.warn("Samuel live web search unavailable", {
+            message:
+              webError instanceof Error
+                ? webError.message.slice(0, 500)
+                : "falha desconhecida",
+          });
           send({
             type: "warning",
             code: "LIVE_WEB_UNAVAILABLE",
@@ -332,7 +338,7 @@ export async function POST(request: Request) {
           const generatedContent = await generateContentProject(contentRequestFromQuery(chatRequest.query));
           send({ type: "content_project", project: generatedContent.project });
           toolFragments.push(
-            `[STUDIO — CAMPANHA CRIADA] ${generatedContent.project.name}. O projeto foi aberto no Studio com roteiro, cenas e textos por rede. A narração ElevenLabs e o vídeo final podem ser gerados ali. Não afirme que houve publicação externa sem confirmação e ID da plataforma.`,
+            `[STUDIO — PRODUÇÃO INICIADA] ${generatedContent.project.name}. O projeto foi enviado ao Studio e a produção automática de narração + vídeo foi iniciada. Só afirme que o MP4 ficou pronto quando a interface do Studio apresentar a prévia final. Não afirme publicação externa sem confirmação e ID da plataforma.`,
           );
         }
 
