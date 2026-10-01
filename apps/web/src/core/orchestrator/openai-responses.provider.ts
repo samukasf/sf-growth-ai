@@ -70,6 +70,17 @@ function firstEnvValue(...keys: string[]): string | undefined {
   return undefined;
 }
 
+export function isOpenAiOfficialBaseUrl(baseUrl: string): boolean {
+  return normalizeBaseUrl(baseUrl).includes("api.openai.com");
+}
+
+export function withResponsesStoreFlag<T extends Record<string, unknown>>(
+  baseUrl: string,
+  body: T,
+): T | (T & { store: false }) {
+  return isOpenAiOfficialBaseUrl(baseUrl) ? { ...body, store: false } : body;
+}
+
 export function getResponsesProviderConfig(): ResponsesProviderConfig | null {
   const providerPreference = (
     process.env.SAMUEL_AI_TEXT_PROVIDER ?? "auto"
@@ -123,17 +134,14 @@ export function getResponsesProviderConfig(): ResponsesProviderConfig | null {
     apiKey,
     baseUrl: normalizeBaseUrl(
       wantsOpenAi
-        ? (process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1")
-        : process.env.AI_GATEWAY_BASE_URL ??
-            process.env.OPENAI_BASE_URL ??
+        ? (firstEnvValue("OPENAI_BASE_URL") ?? "https://api.openai.com/v1")
+        : firstEnvValue("AI_GATEWAY_BASE_URL", "OPENAI_BASE_URL") ??
             "https://api.openai.com/v1",
     ),
     model:
       wantsOpenAi
-        ? (process.env.OPENAI_MODEL ?? "gpt-5.4-mini")
-        : process.env.AI_GATEWAY_MODEL ??
-            process.env.OPENAI_MODEL ??
-            "gpt-5.4-mini",
+        ? (firstEnvValue("OPENAI_MODEL") ?? "gpt-5.4-mini")
+        : firstEnvValue("AI_GATEWAY_MODEL", "OPENAI_MODEL") ?? "gpt-5.4-mini",
     maxOutputTokens,
     apiKind: "responses",
   };
@@ -279,19 +287,20 @@ export class OpenAIResponsesProvider implements LLMProviderPort {
         Authorization: `Bearer ${this.config.apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model: input.model ?? this.config.model,
-        instructions: buildSamuelInstructions(input),
-        input: buildResponsesApiInput(input),
-        max_output_tokens: this.config.maxOutputTokens,
-        ...(this.config.textFormat
-          ? { text: { format: this.config.textFormat } }
-          : {}),
-        ...(this.config.reasoningEffort
-          ? { reasoning: { effort: this.config.reasoningEffort } }
-          : {}),
-        store: false,
-      }),
+      body: JSON.stringify(
+        withResponsesStoreFlag(this.config.baseUrl, {
+          model: input.model ?? this.config.model,
+          instructions: buildSamuelInstructions(input),
+          input: buildResponsesApiInput(input),
+          max_output_tokens: this.config.maxOutputTokens,
+          ...(this.config.textFormat
+            ? { text: { format: this.config.textFormat } }
+            : {}),
+          ...(this.config.reasoningEffort
+            ? { reasoning: { effort: this.config.reasoningEffort } }
+            : {}),
+        }),
+      ),
     });
 
     if (!response.ok) throw new Error(await readError(response));
@@ -361,20 +370,21 @@ export class OpenAIResponsesProvider implements LLMProviderPort {
         Authorization: `Bearer ${this.config.apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model,
-        instructions: buildSamuelInstructions(input),
-        input: buildResponsesApiInput(input),
-        max_output_tokens: this.config.maxOutputTokens,
-        ...(this.config.textFormat
-          ? { text: { format: this.config.textFormat } }
-          : {}),
-        ...(this.config.reasoningEffort
-          ? { reasoning: { effort: this.config.reasoningEffort } }
-          : {}),
-        stream: true,
-        store: false,
-      }),
+      body: JSON.stringify(
+        withResponsesStoreFlag(this.config.baseUrl, {
+          model,
+          instructions: buildSamuelInstructions(input),
+          input: buildResponsesApiInput(input),
+          max_output_tokens: this.config.maxOutputTokens,
+          ...(this.config.textFormat
+            ? { text: { format: this.config.textFormat } }
+            : {}),
+          ...(this.config.reasoningEffort
+            ? { reasoning: { effort: this.config.reasoningEffort } }
+            : {}),
+          stream: true,
+        }),
+      ),
       signal,
     });
 
