@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 import { cn } from "@/utils/cn";
 
 type DsAvatarProps = {
@@ -13,6 +15,12 @@ const SIZES = {
   lg: "size-12 text-base",
 } as const;
 
+const PIXELS = {
+  sm: 32,
+  md: 40,
+  lg: 48,
+} as const;
+
 function initials(name: string): string {
   return name
     .split(" ")
@@ -25,9 +33,12 @@ function initials(name: string): string {
 export function DsAvatar({ name, src, size = "md", className }: DsAvatarProps) {
   if (src) {
     return (
-      <img
+      <Image
         src={src}
         alt={name}
+        width={PIXELS[size]}
+        height={PIXELS[size]}
+        unoptimized
         className={cn(
           "ds-root rounded-[var(--ds-radius-full)] object-cover ring-2 ring-[var(--ds-surface)]",
           SIZES[size],

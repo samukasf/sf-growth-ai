@@ -1,4 +1,3 @@
-import type { SoftwareProject } from "../../domain";
 import type {
   AIProviderLayerPort,
   BusinessAutomationPlatformPort,
@@ -12,65 +11,40 @@ export class NoopExecutiveProjectGeneratorAdapter implements ExecutiveProjectGen
   isAvailable() {
     return false;
   }
-  async notifySoftwareFactoryRequested(
-    _organizationId: string,
-    _companyId: string,
-    _project: SoftwareProject,
-  ) {}
+  async notifySoftwareFactoryRequested() {}
 }
 
 export class NoopEnterpriseBrainAdapter implements EnterpriseBrainPort {
   isAvailable() {
     return false;
   }
-  async syncSoftwareProjects(
-    _organizationId: string,
-    _companyId: string,
-    _projects: Record<string, unknown>[],
-  ) {}
+  async syncSoftwareProjects() {}
 }
 
 export class NoopExecutiveCEOAdapter implements ExecutiveCEOPort {
   isAvailable() {
     return false;
   }
-  async deliverSoftwareBriefing(
-    _organizationId: string,
-    _companyId: string,
-    _briefing: Record<string, unknown>,
-  ) {}
+  async deliverSoftwareBriefing() {}
 }
 
 export class NoopExecutiveCouncilAdapter implements ExecutiveCouncilPort {
   isAvailable() {
     return false;
   }
-  async requestSoftwareApproval(
-    _organizationId: string,
-    _companyId: string,
-    _approval: Record<string, unknown>,
-  ) {}
+  async requestSoftwareApproval() {}
 }
 
 export class NoopBusinessAutomationPlatformAdapter implements BusinessAutomationPlatformPort {
   isAvailable() {
     return false;
   }
-  async evaluateAutomationBlueprint(
-    _organizationId: string,
-    _companyId: string,
-    _project: SoftwareProject,
-  ) {}
+  async evaluateAutomationBlueprint() {}
 }
 
 export class NoopAIProviderLayerAdapter implements AIProviderLayerPort {
   isAvailable() {
     return false;
   }
-  async registerPlannedGeneration(
-    _organizationId: string,
-    _companyId: string,
-    _project: SoftwareProject,
-  ) {}
+  async registerPlannedGeneration() {}
 }
-

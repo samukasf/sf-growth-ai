@@ -1,4 +1,3 @@
-import type { Assessment } from "../../domain";
 import type {
   EnterpriseBrainPort,
   ExecutiveCEOPort,
@@ -11,49 +10,33 @@ export class NoopEnterpriseBrainAdapter implements EnterpriseBrainPort {
   isAvailable() {
     return false;
   }
-  async syncAssessmentScores(_assessment: Assessment) {}
+  async syncAssessmentScores() {}
 }
 
 export class NoopExecutiveInnovationAdapter implements ExecutiveInnovationPort {
   isAvailable() {
     return false;
   }
-  async submitRecommendations(
-    _organizationId: string,
-    _companyId: string,
-    _recommendations: Record<string, unknown>[],
-  ) {}
+  async submitRecommendations() {}
 }
 
 export class NoopExecutiveProjectsAdapter implements ExecutiveProjectsPort {
   isAvailable() {
     return false;
   }
-  async createProjectsFromRoadmap(
-    _organizationId: string,
-    _companyId: string,
-    _roadmap: Record<string, unknown>,
-  ) {}
+  async createProjectsFromRoadmap() {}
 }
 
 export class NoopSoftwareFactoryAdapter implements SoftwareFactoryPort {
   isAvailable() {
     return false;
   }
-  async evaluateSoftwareNeeds(
-    _organizationId: string,
-    _companyId: string,
-    _recommendations: Record<string, unknown>[],
-  ) {}
+  async evaluateSoftwareNeeds() {}
 }
 
 export class NoopExecutiveCEOAdapter implements ExecutiveCEOPort {
   isAvailable() {
     return false;
   }
-  async deliverExecutiveBriefing(
-    _organizationId: string,
-    _companyId: string,
-    _briefing: Record<string, unknown>,
-  ) {}
+  async deliverExecutiveBriefing() {}
 }
