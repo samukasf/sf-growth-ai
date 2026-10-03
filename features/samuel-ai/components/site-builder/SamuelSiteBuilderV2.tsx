@@ -213,6 +213,7 @@ export function SamuelSiteBuilderV2({
     if (!hydrated || incomingBriefAppliedRef.current) return;
     incomingBriefAppliedRef.current = true;
 
+    let brief = "";
     try {
       const raw = window.sessionStorage.getItem(
         "sf-growth-ai:samuel-site-builder:incoming",
@@ -222,9 +223,13 @@ export function SamuelSiteBuilderV2({
         "sf-growth-ai:samuel-site-builder:incoming",
       );
       const payload = JSON.parse(raw) as { brief?: string };
-      const brief = payload.brief?.replace(/\s+/g, " ").trim();
-      if (!brief) return;
+      brief = payload.brief?.replace(/\s+/g, " ").trim() ?? "";
+    } catch {
+      return;
+    }
+    if (!brief) return;
 
+    const applyTimer = window.setTimeout(() => {
       setDraft((current) => ({
         ...current,
         mode: /(?:mini-?app|aplicativo|\bapp\b)/i.test(brief)
@@ -239,10 +244,16 @@ export function SamuelSiteBuilderV2({
         current.trim() ? current : "Projeto criado pelo Samuel",
       );
       setSaveNotice("Briefing recebido do Samuel · preview atualizado");
-      window.setTimeout(() => setSaveNotice(null), 3200);
-    } catch {
-      // Ignore malformed/blocked session storage and keep the normal builder defaults.
-    }
+    }, 0);
+    const clearNoticeTimer = window.setTimeout(
+      () => setSaveNotice(null),
+      3200,
+    );
+
+    return () => {
+      window.clearTimeout(applyTimer);
+      window.clearTimeout(clearNoticeTimer);
+    };
   }, [hydrated]);
 
   const persist = (nextProjects: SiteProject[]) => {
