@@ -10,6 +10,9 @@ import {
 } from "react";
 import {
   AlertTriangle,
+  CheckCircle2,
+  Circle,
+  Loader2,
   Mic,
   MicOff,
   Music2,
@@ -60,6 +63,10 @@ import type {
   SamuelWebSource,
 } from "../chat/samuel-chat.types";
 import type { ChatMessage } from "../types";
+import type {
+  SamuelMission,
+  SamuelMissionStep,
+} from "../agent/samuel-mission";
 
 type ChatPanelProps = {
   initialMessages: ChatMessage[];
@@ -266,6 +273,89 @@ function ExecutiveMessage({
   );
 }
 
+
+function missionStatusLabel(status: SamuelMission["status"]) {
+  if (status === "waiting_approval") return "Aguardando aprovação";
+  if (status === "completed") return "Concluída";
+  if (status === "partial") return "Parcial";
+  if (status === "blocked") return "Bloqueada";
+  if (status === "planning") return "Planeando";
+  return "Em execução";
+}
+
+function MissionStepIcon({ step }: { step: SamuelMissionStep }) {
+  if (step.status === "completed") {
+    return <CheckCircle2 aria-hidden="true" className="size-4 text-emerald-300" />;
+  }
+  if (step.status === "running") {
+    return <Loader2 aria-hidden="true" className="size-4 animate-spin text-cyan-300" />;
+  }
+  if (step.status === "waiting_approval") {
+    return <AlertTriangle aria-hidden="true" className="size-4 text-amber-300" />;
+  }
+  if (step.status === "blocked") {
+    return <AlertTriangle aria-hidden="true" className="size-4 text-rose-300" />;
+  }
+  if (step.status === "delegated") {
+    return <Radio aria-hidden="true" className="size-4 text-violet-300" />;
+  }
+  return <Circle aria-hidden="true" className="size-4 text-white/25" />;
+}
+
+function SamuelMissionCard({ mission }: { mission: SamuelMission }) {
+  const completed = mission.steps.filter((step) => step.status === "completed").length;
+  const total = mission.steps.length;
+
+  return (
+    <div className="samuel-mission-card rounded-2xl border border-cyan-300/20 bg-cyan-300/[.045] px-3.5 py-3 text-xs text-[#d9efff]">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <span className="text-[9px] font-semibold uppercase tracking-[.2em] text-cyan-300/75">
+            Missão Samuel
+          </span>
+          <p className="mt-1 line-clamp-2 font-semibold leading-snug text-white">
+            {mission.objective}
+          </p>
+        </div>
+        <span className="shrink-0 rounded-full border border-cyan-300/15 bg-black/20 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[.08em] text-cyan-100/80">
+          {missionStatusLabel(mission.status)}
+        </span>
+      </div>
+
+      <div className="mt-3 space-y-1.5">
+        {mission.steps.map((step) => (
+          <div
+            key={step.id}
+            className="grid grid-cols-[18px_minmax(0,1fr)_auto] items-start gap-2 rounded-xl border border-white/[.05] bg-black/15 px-2.5 py-2"
+          >
+            <span className="mt-0.5">
+              <MissionStepIcon step={step} />
+            </span>
+            <div className="min-w-0">
+              <p className="font-medium text-white/90">{step.title}</p>
+              {step.evidence ? (
+                <p className="mt-0.5 line-clamp-2 text-[10px] leading-relaxed text-white/45">
+                  {step.evidence}
+                </p>
+              ) : null}
+            </div>
+            {step.requiresApproval && step.status !== "completed" ? (
+              <span className="mt-0.5 text-[8px] font-semibold uppercase tracking-[.08em] text-amber-200/65">
+                aprovação
+              </span>
+            ) : null}
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-2.5 flex items-center justify-between text-[9px] text-white/35">
+        <span>{completed}/{total} etapas concluídas</span>
+        <span>execução verificável</span>
+      </div>
+    </div>
+  );
+}
+
 export function ChatPanel({
   initialMessages,
   companyId,
@@ -302,6 +392,7 @@ export function ChatPanel({
     error: null,
   });
   const [historyExpanded, setHistoryExpanded] = useState(false);
+  const [mission, setMission] = useState<SamuelMission | null>(null);
   const presenceSleeping = useSamuelIdlePresence();
   const [activeBrowserMessageId, setActiveBrowserMessageId] = useState<string | null>(null);
   const selectedVoice = findSamuelVoicePreset(selectedVoiceId);
@@ -537,6 +628,7 @@ export function ChatPanel({
       setPendingAction(null);
       setActionResult(null);
       setHistoryExpanded(false);
+      setMission(null);
 
       const controller = new AbortController();
       abortRef.current = controller;
@@ -568,6 +660,9 @@ export function ChatPanel({
           onEvent(event) {
             if (event.type === "start") setConversationId(event.conversationId);
             if (event.type === "warning") setWarning(event.message);
+            if (event.type === "mission_plan" || event.type === "mission_update") {
+              setMission(event.mission);
+            }
             if (event.type === "web_sources") setWebSources(event.sources);
             if (event.type === "music_action") {
               void executeMusic(event.command)
@@ -936,6 +1031,8 @@ export function ChatPanel({
             {historyExpanded ? "Compactar" : `Ver tudo${hiddenMessageCount ? ` (+${hiddenMessageCount})` : ""}`}
           </button>
         </div>
+
+        {mission ? <SamuelMissionCard mission={mission} /> : null}
 
         {!hasEngaged && (
           <div className="samuel-chat-empty">
