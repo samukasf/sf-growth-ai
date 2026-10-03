@@ -61,6 +61,7 @@ import type {
   SamuelToolActionPlan,
   SamuelToolResult,
   SamuelWebSource,
+  SamuelSurfaceHandoff,
 } from "../chat/samuel-chat.types";
 import type { ChatMessage } from "../types";
 import type {
@@ -439,6 +440,7 @@ export function ChatPanel({
     setMusicDucked(browserSpeaking || userSpeechActive);
   }, [browserSpeaking, setMusicDucked, userSpeechActive]);
   const abortRef = useRef<AbortController | null>(null);
+  const pendingHandoffRef = useRef<SamuelSurfaceHandoff | null>(null);
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const spokenAssistantRef = useRef<string | null>(null);
@@ -629,6 +631,7 @@ export function ChatPanel({
       setActionResult(null);
       setHistoryExpanded(false);
       setMission(null);
+      pendingHandoffRef.current = null;
 
       const controller = new AbortController();
       abortRef.current = controller;
@@ -711,6 +714,7 @@ export function ChatPanel({
               );
               setConversationId(event.conversationId);
               if (event.pendingAction) setPendingAction(event.pendingAction);
+              pendingHandoffRef.current = event.handoff ?? null;
               speakSamuel(event.message.content, event.message.id);
             }
           },
@@ -728,6 +732,20 @@ export function ChatPanel({
           ),
         );
         speakSamuel(result.content, assistantId);
+
+        const handoff = pendingHandoffRef.current;
+        pendingHandoffRef.current = null;
+        if (handoff?.surface === "site-builder") {
+          try {
+            sessionStorage.setItem(
+              "sf-growth-ai:samuel-site-builder:incoming",
+              JSON.stringify(handoff.payload),
+            );
+          } catch {
+            // The builder can still open with company defaults if storage is restricted.
+          }
+          window.dispatchEvent(new CustomEvent("samuel-open-site-builder"));
+        }
       } catch (sendError) {
         const cancelled =
           controller.signal.aborted ||
