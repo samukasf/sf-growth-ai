@@ -9,6 +9,7 @@ import type { ExecutiveContext } from "@/services/executive-context.service";
 import type { ChatMessage } from "../types";
 import type { SamuelContentProject } from "../content-studio/samuel-content.types";
 import type { SamuelMusicCommand } from "../music/samuel-music.types";
+import type { SamuelMission } from "../agent/samuel-mission";
 
 export type SamuelChatCompanyContext = {
   executiveContext: ExecutiveContext | null;
@@ -55,6 +56,8 @@ export type SamuelChatStreamEvent =
       persistence: "supabase" | "client";
     }
   | { type: "step"; step: PipelineStep }
+  | { type: "mission_plan"; mission: SamuelMission }
+  | { type: "mission_update"; mission: SamuelMission }
   | { type: "provider"; provider: string; model: string | null }
   | { type: "warning"; code: string; message: string }
   | { type: "web_sources"; sources: SamuelWebSource[] }
