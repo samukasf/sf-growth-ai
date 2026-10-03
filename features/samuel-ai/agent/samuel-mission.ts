@@ -144,6 +144,15 @@ const STEP_BY_SKILL: Record<string, StepTemplate> = {
     requiresApproval: false,
     capabilityId: "sales.crm",
   },
+  integrations: {
+    dedupeKey: "integrations",
+    skillId: "integrations",
+    title: "Descobrir e conectar ferramentas",
+    detail: "Encontrar a integração adequada, verificar se a conta está conectada e preparar a execução com aprovação explícita para ações externas.",
+    risk: "sensitive",
+    requiresApproval: true,
+    capabilityId: "integration.gateway",
+  },
   marketing: {
     dedupeKey: "marketing",
     skillId: "marketing",
