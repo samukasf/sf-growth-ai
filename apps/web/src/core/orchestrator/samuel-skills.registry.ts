@@ -111,6 +111,18 @@ export const SAMUEL_SKILLS: readonly SamuelSkill[] = [
     surfaces: ["watchers", "chat"],
   },
   {
+    id: "integrations",
+    name: "Integrações dinâmicas",
+    description: "Descobre e conecta ferramentas externas para executar trabalho em apps suportados sem hardcode por serviço.",
+    capabilities: ["integration.search", "integration.connect", "integration.execute"],
+    triggers: [
+      /integrar|integra[cç][aã]o|conectar|ligar conta/i,
+      /slack|notion|hubspot|salesforce|trello|asana|airtable|jira|github|dropbox|microsoft teams|discord/i,
+    ],
+    risk: "sensitive",
+    surfaces: ["chat", "voice", "integrations"],
+  },
+  {
     id: "marketing",
     name: "Marketing e anúncios",
     description: "Analisa campanhas e encaminha ações de marketing e publicidade.",
