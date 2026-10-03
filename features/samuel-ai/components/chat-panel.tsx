@@ -62,6 +62,7 @@ import type {
   SamuelToolResult,
   SamuelWebSource,
   SamuelSurfaceHandoff,
+  SamuelIntegrationConnectPrompt,
 } from "../chat/samuel-chat.types";
 import type { ChatMessage } from "../types";
 import type {
@@ -394,6 +395,8 @@ export function ChatPanel({
   });
   const [historyExpanded, setHistoryExpanded] = useState(false);
   const [mission, setMission] = useState<SamuelMission | null>(null);
+  const [integrationConnect, setIntegrationConnect] =
+    useState<SamuelIntegrationConnectPrompt | null>(null);
   const presenceSleeping = useSamuelIdlePresence();
   const [activeBrowserMessageId, setActiveBrowserMessageId] = useState<string | null>(null);
   const selectedVoice = findSamuelVoicePreset(selectedVoiceId);
@@ -631,6 +634,7 @@ export function ChatPanel({
       setActionResult(null);
       setHistoryExpanded(false);
       setMission(null);
+      setIntegrationConnect(null);
       pendingHandoffRef.current = null;
 
       const controller = new AbortController();
@@ -667,6 +671,9 @@ export function ChatPanel({
               setMission(event.mission);
             }
             if (event.type === "web_sources") setWebSources(event.sources);
+            if (event.type === "integration_connect") {
+              setIntegrationConnect(event.connection);
+            }
             if (event.type === "music_action") {
               void executeMusic(event.command)
                 .then((message) => setMusicNotice(message))
@@ -1051,6 +1058,25 @@ export function ChatPanel({
         </div>
 
         {mission ? <SamuelMissionCard mission={mission} /> : null}
+
+        {integrationConnect ? (
+          <div className="rounded-2xl border border-violet-300/20 bg-violet-300/[.05] px-3.5 py-3 text-xs text-violet-50">
+            <div className="flex items-center gap-2 font-semibold text-white">
+              <Sparkles aria-hidden="true" className="size-4 text-violet-300" />
+              Integração necessária
+            </div>
+            <p className="mt-1.5 leading-relaxed text-violet-100/70">
+              Para continuar esta missão, conecte {integrationConnect.label}.
+              A autorização acontece numa página segura do provedor e volta ao Samuel.
+            </p>
+            <a
+              href={integrationConnect.url}
+              className="mt-3 inline-flex min-h-10 items-center justify-center rounded-xl border border-violet-300/25 bg-violet-300/10 px-4 text-[11px] font-semibold text-white transition hover:bg-violet-300/15"
+            >
+              Conectar {integrationConnect.label}
+            </a>
+          </div>
+        ) : null}
 
         {!hasEngaged && (
           <div className="samuel-chat-empty">
