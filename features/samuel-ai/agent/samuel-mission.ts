@@ -277,15 +277,23 @@ export function updateSamuelMissionStep(
 }
 
 export function finalizeSamuelMission(mission: SamuelMission): SamuelMission {
-  const steps = mission.steps.map((step) =>
-    step.status === "queued"
-      ? {
-          ...step,
-          status: "completed" as const,
-          evidence: step.evidence ?? "Concluído pela resposta do Samuel Runtime.",
-        }
-      : step,
-  );
+  const steps = mission.steps.map((step) => {
+    if (step.status !== "queued") return step;
+    if (step.skillId === "conversation" || step.skillId === "memory") {
+      return {
+        ...step,
+        status: "completed" as const,
+        evidence: step.evidence ?? "Concluído pelo Samuel Runtime com o contexto disponível.",
+      };
+    }
+    return {
+      ...step,
+      status: "blocked" as const,
+      evidence:
+        step.evidence ??
+        "Capacidade identificada, mas não foi acionada por um executor verificado nesta execução.",
+    };
+  });
 
   const blocked = steps.some((step) => step.status === "blocked");
   const waiting = steps.some((step) => step.status === "waiting_approval");
