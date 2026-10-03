@@ -36,8 +36,16 @@ describe("Samuel native mobile contract", () => {
     expect(getSamuelCapability("creative.video")?.voiceEnabled).toBe(true);
   });
 
-  it("keeps planned capabilities visible instead of silently deleting them", () => {
+  it("keeps planned capabilities visible and exposes newly connected surfaces", () => {
     expect(getSamuelCapability("social.publish")?.availability).toBe("planned");
-    expect(getSamuelCapability("creative.website")?.availability).toBe("planned");
+    expect(getSamuelCapability("creative.website")).toMatchObject({
+      availability: "connected",
+      voiceEnabled: true,
+      executor: {
+        kind: "surface",
+        surface: "site-builder",
+        event: "samuel-open-site-builder",
+      },
+    });
   });
 });
