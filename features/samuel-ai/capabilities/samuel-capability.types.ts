@@ -10,7 +10,8 @@ export type SamuelCapabilityDomain =
   | "workspace"
   | "desktop"
   | "creative"
-  | "social";
+  | "social"
+  | "integration";
 
 export type SamuelExecutionClass = "read" | "draft" | "mutate" | "sensitive";
 
