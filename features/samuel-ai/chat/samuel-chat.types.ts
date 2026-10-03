@@ -48,6 +48,13 @@ export type SamuelChatRuntimeSummary = {
 export type SamuelToolActionPlan = GmailActionPlan | CalendarActionPlan;
 export type SamuelToolResult = GmailToolResult | CalendarToolResult;
 
+export type SamuelIntegrationConnectPrompt = {
+  toolkit: string;
+  label: string;
+  url: string;
+  sessionId: string;
+};
+
 export type SamuelSurfaceHandoff = {
   surface: "site-builder" | "studio";
   payload: {
@@ -69,6 +76,7 @@ export type SamuelChatStreamEvent =
   | { type: "provider"; provider: string; model: string | null }
   | { type: "warning"; code: string; message: string }
   | { type: "web_sources"; sources: SamuelWebSource[] }
+  | { type: "integration_connect"; connection: SamuelIntegrationConnectPrompt }
   | { type: "content_project"; project: SamuelContentProject }
   | { type: "music_action"; command: SamuelMusicCommand }
   | { type: "delta"; delta: string }
