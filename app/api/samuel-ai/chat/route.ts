@@ -58,6 +58,11 @@ import {
   updateSamuelMissionStep,
 } from "@/features/samuel-ai/agent/samuel-mission";
 import { searchGooglePlaces } from "@/features/google-integrations/google-capabilities.server";
+import {
+  composioGatewayReadiness,
+  createComposioConnectLink,
+  searchComposioTools,
+} from "@/features/samuel-ai/integrations/composio-gateway.server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -234,6 +239,9 @@ export async function POST(request: Request) {
   );
   let mission = buildSamuelMission(chatRequest.query, turnPlan.skills);
   const siteBuilderHandoff = shouldOpenSiteBuilder(chatRequest.query);
+  const integrationRequested = turnPlan.skills.some(
+    (skill) => skill.id === "integrations",
+  );
 
   const { sessionKey, sessionHash } = await getWorkspaceSessionIdentity();
   const repository = new SamuelConversationRepository();
@@ -345,6 +353,111 @@ export async function POST(request: Request) {
         let liveWebResult: Awaited<ReturnType<typeof searchSamuelLiveWeb>> = null;
         if (musicCommand) {
           toolFragments.push(musicCommandFragment(musicCommand));
+        }
+
+        if (integrationRequested) {
+          updateMission(
+            "integrations",
+            "running",
+            "Procurando ferramentas e contas conectadas no gateway…",
+          );
+          const readiness = composioGatewayReadiness();
+          if (!readiness.configured) {
+            const message =
+              "Gateway de integrações disponível no SF, mas falta configurar COMPOSIO_API_KEY no servidor.";
+            updateMission("integrations", "blocked", message);
+            send({
+              type: "warning",
+              code: "INTEGRATION_GATEWAY_NOT_CONFIGURED",
+              message,
+            });
+          } else {
+            try {
+              const discovery = await searchComposioTools({
+                userId: auth.user.id,
+                companyId: chatRequest.companyId,
+                useCase: chatRequest.query,
+              });
+              const primaryTools = discovery.primaryToolSlugs.slice(0, 8);
+              const toolkits = discovery.toolkits.slice(0, 8);
+              toolFragments.push(
+                [
+                  "[INTEGRATION GATEWAY — FERRAMENTAS DESCOBERTAS]",
+                  toolkits.length
+                    ? `Toolkits: ${toolkits.join(", ")}`
+                    : "Toolkit específico não identificado.",
+                  primaryTools.length
+                    ? `Ferramentas principais: ${primaryTools.join(", ")}`
+                    : "Nenhuma ferramenta principal foi devolvida.",
+                  discovery.recommendedPlanSteps.length
+                    ? `Plano recomendado: ${discovery.recommendedPlanSteps
+                        .slice(0, 6)
+                        .join(" → ")}`
+                    : "",
+                  "Ações externas genéricas continuam exigindo aprovação explícita antes da execução.",
+                ]
+                  .filter(Boolean)
+                  .join("\n"),
+              );
+
+              const disconnected =
+                discovery.connections.find(
+                  (connection) =>
+                    !connection.connected &&
+                    (!toolkits.length ||
+                      toolkits.includes(connection.toolkit)),
+                ) ??
+                discovery.connections.find((connection) => !connection.connected);
+
+              if (disconnected) {
+                const callback = new URL("/samuel-ai", request.url);
+                callback.searchParams.set("integration", "connected");
+                callback.searchParams.set("toolkit", disconnected.toolkit);
+                const link = await createComposioConnectLink({
+                  userId: auth.user.id,
+                  companyId: chatRequest.companyId,
+                  toolkit: disconnected.toolkit,
+                  sessionId: discovery.sessionId,
+                  callbackUrl: callback.toString(),
+                });
+                send({
+                  type: "integration_connect",
+                  connection: {
+                    toolkit: disconnected.toolkit,
+                    label:
+                      disconnected.description?.trim() ||
+                      disconnected.toolkit,
+                    url: link.redirectUrl,
+                    sessionId: discovery.sessionId,
+                  },
+                });
+                updateMission(
+                  "integrations",
+                  "waiting_approval",
+                  `Integração ${disconnected.toolkit} encontrada; conecte a conta para continuar.`,
+                );
+              } else {
+                updateMission(
+                  "integrations",
+                  "waiting_approval",
+                  primaryTools.length
+                    ? `Ferramentas encontradas: ${primaryTools.join(", ")}. A execução externa aguarda aprovação explícita.`
+                    : "Integração encontrada; a execução externa aguarda aprovação explícita.",
+                );
+              }
+            } catch (integrationError) {
+              const message =
+                integrationError instanceof Error
+                  ? integrationError.message
+                  : "Falha ao consultar o gateway de integrações.";
+              updateMission("integrations", "blocked", message);
+              send({
+                type: "warning",
+                code: "INTEGRATION_GATEWAY_UNAVAILABLE",
+                message,
+              });
+            }
+          }
         }
 
         if (shouldDiscoverLocalBusinesses(chatRequest.query)) {
