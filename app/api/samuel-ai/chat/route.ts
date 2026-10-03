@@ -50,6 +50,14 @@ import {
   generateContentProject,
   isContentCreationRequest,
 } from "@/features/samuel-ai/content-studio/samuel-content.server";
+import {
+  buildSamuelMission,
+  finalizeSamuelMission,
+  shouldDiscoverLocalBusinesses,
+  shouldOpenSiteBuilder,
+  updateSamuelMissionStep,
+} from "@/features/samuel-ai/agent/samuel-mission";
+import { searchGooglePlaces } from "@/features/google-integrations/google-capabilities.server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -224,6 +232,8 @@ export async function POST(request: Request) {
     chatRequest.query,
     chatRequest.channel ?? "web",
   );
+  let mission = buildSamuelMission(chatRequest.query, turnPlan.skills);
+  const siteBuilderHandoff = shouldOpenSiteBuilder(chatRequest.query);
 
   const { sessionKey, sessionHash } = await getWorkspaceSessionIdentity();
   const repository = new SamuelConversationRepository();
@@ -269,6 +279,23 @@ export async function POST(request: Request) {
       const send = (event: SamuelChatStreamEvent) => {
         if (!request.signal.aborted) controller.enqueue(encodeChatEvent(event));
       };
+      const updateMission = (
+        skillOrCapabilityId: string,
+        status:
+          | "queued"
+          | "running"
+          | "waiting_approval"
+          | "delegated"
+          | "completed"
+          | "blocked",
+        evidence?: string,
+      ) => {
+        mission = updateSamuelMissionStep(mission, skillOrCapabilityId, {
+          status,
+          evidence: evidence ?? null,
+        });
+        send({ type: "mission_update", mission });
+      };
 
       send({
         type: "start",
@@ -276,6 +303,7 @@ export async function POST(request: Request) {
         messageId: userMessage.id,
         persistence,
       });
+      send({ type: "mission_plan", mission });
 
       if (persistence === "client" && repository.available) {
         send({
@@ -289,6 +317,11 @@ export async function POST(request: Request) {
         const musicCommand = parseSamuelMusicCommand(chatRequest.query);
         if (musicCommand) {
           send({ type: "music_action", command: musicCommand });
+          updateMission(
+            "music",
+            "delegated",
+            "Comando enviado ao player/Spotify; a confirmação final ocorre no dispositivo.",
+          );
         }
 
         const workspaceSignal = musicCommand
@@ -314,7 +347,53 @@ export async function POST(request: Request) {
           toolFragments.push(musicCommandFragment(musicCommand));
         }
 
+        if (shouldDiscoverLocalBusinesses(chatRequest.query)) {
+          updateMission("lead-discovery", "running", "Consultando Google Places…");
+          try {
+            const places = await searchGooglePlaces(
+              chatRequest.companyId,
+              chatRequest.query,
+              20,
+            );
+            if (places.length) {
+              const compact = places
+                .slice(0, 20)
+                .map(
+                  (place, index) =>
+                    `${index + 1}. ${place.name} | ${place.address ?? "sem endereço"} | ${place.phone ?? "sem telefone"} | ${place.website ?? place.googleMapsUrl ?? "sem site"}`,
+                )
+                .join("\n");
+              toolFragments.push(
+                `[LEAD DISCOVERY — GOOGLE PLACES] Foram encontrados ${places.length} negócios reais.\n${compact}`,
+              );
+              updateMission(
+                "lead-discovery",
+                "completed",
+                `${places.length} negócios encontrados com dados do Google Places.`,
+              );
+            } else {
+              updateMission(
+                "lead-discovery",
+                "completed",
+                "Pesquisa concluída; nenhum negócio correspondente foi encontrado.",
+              );
+            }
+          } catch (leadError) {
+            const message =
+              leadError instanceof Error
+                ? leadError.message
+                : "Falha ao pesquisar empresas no Google Places.";
+            updateMission("lead-discovery", "blocked", message);
+            send({
+              type: "warning",
+              code: "LEAD_DISCOVERY_UNAVAILABLE",
+              message,
+            });
+          }
+        }
+
         if (!musicCommand) try {
+          updateMission("research.company", "running", "Consultando fontes atuais…");
           const company = chatRequest.companyContext?.executiveContext?.company;
           const locationHint = [company?.city, company?.country]
             .filter(Boolean)
@@ -336,6 +415,19 @@ export async function POST(request: Request) {
                     .join(" | ")}`
                 : "[WEB AO VIVO — FONTES] A pesquisa não devolveu URLs citáveis.",
             );
+            updateMission(
+              "research.company",
+              "completed",
+              liveWebResult.sources.length
+                ? `${liveWebResult.sources.length} fontes atuais consultadas.`
+                : "Pesquisa atual concluída sem URLs citáveis.",
+            );
+          } else {
+            updateMission(
+              "research.company",
+              "completed",
+              "A pesquisa ao vivo não era necessária para concluir esta etapa.",
+            );
           }
         } catch (webError) {
           if (request.signal.aborted) throw webError;
@@ -345,30 +437,55 @@ export async function POST(request: Request) {
                 ? webError.message.slice(0, 500)
                 : "falha desconhecida",
           });
+          const warningMessage =
+            "A pesquisa em tempo real ficou indisponível nesta resposta; não vou tratar dados atuais como verificados.";
+          updateMission("research.company", "blocked", warningMessage);
           send({
             type: "warning",
             code: "LIVE_WEB_UNAVAILABLE",
-            message:
-              "A pesquisa em tempo real ficou indisponível nesta resposta; não vou tratar dados atuais como verificados.",
+            message: warningMessage,
           });
         }
 
+        if (siteBuilderHandoff) {
+          updateMission(
+            "site-builder",
+            "delegated",
+            "Briefing preparado para o Site Builder; o preview editável será aberto ao concluir a resposta.",
+          );
+          toolFragments.push(
+            `[SITE BUILDER — HANDOFF PREPARADO] O pedido foi convertido em briefing para o Site Builder. Não diga que o site já foi publicado. O preview editável será aberto depois desta resposta.`,
+          );
+        }
+
         if (isContentCreationRequest(chatRequest.query)) {
+          updateMission("content", "running", "Criando o projeto no Samuel Studio…");
           const generatedContent = await generateContentProject(contentRequestFromQuery(chatRequest.query));
           send({ type: "content_project", project: generatedContent.project });
           toolFragments.push(
             `[STUDIO — PRODUÇÃO INICIADA] ${generatedContent.project.name}. O projeto foi enviado ao Studio e a produção automática de narração + vídeo foi iniciada. Só afirme que o MP4 ficou pronto quando a interface do Studio apresentar a prévia final. Não afirme publicação externa sem confirmação e ID da plataforma.`,
           );
+          updateMission(
+            "content",
+            "completed",
+            `Projeto "${generatedContent.project.name}" criado no Studio; renderização final continua no módulo de produção.`,
+          );
         }
 
         if (gmailPlan) {
           if (gmailPlan.requiresConfirmation) {
+            updateMission(
+              "gmail",
+              "waiting_approval",
+              "A ação foi preparada e aguarda a sua confirmação explícita.",
+            );
             pendingAction = gmailPlan;
             send({ type: "action_proposal", action: gmailPlan });
             toolFragments.push(
               `[GMAIL — PROPOSTA] ${gmailPlan.title}: ${gmailPlan.preview}`,
             );
           } else {
+            updateMission("gmail", "running", "Executando a operação no Gmail…");
             const result = await executeGmailTool(
               chatRequest.companyId,
               gmailPlan.actionId,
@@ -376,6 +493,11 @@ export async function POST(request: Request) {
             );
             send({ type: "action_result", result });
             toolFragments.push(gmailResultToFragment(result));
+            updateMission(
+              "gmail",
+              result.ok ? "completed" : "blocked",
+              result.summary,
+            );
             if (!result.ok && /não conectada|NOT_CONNECTED|NOT_CONFIGURED/i.test(result.summary)) {
               send({
                 type: "warning",
@@ -389,12 +511,18 @@ export async function POST(request: Request) {
 
         if (calendarPlan) {
           if (calendarPlan.requiresConfirmation) {
+            updateMission(
+              "calendar",
+              "waiting_approval",
+              "A alteração foi preparada e aguarda a sua confirmação explícita.",
+            );
             pendingAction = calendarPlan;
             send({ type: "action_proposal", action: calendarPlan });
             toolFragments.push(
               `[GOOGLE AGENDA — PROPOSTA] ${calendarPlan.title}: ${calendarPlan.preview}`,
             );
           } else {
+            updateMission("calendar", "running", "Executando a operação na Agenda…");
             const result = await executeCalendarTool(
               chatRequest.companyId,
               calendarPlan.actionId,
@@ -402,6 +530,11 @@ export async function POST(request: Request) {
             );
             send({ type: "action_result", result });
             toolFragments.push(calendarResultToFragment(result));
+            updateMission(
+              "calendar",
+              result.ok ? "completed" : "blocked",
+              result.summary,
+            );
             if (!result.ok && /não conectada|NOT_CONNECTED|NOT_CONFIGURED|permiss/i.test(result.summary)) {
               send({
                 type: "warning",
@@ -520,6 +653,9 @@ export async function POST(request: Request) {
           }
         }
 
+        mission = finalizeSamuelMission(mission);
+        send({ type: "mission_update", mission });
+
         send({
           type: "complete",
           conversationId,
@@ -529,6 +665,15 @@ export async function POST(request: Request) {
           model,
           persistence,
           pendingAction,
+          handoff: siteBuilderHandoff
+            ? {
+                surface: "site-builder",
+                payload: {
+                  brief: chatRequest.query,
+                  source: "samuel-mission",
+                },
+              }
+            : null,
         });
       } catch (error) {
         if (request.signal.aborted) {

@@ -39,6 +39,11 @@ export type SamuelCapabilityExecutor =
       kind: "provider";
       provider: string;
       operation: string;
+    }
+  | {
+      kind: "surface";
+      surface: "site-builder" | "studio";
+      event: string;
     };
 
 export type SamuelCapabilityDefinition = {

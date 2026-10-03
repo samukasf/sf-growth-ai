@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Archive,
   Download,
@@ -151,6 +151,7 @@ export function SamuelSiteBuilderV2({
   const [publishing, setPublishing] = useState(false);
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
   const [publishError, setPublishError] = useState<string | null>(null);
+  const incomingBriefAppliedRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -207,6 +208,53 @@ export function SamuelSiteBuilderV2({
       cancelled = true;
     };
   }, [baseDraft, companyId, companyLocation, companyName, companySegment]);
+
+  useEffect(() => {
+    if (!hydrated || incomingBriefAppliedRef.current) return;
+    incomingBriefAppliedRef.current = true;
+
+    let brief = "";
+    try {
+      const raw = window.sessionStorage.getItem(
+        "sf-growth-ai:samuel-site-builder:incoming",
+      );
+      if (!raw) return;
+      window.sessionStorage.removeItem(
+        "sf-growth-ai:samuel-site-builder:incoming",
+      );
+      const payload = JSON.parse(raw) as { brief?: string };
+      brief = payload.brief?.replace(/\s+/g, " ").trim() ?? "";
+    } catch {
+      return;
+    }
+    if (!brief) return;
+
+    const applyTimer = window.setTimeout(() => {
+      setDraft((current) => ({
+        ...current,
+        mode: /(?:mini-?app|aplicativo|\bapp\b)/i.test(brief)
+          ? "app"
+          : current.mode,
+        tone: /(?:premium|luxo|sofisticad|elegant)/i.test(brief)
+          ? "premium"
+          : current.tone,
+        goal: brief.slice(0, 280),
+      }));
+      setProjectName((current) =>
+        current.trim() ? current : "Projeto criado pelo Samuel",
+      );
+      setSaveNotice("Briefing recebido do Samuel · preview atualizado");
+    }, 0);
+    const clearNoticeTimer = window.setTimeout(
+      () => setSaveNotice(null),
+      3200,
+    );
+
+    return () => {
+      window.clearTimeout(applyTimer);
+      window.clearTimeout(clearNoticeTimer);
+    };
+  }, [hydrated]);
 
   const persist = (nextProjects: SiteProject[]) => {
     setProjects(nextProjects);
