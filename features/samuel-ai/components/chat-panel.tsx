@@ -733,7 +733,7 @@ export function ChatPanel({
         );
         speakSamuel(result.content, assistantId);
 
-        const handoff = pendingHandoffRef.current;
+        const handoff = pendingHandoffRef.current as SamuelSurfaceHandoff | null;
         pendingHandoffRef.current = null;
         if (handoff?.surface === "site-builder") {
           try {
