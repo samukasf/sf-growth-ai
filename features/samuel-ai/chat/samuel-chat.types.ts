@@ -48,6 +48,14 @@ export type SamuelChatRuntimeSummary = {
 export type SamuelToolActionPlan = GmailActionPlan | CalendarActionPlan;
 export type SamuelToolResult = GmailToolResult | CalendarToolResult;
 
+export type SamuelSurfaceHandoff = {
+  surface: "site-builder" | "studio";
+  payload: {
+    brief?: string;
+    source?: string;
+  };
+};
+
 export type SamuelChatStreamEvent =
   | {
       type: "start";
@@ -81,6 +89,7 @@ export type SamuelChatStreamEvent =
       model: string | null;
       persistence: "supabase" | "client";
       pendingAction?: SamuelToolActionPlan | null;
+      handoff?: SamuelSurfaceHandoff | null;
     }
   | {
       type: "cancelled";
