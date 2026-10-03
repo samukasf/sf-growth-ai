@@ -54,6 +54,7 @@ import {
   buildSamuelMission,
   finalizeSamuelMission,
   shouldDiscoverLocalBusinesses,
+  shouldOpenSiteBuilder,
   updateSamuelMissionStep,
 } from "@/features/samuel-ai/agent/samuel-mission";
 import { searchGooglePlaces } from "@/features/google-integrations/google-capabilities.server";
@@ -232,6 +233,7 @@ export async function POST(request: Request) {
     chatRequest.channel ?? "web",
   );
   let mission = buildSamuelMission(chatRequest.query, turnPlan.skills);
+  const siteBuilderHandoff = shouldOpenSiteBuilder(chatRequest.query);
 
   const { sessionKey, sessionHash } = await getWorkspaceSessionIdentity();
   const repository = new SamuelConversationRepository();
@@ -445,6 +447,17 @@ export async function POST(request: Request) {
           });
         }
 
+        if (siteBuilderHandoff) {
+          updateMission(
+            "site-builder",
+            "delegated",
+            "Briefing preparado para o Site Builder; o preview editável será aberto ao concluir a resposta.",
+          );
+          toolFragments.push(
+            `[SITE BUILDER — HANDOFF PREPARADO] O pedido foi convertido em briefing para o Site Builder. Não diga que o site já foi publicado. O preview editável será aberto depois desta resposta.`,
+          );
+        }
+
         if (isContentCreationRequest(chatRequest.query)) {
           updateMission("content", "running", "Criando o projeto no Samuel Studio…");
           const generatedContent = await generateContentProject(contentRequestFromQuery(chatRequest.query));
@@ -652,6 +665,15 @@ export async function POST(request: Request) {
           model,
           persistence,
           pendingAction,
+          handoff: siteBuilderHandoff
+            ? {
+                surface: "site-builder",
+                payload: {
+                  brief: chatRequest.query,
+                  source: "samuel-mission",
+                },
+              }
+            : null,
         });
       } catch (error) {
         if (request.signal.aborted) {
